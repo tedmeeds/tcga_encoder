@@ -9,12 +9,17 @@ sources:
       - ["Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation","Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins"]
          
   RNA:
-    data_store: "RNA/gdac.broadinstitute.org_PAN26.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
+    data_store: "RNA/gdac.broadinstitute.org_UVM.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
+    #data_store: "RNA/gdac.broadinstitute.org_PAN5.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
+    #data_store: "RNA/gdac.broadinstitute.org_PAN26.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
     nbr: 100
+    method: "max_var_fair"
     
   METH:
-    data_store: "METH/gdac.broadinstitute.org_PAN33.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
+    data_store: "METH/gdac.broadinstitute.org_UVM.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
+    #data_store: "METH/gdac.broadinstitute.org_PAN33.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
     nbr: 100
+    method: "max_var_fair"
 
   CLINICAL:
     data_store: "CLINICAL/gdac.broadinstitute.org_PAN33.Merge_Clinical.Level_1.2016012800.0.0.h5"

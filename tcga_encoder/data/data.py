@@ -1,7 +1,7 @@
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.definitions.tcga import *
 from tcga_encoder.definitions.nn import *
-
+import pdb
 
 def fair_rank( x ):
   #ranks = []
@@ -283,7 +283,8 @@ class MultiSourceData(object):
       self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ] = pd.DataFrame( channel_mutations, index=patient_rows, columns=gene_columns )
       channel_idx+=1  
       
-  def AddRNA( self, broad_location, filename, genes2keep = None, diseases = None ):
+  def AddRNA( self, broad_location, filename, h5store, nbr_genes, method = "max_var_fair", diseases = None ):
+    #genes2keep = None, diseases = None ):
     print "*****************************************"
     print "**                                     **"
     print "**          RNA                        **"
@@ -292,7 +293,7 @@ class MultiSourceData(object):
 
     self.InitSource( RNA, broad_location, filename )
     
-    h5 = self.ReadH5( os.path.join(broad_location, filename) )
+    h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
     if diseases is not None:
       n=len(h5)
@@ -345,6 +346,7 @@ class MultiSourceData(object):
       hugo,entrez = k.split("|")
       self.rna_hugo2index[hugo] = v
     
+    genes2keep = None
     if genes2keep is not None:
       self.rna_genes2keep2idx = OrderedDict()
       for g in genes2keep:
@@ -362,13 +364,33 @@ class MultiSourceData(object):
     
     R =   h5.values[:, gene_ids ].astype(float)
     
-    self.store[ RNA + "/" + "RSEM" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = gene_columns )
-    
+
+    I = pp.find( np.isnan(R.sum(0) )==False )
+    R = R[:,I]
+    gene_columns = gene_columns[I]
     FAIR_R = fair_rank_order_normalization(R)
+    
+    if method == "max_var_fair":
+      v = np.var( FAIR_R, 0 )
+      gene_ids = np.argsort( v )[-nbr_genes:]
+      gene_columns = gene_columns[gene_ids]
+      
+      I = np.argsort( gene_columns )
+      gene_ids = gene_ids[I]
+      gene_columns = gene_columns[I]
+      
+      FAIR_R = FAIR_R[:,gene_ids]
+      R = R[:,gene_ids]
+      #pdb.set_trace()
+    elif method is None:
+      pass
+    else:
+      assert False, "unknown selection method for RNA = %s"%(method)
+    self.store[ RNA + "/" + "RSEM" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = gene_columns )
     self.store[ RNA + "/" + "FAIR" + "/" ] = pd.DataFrame( FAIR_R, index = patient_rows, columns = gene_columns )
 
     
-  def AddMeth( self, broad_location, filename, genes2keep = None, diseases = None ):
+  def AddMeth( self, broad_location, filename, h5store, nbr_genes, method = "max_var_fair", diseases = None ):
     print "*****************************************"
     print "**                                     **"
     print "**          METHYLATION                **"
@@ -376,7 +398,7 @@ class MultiSourceData(object):
     print "*****************************************"
     self.InitSource( METH, broad_location, filename )
     
-    h5 = self.ReadH5( os.path.join(broad_location, filename) )
+    h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
     if diseases is not None:
       n=len(h5)
@@ -417,12 +439,13 @@ class MultiSourceData(object):
     self.meth_original2index = OrderedDict()
     self.meth_hugo2index = OrderedDict()
     for k,v in zip( self.meth_original_genes, xrange(len(self.meth_original_genes))):
-      if k == "admin.disease_code" or k == "patient.bcr_patient_barcode" or k == "RNApatient.bcr_patient_barcode":
+      if k == "admin.disease_code" or k == "patient.bcr_patient_barcode" or k == "Methpatient.bcr_patient_barcode":
         continue
       self.meth_original2index[k] = v
       #hugo,entrez = k.split("|")
       self.meth_hugo2index[k] = v
     
+    genes2keep=None
     if genes2keep is not None:
       self.meth_genes2keep2idx = OrderedDict()
       for g in genes2keep:
@@ -447,9 +470,33 @@ class MultiSourceData(object):
     gene_columns = gene_columns[I]
     self.AddInfo( METH, "filtering_step", "METH has %d genes"%(len(I)) )
     
-    self.store[ METH + "/" + "METH" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = gene_columns )
-    
     FAIR_R = fair_rank_order_normalization(R)
+    
+    if method == "max_var_fair":
+      v = np.var( FAIR_R, 0 )
+      gene_ids = np.argsort( v )[-nbr_genes:]
+      gene_columns = gene_columns[gene_ids]
+      
+      I = np.argsort( gene_columns )
+      gene_ids = gene_ids[I]
+      gene_columns = gene_columns[I]
+      FAIR_R = FAIR_R[:,gene_ids]
+      R = R[:,gene_ids]
+      
+      
+      #pdb.set_trace()
+    elif method is None:
+      pass
+    else:
+      assert False, "unknown selection method for RNA = %s"%(method)
+    
+    self.AddInfo( METH, "filtering_step", "METH has %d genes"%(len(gene_columns)) )
+    
+    
+    
+    
+    
+    self.store[ METH + "/" + "METH" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = gene_columns )
     self.store[ METH + "/" + "FAIR" + "/" ] = pd.DataFrame( FAIR_R, index = patient_rows, columns = gene_columns )
     
     
