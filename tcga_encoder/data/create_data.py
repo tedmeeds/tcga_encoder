@@ -7,20 +7,74 @@ from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
 from tcga_encoder.definitions.locations import *
 
+def process_dna( spec, broad_location ):
+  filter_nbr = spec["filter_nbr"]
+  filter_column     = spec["filter_column"]
+  filtered_csv_file = spec["filter_file"]
+  filtered_csv_file = os.path.join( os.environ.get('HOME','/'), filtered_csv_file)
+  
+  genes2keep = load_gene_filter( filtered_csv_file, filter_column, filter_nbr )
+  
+  #os.path.join(broad_location,RNA)
+  h5 = ReadH5( os.path.join( broad_location, spec["data_store"]) )
+  
+  return h5, genes2keep 
+  
+def process_rna( spec, broad_location ):
+  return None, None 
+  
+def process_meth( spec, broad_location ):
+  return None, None 
+  
+def process_clinical( spec, broad_location ):
+  h5 = ReadH5( os.path.join( broad_location, spec["data_store"]) )
+  return h5
+  
 if __name__ == "__main__":
   print "*****************************************"
   print "**                                     **"
-  print "**          START                      **"
+  print "**    CREATE DATA: START               **"
   print "**                                     **"
   print "*****************************************"
-  
+  diseases = None # ie all of them
   assert len(sys.argv) >= 2, "Must pass yaml file."
   yaml_file = sys.argv[1]
   print "Running: ",yaml_file
   
   y = load_yaml( yaml_file)
   
+  print y
+  save_location = os.path.join( os.environ.get('HOME','/'), y["data_store"]["location"] )
+  print "HOME:", os.environ.get('HOME','/')
+  print "SAVE:",save_location
+  dataset = MultiSourceData( save_location )
+  broad_location = os.path.join( os.environ.get('HOME','/'), y["broad_location"] )
+
+  # add CLINICAL first
+  print "Loading CLINICAL"
+  clinical_h5 = process_clinical( y["sources"][CLINICAL], broad_location )
+  dataset.AddClinical( broad_location, y["sources"][CLINICAL], clinical_h5, diseases = diseases )
   
+  for source_name in y["sources"]:
+    source_spec = y["sources"][source_name]
+    if source_name == DNA:
+      dna_h5, dna_genes = process_dna( source_spec, broad_location )
+      mutation_channels = source_spec["mutation_channels"]
+      dataset.AddDNA( broad_location, source_spec["data_store"], dna_h5, mutation_channels=mutation_channels, genes2keep=dna_genes )
+    elif source_name == RNA:
+      rna_h5, rna_genes = process_rna( source_spec, broad_location )
+      #dataset.AddRNA( rna_h5, rna_genes )
+    elif source_name == METH:
+      meth_h5, meth_genes = process_meth( source_spec, broad_location )
+      #dataset.AddMeth( meth_h5, meth_genes )
+    elif source_name == CLINICAL:
+      pass
+      
+    else:
+      assert False, "Unknown source %s"%(source_name)
+
+  print dna_genes
+  print dna_h5
   # b_save = True
   # filter_observed_only = True
   # diseases = None #["acc","brca","blca","cesc","chol"]
@@ -77,8 +131,7 @@ if __name__ == "__main__":
   
   print "*****************************************"
   print "**                                     **"
-  print "**          FINISHED                   **"
+  print "**    CREATE DATA: END                **"
   print "**                                     **"
   print "*****************************************"
 
-  print "Script done"

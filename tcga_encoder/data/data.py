@@ -1,5 +1,6 @@
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.definitions.tcga import *
+from tcga_encoder.definitions.nn import *
 
 
 def fair_rank( x ):
@@ -61,9 +62,9 @@ class MultiSourceData(object):
   def CloseHdfStore(self, store):
     return store.close()
    
-  def ReadH5( self, fullpath ):
-    df = pd.read_hdf( fullpath )  
-    return df
+  # def ReadH5( self, fullpath ):
+  #   df = pd.read_hdf( fullpath )
+  #   return df
     
   def GetDimension( self, source_name ):
     if source_name == TISSUE:
@@ -89,7 +90,7 @@ class MultiSourceData(object):
     self.AddInfo( source_name, "broad_location", broad_location )
     self.AddInfo( source_name, "file", filename )
 
-  def AddClinical( self, broad_location, filename, diseases = None ):
+  def AddClinical( self, broad_location, filename, h5store, diseases = None ):
     print "*****************************************"
     print "**                                     **"
     print "**          CLINICAL                   **"
@@ -97,7 +98,7 @@ class MultiSourceData(object):
     print "*****************************************"
     self.InitSource( CLINICAL, broad_location, filename )
     
-    h5 = self.ReadH5( os.path.join(broad_location, filename) )
+    h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
     if diseases is not None:
       #query = [hd["admin.disease_code"]==d for d in diseases]
@@ -107,7 +108,9 @@ class MultiSourceData(object):
       #pdb.set_trace()
       h5 = h5[query]
     
-    self.clinical_diseases = np.unique( h5["admin.disease_code"].values  )
+    DISEASES = h5["admin.disease_code"].values #.astype(str)
+    
+    self.clinical_diseases = np.unique( DISEASES  )
     
     self.clinical_disease2idx = OrderedDict()
     self.clinical_barcode2idx = OrderedDict()
@@ -117,8 +120,8 @@ class MultiSourceData(object):
     #for k,v in zip( self.clinical_patients, range(len(self.clinical_patients))):
     #  self.clinical_barcode2idx[ k ] = v
       
-    PATIENTS = h5["patient.bcr_patient_barcode"].values
-    DISEASES = h5["admin.disease_code"].values
+    PATIENTS = h5["patient.bcr_patient_barcode"].values #.astype(str)
+    
     
     PATIENT_INDEX = []
 
@@ -175,7 +178,7 @@ class MultiSourceData(object):
           assert False, "Problem assigning to tissue"
         #pdb.set_trace()
     
-  def AddDNA( self, broad_location, filename, mutation_channels, genes2keep = None, diseases = None ):
+  def AddDNA( self, broad_location, filename, h5store, mutation_channels, genes2keep = None, diseases = None ):
     print "*****************************************"
     print "**                                     **"
     print "**          DNA                        **"
@@ -183,7 +186,7 @@ class MultiSourceData(object):
     print "*****************************************"
     self.InitSource( DNA, broad_location, filename )
     
-    h5 = self.ReadH5( os.path.join(broad_location, filename) )
+    h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
  
     if diseases is not None:
       n=len(h5)
