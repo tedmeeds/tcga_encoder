@@ -1,6 +1,6 @@
-from utils.utils import *
-from utils.definitions import *
-import pandas as pd
+from tcga_encoder.utils.helpers import *
+from tcga_encoder.definitions.tcga import *
+
 
 def fair_rank( x ):
   #ranks = []
