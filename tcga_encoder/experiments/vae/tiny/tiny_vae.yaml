@@ -1,0 +1,395 @@
+logging:
+  location: "results/tcga_vae_post_recomb/"
+  experiment: "tiny_vae_a"
+    
+data: 
+  location: "data/broad_processed_post_recomb/20160128/pan_tiny_multi_set"
+  name_of_store: "data"
+  n_dna_channels: 1
+  
+algorithm:
+  r1: 0.75
+  r2: 0.05
+  beta_init: 0.01
+  beta_growth: 2.0
+  beta_max: 1.0
+  beta_min: 0.1
+  
+  free_bits_init: 1.0
+  free_bits_growth: -0.9
+  free_bits_max: 1.0
+  free_bits_min: 0.0
+  
+  nbr_brca_train: 50
+  include_validation: 1
+  include_brca: 0
+  train_mode: "all"
+  epochs: 300
+  n_train_full: 2000
+  n_train_non_full: 3000
+  split_seed: 0
+  learning_rate: 0.003
+  learning_rate_decay: 0.5
+  min_learning_rate: 1e-8
+  batch_size: 200
+  optimizer: !!python/name:tensorflow.python.training.training.AdamOptimizer
+  batcher: !!python/name:tcga_encoder.models.vae.batcher.TCGABatcher
+  
+  call_backs:
+    - name: "test_fill"
+      rate: 100
+    - name: "save_model"
+      rate: 100
+    # - name: "save_latent"
+    #   rate: 2000000
+    - name: "batch_epoch"
+      rate: 100
+    - name: "test_epoch"
+      rate: 100
+    - name: "epoch_viz"
+      rate: 100
+    # - name: "latent_viz"
+    #   rate: 4000
+    - name: "model_viz"
+      rate: 100
+    - name: "learning_decay"
+      rate: 500
+    - name: "beta"
+      rate: 200
+    - name: "free_bits"
+      rate: 200
+        
+architecture:
+  name: full_vae
+  kind: conditional_vae
+  network: !!python/name:tcga_encoder.models.networks.ConditionalVariationalAutoEncoder
+  variables:
+    n_z: 20
+    min_variance: 0.1
+    max_variance: 1000.0
+    n_rec_shared: 100
+    n_gen_shared: 100
+    rec_l1:  0.0
+    rec_l1_dna: 0.0
+    rec_l2_dna: 0.0
+    rec_l2:  0.0
+    gen_l1:  0.0
+    gen_l2:  0.0
+    n_dna_channels: 4
+    n_input_sources: 3
+  
+  keep_rates:
+    - layer: "RNA_dropout"
+      keep_rate: 0.5
+    - layer: "DNA_dropout"
+      keep_rate: 0.5
+    - layer: "METH_dropout"
+      keep_rate: 0.5
+  
+  sources: ["RNA","DNA","METH"]
+  input_sources: ["RNA","DNA","METH"]
+  target_sources: ["RNA","DNA","METH"]
+  
+  # inter_z_kl_penalty: 0.0
+  # inter_z_kl_mask: "INPUT_observations"
+  # inter_z_kl:
+  #   - ["rec_z_space_rna",  "rec_z_space_dna",  0,1]
+  #   - ["rec_z_space_dna",  "rec_z_space_rna",  1,0]
+  #   - ["rec_z_space_rna",  "rec_z_space_meth", 0,2]
+  #   - ["rec_z_space_meth", "rec_z_space_rna",  2,0]
+  #   - ["rec_z_space_meth", "rec_z_space_dna",  2,1]
+  #   - ["rec_z_space_dna",  "rec_z_space_meth", 1,2]
+          
+  recognition:
+    
+    layers:
+      - name: "u_z"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["n_z"]
+        
+      - name: "INPUT_observations"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["n_input_sources"]
+        
+      - name: "INPUT_missing"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["n_input_sources"]
+        
+      - name: "INPUT_weighted_observations"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["n_input_sources"]
+                
+      - name: "RNA_input"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["rna_dim"]
+        
+      - name: "RNA_dropout"
+        layer: !!python/name:tcga_encoder.models.layers.DropoutLayer
+        inputs: ["RNA_input"]
+          
+      - name: "DNA_input"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["dna_dim"]
+        
+      - name: "DNA_dropout"
+        layer: !!python/name:tcga_encoder.models.layers.DropoutLayer
+        inputs: ["DNA_input"]
+        
+      - name: "METH_input"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["meth_dim"]
+        
+      - name: "METH_dropout"
+        layer: !!python/name:tcga_encoder.models.layers.DropoutLayer
+        inputs: ["METH_input"]
+        
+      - name: "TISSUE_input"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["tissue_dim"]
+
+      - name: "rec_hidden_rna"
+        layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
+        #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
+        inputs: ["RNA_dropout"]
+        shape: ["n_rec_shared"]
+        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        biases: False
+        
+      - name: "rec_hidden_dna"
+        layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
+        #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
+        inputs: ["DNA_input"]
+        shape: ["n_rec_shared"]
+        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        biases: False
+
+      - name: "rec_hidden_meth"
+        layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
+        #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
+        inputs: ["METH_dropout"]
+        shape: ["n_rec_shared"]
+        transfer: !!python/name:tensorflow.python.ops.nn.relu     
+        biases: False   
+        
+      # - name: "rec_hidden_shared"
+      #   layer: !!python/name:models.layers.DroppedSourceHiddenLayer
+      #   #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
+      #   inputs: ["RNA_dropout","DNA_dropout","METH_dropout","INPUT_weighted_observations"]
+      #   shape: ["n_rec_shared"]
+      #   transfer: !!python/name:tensorflow.python.ops.nn.relu
+
+      - name: "rec_z_space_rna"
+        layer: !!python/name:tcga_encoder.models.layers.GaussianModelLayer
+        inputs: ["rec_hidden_rna"]
+        shape: ["n_z"]
+        min_variance: "min_variance"
+        max_variance: "max_variance"
+        biases: False
+
+      - name: "rec_z_space_dna"
+        layer: !!python/name:tcga_encoder.models.layers.GaussianModelLayer
+        inputs: ["rec_hidden_dna"]
+        shape: ["n_z"]
+        min_variance: "min_variance"
+        max_variance: "max_variance"
+        biases: False
+
+      - name: "rec_z_space_meth"
+        layer: !!python/name:tcga_encoder.models.layers.GaussianModelLayer
+        inputs: ["rec_hidden_meth"]
+        shape: ["n_z"]
+        min_variance: "min_variance"
+        max_variance: "max_variance"
+        biases: False
+        
+                                      
+      - name: "rec_z_space"
+        layer: !!python/name:tcga_encoder.models.layers.GaussianProductLayer
+        inputs: ["rec_z_space_rna","rec_z_space_dna", "rec_z_space_meth","INPUT_observations"]
+        shape: ["n_z"]
+        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        
+      - name: "rec_z"
+        layer: !!python/name:tcga_encoder.models.layers.GeneratedDataLayer
+        inputs: ["rec_z_space", "u_z"]
+        shape: ["n_z"]
+        
+  generative:
+    targets: ["RNA"]
+    layers:
+      - name: "gen_z_space"
+        layer: !!python/name:tcga_encoder.models.layers.GaussianModelLayer
+        inputs: ["TISSUE_input"]
+        shape: ["n_z"]
+        min_variance: "min_variance"
+        max_variance: "max_variance"
+      - name: "gen_z"
+        layer: !!python/name:tcga_encoder.models.layers.GeneratedDataLayer
+        inputs: ["gen_z_space", "u_z"]
+        shape: ["n_z"]
+      # - name: "rec_z_dropout"
+      #   layer: !!python/name:models.layers.DropoutLayer
+      #   inputs: ["rec_z"]
+      - name: "gen_hidden_shared"
+        layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
+        inputs: ["rec_z"]
+        shape: ["n_gen_shared"]
+        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        biases: False
+      # - name: "gen_hidden2"
+      #   layer: !!python/name:models.layers.HiddenLayer
+      #   inputs: ["rec_z"]
+      #   shape: ["n_gen_h1"]
+      #   transfer: !!python/name:tensorflow.python.ops.nn.relu
+      # - name: "gen_hidden3"
+      #   layer: !!python/name:models.layers.HiddenLayer
+      #   inputs: ["rec_z"]
+      #   shape: ["n_gen_h1"]
+      #   transfer: !!python/name:tensorflow.python.ops.nn.relu
+        
+      - name: "gen_rna_space"
+        layer: !!python/name:tcga_encoder.models.layers.BetaModelLayer
+        inputs: ["gen_hidden_shared","TISSUE_input"]
+        shape: ["rna_dim"]
+        prior: [0.001,0.001]
+        biases: False
+        
+      - name: "RNA_target"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["rna_dim"]
+      - name: "RNA_target_mask"
+        layer: !!python/name:tcga_encoder.models.layers.MaskLayer
+        shape: []
+        
+      - name: "gen_dna_space"
+        layer: !!python/name:tcga_encoder.models.layers.SigmoidModelLayer
+        inputs: ["rec_z","TISSUE_input"]
+        shape: ["dna_dim"]
+        biases: False
+        
+      - name: "gen_meth_space"
+        layer: !!python/name:tcga_encoder.models.layers.BetaModelLayer
+        inputs: ["gen_hidden_shared","TISSUE_input"]
+        shape: ["meth_dim"]
+        prior: [0.001,0.001]
+        biases: False
+        
+      - name: "DNA_target"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["dna_dim"]
+      - name: "DNA_target_mask"
+        layer: !!python/name:tcga_encoder.models.layers.MaskLayer
+        shape: []
+      - name: "METH_target"
+        layer: !!python/name:tcga_encoder.models.layers.DataLayer
+        shape: ["meth_dim"]
+      - name: "METH_target_mask"
+        layer: !!python/name:tcga_encoder.models.layers.MaskLayer
+        shape: []
+        
+  regularizers:
+    - reg: !!python/name:tcga_encoder.models.regularizers.L1Regularizer
+      layer: "rec_hidden_rna"
+      lambda: "rec_l1"
+    - reg: !!python/name:tcga_encoder.models.regularizers.L1Regularizer
+      layer: "rec_hidden_meth"
+      lambda: "rec_l1"
+    - reg: !!python/name:tcga_encoder.models.regularizers.L1Regularizer
+      layer: "rec_hidden_dna"
+      lambda: "rec_l1_dna"
+    - reg: !!python/name:tcga_encoder.models.regularizers.L1Regularizer
+      layer: "gen_hidden_shared"
+      lambda: "gen_l1"
+    - reg: !!python/name:tcga_encoder.models.regularizers.L2Regularizer
+      layer: "rec_hidden_rna"
+      lambda: "rec_l2"
+    - reg: !!python/name:tcga_encoder.models.regularizers.L2Regularizer
+      layer: "rec_hidden_meth"
+      lambda: "rec_l2"
+    - reg: !!python/name:tcga_encoder.models.regularizers.L2Regularizer
+      layer: "gen_hidden_shared"
+      lambda: "gen_l2"
+    - reg: !!python/name:tcga_encoder.models.regularizers.L1Regularizer
+      layer: "rec_z_space_dna"
+      lambda: "rec_l1_dna"
+    # - reg: !!python/name:models.regularizers.L2Regularizer
+    #   layer: "rec_hidden2"
+    #   lambda: "rec_l2"
+    # - reg: !!python/name:models.regularizers.L1Regularizer
+    #   layer: "rec_z_space"
+    #   lambda: "rec_l1"
+    # - reg: !!python/name:models.regularizers.L1Regularizer
+    #   layer: "gen_hidden1"
+    #   lambda: "gen_l1"
+    # - reg: !!python/name:models.regularizers.L2Regularizer
+    #   layer: "gen_rna_space"
+    #   lambda: "gen_l2"
+      
+  data_loglik:
+    - model: "gen_rna_space"
+      observations: "RNA_target"
+      short: "R"
+      mask: "RNA_target_mask"
+    - model: "gen_dna_space"
+      observations: "DNA_target"
+      short: "D"
+      mask: "DNA_target_mask"
+    - model: "gen_meth_space"
+      observations: "METH_target"
+      short: "M"
+      mask: "METH_target_mask"
+      
+  prior_loglik:
+    - model: "gen_z_space"
+      observations: "rec_z"
+    
+  rec_loglik:
+    - model: "rec_z_space"
+      observations: "rec_z"
+    
+# - name: z_to_tissue
+#   kind: feedforward
+#   network: !!python/name:models.vae.tcga_models.TCGA_LatentToTissue
+#   input_sources: ["Z_INPUT"]
+#   t_space_model: !!python/name:models.layers.GaussianModelLayer
+#
+# - name: dna2rna_vae
+#   kind: vae
+#   network: !!python/name:models.vae.tcga_models.TCGA_DnaToRna
+#   n_z: 10
+#   z_space_model: !!python/name:models.layers.GaussianModelLayer
+#   recognition:
+#     input_sources: ["DNA","TISSUE"]
+#     hidden_layers:
+#       - name: layer1
+#         n_h: 20
+#         transfer: !!python/name:tensorflow.python.ops.nn.relu
+#   generative:
+#     hidden_layers:
+#       - name: layer1
+#         n_h: 10
+#         transfer: !!python/name:tensorflow.python.ops.nn.tanh
+#     target_sources:
+#       - name: "RNA"
+#       - x_space_model: !!python/name:models.layers.BetaModelLayer
+#
+#
+# - name: rna2dna_vae
+#   kind: vae
+#   network: !!python/name:models.vae.tcga_models.TCGA_RnaToDna
+#   n_z: 10
+#   z_space_model: !!python/name:models.layers.GaussianModelLayer
+#   recognition:
+#     input_sources: ["RNA","TISSUE"]
+#     hidden_layers:
+#       - name: layer1
+#         n_h: 20
+#         transfer: !!python/name:tensorflow.python.ops.nn.relu
+#   generative:
+#     hidden_layers:
+#       - name: layer1
+#         n_h: 10
+#         transfer: !!python/name:tensorflow.python.ops.nn.tanh
+#     target_sources:
+#       - name: "DNA"
+#       - x_space_model: !!python/name:models.layers.SigmoidModelLayer

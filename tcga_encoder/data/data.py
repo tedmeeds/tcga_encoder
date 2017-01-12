@@ -3,6 +3,14 @@ from tcga_encoder.definitions.tcga import *
 from tcga_encoder.definitions.nn import *
 import pdb
 
+
+def load_data_from_dict( y ):      
+  y['location'] = os.path.join( os.environ.get('HOME','/'),y['location'])
+  y['name_of_store'] = y['name_of_store']
+  
+  y['dataset'] = MultiSourceData( y['location'], y['name_of_store'] )
+  y['store'] = y['dataset'].store
+  
 def fair_rank( x ):
   #ranks = []
   ix = np.argsort(x)

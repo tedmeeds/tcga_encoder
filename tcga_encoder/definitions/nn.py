@@ -144,3 +144,13 @@ LATENT_VIZ    = "latent_viz"
 
 KEEP_RATES = "keep_rates"
 KEEP_RATE  = "keep_rate"
+
+BATCH_SOURCE_LOGPDF = "Batch_SourceLogPdf"
+TEST_SOURCE_LOGPDF = "Test_SourceLogPdf"
+VAL_SOURCE_LOGPDF = "Val_SourceLogPdf"
+
+TEST_FILL_LOGLIK  = "Test_LogLik"
+TEST_FILL_ERROR  = "Test_Error"
+
+VAL_FILL_LOGLIK  = "Val_LogLik"
+VAL_FILL_ERROR  = "Val_Error"
