@@ -1,7 +1,7 @@
 sources:
   DNA:
     #data_store: "DNA/gdac.broadinstitute.org_PAN5.Mutation_Packager_Calls.Level_3.2016012800.0.0.h5"
-    data_store: "gdac.broadinstitute.org_PAN32.Mutation_Packager_Calls.Level_3.2016012800.0.0.h5"
+    data_store: "DNA/gdac.broadinstitute.org_PAN32.Mutation_Packager_Calls.Level_3.2016012800.0.0.h5"
     filter_file: "data/broad_firehose/analyses__2016_01_28_processed/20160128/PAN23_sig_genes.csv"
     filter_column: "pan-min_r"
     filter_nbr: 300
