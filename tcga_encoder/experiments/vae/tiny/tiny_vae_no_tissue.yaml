@@ -1,6 +1,6 @@
 logging:
   location: "results/tcga_vae_post_recomb/"
-  experiment: "tiny_vae_z2_c"
+  experiment: "tiny_vae_z2_c_no_tissue"
     
 data: 
   location: "data/broad_processed_post_recomb/20160128/pan_tiny_multi_set"
@@ -28,7 +28,7 @@ algorithm:
   n_train_full: 2000
   n_train_non_full: 3000
   split_seed: 0
-  learning_rate: 0.005
+  learning_rate: 0.001
   learning_rate_decay: 0.5
   min_learning_rate: 1e-8
   batch_size: 200
@@ -37,21 +37,21 @@ algorithm:
   
   call_backs:
     - name: "test_fill"
-      rate: 2000
+      rate: 100
     - name: "save_model"
-      rate: 2000
+      rate: 100
     # - name: "save_latent"
     #   rate: 2000000
     - name: "batch_epoch"
-      rate: 2000
+      rate: 100
     - name: "test_epoch"
-      rate: 2000
+      rate: 100
     - name: "epoch_viz"
-      rate: 2000
+      rate: 1000
     # - name: "latent_viz"
     #   rate: 4000
     - name: "model_viz"
-      rate: 2000
+      rate: 100
     - name: "learning_decay"
       rate: 5000
     - name: "beta"
@@ -61,22 +61,21 @@ algorithm:
         
 architecture:
   name: full_vae
-  kind: conditional_vae
-  network: !!python/name:tcga_encoder.models.networks.ConditionalVariationalAutoEncoder
+  kind: vanilla_vae
+  network: !!python/name:tcga_encoder.models.networks.VanillaVariationalAutoEncoder
   variables:
     n_z: 2
     min_variance: 0.1
     max_variance: 1000.0
-    n_rna_units: 50
-    n_meth_units: 50
-    n_dna_units: 10
+    n_rec_shared: 100
+    n_gen_shared: 100
     rec_l1:  0.0
     rec_l1_dna: 0.0
     rec_l2_dna: 0.0
     rec_l2:  0.0
     gen_l1:  0.0
     gen_l2:  0.0
-    n_dna_channels: 4
+    n_dna_channels: 1
     n_input_sources: 3
   
   keep_rates:
@@ -152,7 +151,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["RNA_dropout"]
-        shape: ["n_rna_units"]
+        shape: ["n_rec_shared"]
         transfer: !!python/name:tensorflow.python.ops.nn.relu
         biases: False
         
@@ -160,7 +159,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["DNA_input"]
-        shape: ["n_dna_units"]
+        shape: ["n_rec_shared"]
         transfer: !!python/name:tensorflow.python.ops.nn.relu
         biases: False
 
@@ -168,7 +167,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["METH_dropout"]
-        shape: ["n_meth_units"]
+        shape: ["n_rec_shared"]
         transfer: !!python/name:tensorflow.python.ops.nn.relu     
         biases: False   
         
@@ -219,11 +218,12 @@ architecture:
     targets: ["RNA"]
     layers:
       - name: "gen_z_space"
-        layer: !!python/name:tcga_encoder.models.layers.GaussianModelLayer
-        inputs: ["TISSUE_input"]
+        layer: !!python/name:tcga_encoder.models.layers.GaussianStaticLayer
+        prior: [0.0,1.0]
         shape: ["n_z"]
         min_variance: "min_variance"
         max_variance: "max_variance"
+        
       - name: "gen_z"
         layer: !!python/name:tcga_encoder.models.layers.GeneratedDataLayer
         inputs: ["gen_z_space", "u_z"]
@@ -250,7 +250,7 @@ architecture:
         
       - name: "gen_rna_space"
         layer: !!python/name:tcga_encoder.models.layers.BetaModelLayer
-        inputs: ["gen_hidden_shared","TISSUE_input"]
+        inputs: ["gen_hidden_shared"]
         shape: ["rna_dim"]
         prior: [0.001,0.001]
         biases: False
@@ -264,13 +264,13 @@ architecture:
         
       - name: "gen_dna_space"
         layer: !!python/name:tcga_encoder.models.layers.SigmoidModelLayer
-        inputs: ["rec_z","TISSUE_input"]
+        inputs: ["rec_z"]
         shape: ["dna_dim"]
         biases: False
         
       - name: "gen_meth_space"
         layer: !!python/name:tcga_encoder.models.layers.BetaModelLayer
-        inputs: ["gen_hidden_shared","TISSUE_input"]
+        inputs: ["gen_hidden_shared"]
         shape: ["meth_dim"]
         prior: [0.001,0.001]
         biases: False
