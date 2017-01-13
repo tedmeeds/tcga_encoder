@@ -47,7 +47,7 @@ algorithm:
     - name: "test_epoch"
       rate: 2000
     - name: "epoch_viz"
-      rate: 20000
+      rate: 2000
     # - name: "latent_viz"
     #   rate: 4000
     - name: "model_viz"
