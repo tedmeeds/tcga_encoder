@@ -70,6 +70,7 @@ architecture:
     n_rna_units: 50
     n_meth_units: 50
     n_dna_units: 10
+    n_gen_units_shared: 50
     rec_l1:  0.0
     rec_l1_dna: 0.0
     rec_l2_dna: 0.0
@@ -234,7 +235,7 @@ architecture:
       - name: "gen_hidden_shared"
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         inputs: ["rec_z"]
-        shape: ["n_gen_shared"]
+        shape: ["n_gen_units_shared"]
         transfer: !!python/name:tensorflow.python.ops.nn.relu
         biases: False
       # - name: "gen_hidden2"
