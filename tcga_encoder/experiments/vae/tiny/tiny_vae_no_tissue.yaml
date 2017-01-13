@@ -37,21 +37,21 @@ algorithm:
   
   call_backs:
     - name: "test_fill"
-      rate: 100
+      rate: 2000
     - name: "save_model"
-      rate: 100
+      rate: 2000
     # - name: "save_latent"
     #   rate: 2000000
     - name: "batch_epoch"
-      rate: 100
+      rate: 2000
     - name: "test_epoch"
-      rate: 100
+      rate: 2000
     - name: "epoch_viz"
-      rate: 1000
+      rate: 20000
     # - name: "latent_viz"
     #   rate: 4000
     - name: "model_viz"
-      rate: 100
+      rate: 2000
     - name: "learning_decay"
       rate: 5000
     - name: "beta"
@@ -67,8 +67,10 @@ architecture:
     n_z: 2
     min_variance: 0.1
     max_variance: 1000.0
-    n_rec_shared: 100
-    n_gen_shared: 100
+    n_rna_units: 50
+    n_meth_units: 50
+    n_dna_units: 10
+    n_gen_units_shared: 50
     rec_l1:  0.0
     rec_l1_dna: 0.0
     rec_l2_dna: 0.0
@@ -151,7 +153,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["RNA_dropout"]
-        shape: ["n_rec_shared"]
+        shape: ["n_rna_units"]
         transfer: !!python/name:tensorflow.python.ops.nn.relu
         biases: False
         
@@ -159,7 +161,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["DNA_input"]
-        shape: ["n_rec_shared"]
+        shape: ["n_dna_units"]
         transfer: !!python/name:tensorflow.python.ops.nn.relu
         biases: False
 
@@ -167,7 +169,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["METH_dropout"]
-        shape: ["n_rec_shared"]
+        shape: ["n_methunits"]
         transfer: !!python/name:tensorflow.python.ops.nn.relu     
         biases: False   
         
@@ -234,7 +236,7 @@ architecture:
       - name: "gen_hidden_shared"
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         inputs: ["rec_z"]
-        shape: ["n_gen_shared"]
+        shape: ["n_gen_units_shared"]
         transfer: !!python/name:tensorflow.python.ops.nn.relu
         biases: False
       # - name: "gen_hidden2"

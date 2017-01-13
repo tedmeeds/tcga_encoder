@@ -1292,7 +1292,9 @@ class TCGABatcher( object ):
       tensors.extend( self.network.GetTensor("rec_z_space_dna") )
       tensors.extend( self.network.GetTensor("rec_z_space_meth") )
       tensors.extend( self.network.GetTensor("rec_z_space") )
-      tensors.extend( self.network.GetTensor("gen_z_space") )
+      
+      if self.network is tcga_encoder.models.networks.ConditionalVariationalAutoEncoder:
+        tensors.extend( self.network.GetTensor("gen_z_space") )
 
       tensor_evals = sess.run( tensors, feed_dict = feed_dict )
 
@@ -1304,8 +1306,9 @@ class TCGABatcher( object ):
       meth_var  = tensor_evals[5]
       z_mean    = tensor_evals[6]
       z_var     = tensor_evals[7]
-      z_mean_g  = tensor_evals[8]
-      z_var_g   = tensor_evals[9]
+      if self.network is tcga_encoder.models.networks.ConditionalVariationalAutoEncoder:
+        z_mean_g  = tensor_evals[8]
+        z_var_g   = tensor_evals[9]
       
       self.fill_store.open()
       self.fill_store[ "%s/Z/%s/mu"%(mode,RNA)]   = pd.DataFrame( rna_mean, index = barcodes, columns = self.z_columns )
@@ -1316,8 +1319,9 @@ class TCGABatcher( object ):
       self.fill_store[ "%s/Z/%s/var"%(mode,METH)] = pd.DataFrame( meth_var, index = barcodes, columns = self.z_columns )
       self.fill_store[ "%s/Z/rec/mu"%mode]        = pd.DataFrame( z_mean, index = barcodes, columns = self.z_columns )
       self.fill_store[ "%s/Z/rec/var"%mode]       = pd.DataFrame( z_var, index = barcodes, columns = self.z_columns )
-      self.fill_store[ "%s/Z/gen/mu"%mode]        = pd.DataFrame( z_mean_g, index = barcodes, columns = self.z_columns )
-      self.fill_store[ "%s/Z/gen/var"%mode]       = pd.DataFrame( z_var_g, index = barcodes, columns = self.z_columns )
+      if self.network is tcga_encoder.models.networks.ConditionalVariationalAutoEncoder:
+        self.fill_store[ "%s/Z/gen/mu"%mode]        = pd.DataFrame( z_mean_g, index = barcodes, columns = self.z_columns )
+        self.fill_store[ "%s/Z/gen/var"%mode]       = pd.DataFrame( z_var_g, index = barcodes, columns = self.z_columns )
       self.fill_store.close()
      
     
