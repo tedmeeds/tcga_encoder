@@ -1,6 +1,6 @@
 logging:
   location: "results/tcga_vae_post_recomb/"
-  experiment: "tiny_vae_b"
+  experiment: "tiny_vae_z2_b"
     
 data: 
   location: "data/broad_processed_post_recomb/20160128/pan_tiny_multi_set"
@@ -64,7 +64,7 @@ architecture:
   kind: conditional_vae
   network: !!python/name:tcga_encoder.models.networks.ConditionalVariationalAutoEncoder
   variables:
-    n_z: 20
+    n_z: 2
     min_variance: 0.1
     max_variance: 1000.0
     n_rec_shared: 100
