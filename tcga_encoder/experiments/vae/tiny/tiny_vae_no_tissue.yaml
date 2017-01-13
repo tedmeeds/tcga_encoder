@@ -169,7 +169,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["METH_dropout"]
-        shape: ["n_methunits"]
+        shape: ["n_meth_units"]
         transfer: !!python/name:tensorflow.python.ops.nn.relu     
         biases: False   
         
