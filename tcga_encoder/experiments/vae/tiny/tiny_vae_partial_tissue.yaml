@@ -40,16 +40,16 @@ algorithm:
       rate: 2000
     - name: "save_model"
       rate: 2000
-    # - name: "save_latent"
-    #   rate: 2000000
+    - name: "save_latent"
+      rate: 2000
     - name: "batch_epoch"
       rate: 2000
     - name: "test_epoch"
       rate: 2000
     - name: "epoch_viz"
       rate: 2000
-    # - name: "latent_viz"
-    #   rate: 4000
+    - name: "latent_viz"
+      rate: 2000
     - name: "model_viz"
       rate: 2000
     - name: "learning_decay"

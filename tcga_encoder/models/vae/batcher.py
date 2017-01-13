@@ -15,13 +15,13 @@ from tcga_encoder.utils.helpers import *
 #import pdb, os, sys
 #from sklearn.metrics import roc_auc_score, roc_curve
 
-#import seaborn as sns
-#sns.set_style("whitegrid")
-#sns.set_context("talk")
+import seaborn as sns
+sns.set_style("whitegrid")
+sns.set_context("talk")
 
-#import pandas as pd
-#pd.set_option('display.max_columns', 500)
-#pd.set_option('display.width', 1000)
+import pandas as pd
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
 
 #import itertools
 
@@ -466,6 +466,7 @@ class TCGABatcher( object ):
     print self.val_tissue.sum()
     #pdb.set_trace()
     
+    self.viz_filename_z_rec_scatter          =  os.path.join( self.savedir, "z_rec_scatter.png" )
     self.viz_filename_z_rec_on_z_gen         =  os.path.join( self.savedir, "z_rec_on_z_gen.png" )
     self.viz_filename_rna_prediction_scatter =  os.path.join( self.savedir, "rna_prediction_scatter.png" )
     self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
@@ -1055,15 +1056,27 @@ class TCGABatcher( object ):
     feed_dict          = info_dict[ TEST_FEED_DICT ]
     feed_imputation    = info_dict[ TEST_FEED_IMPUTATION ]
     barcodes           = feed_imputation[BARCODES]
-    z_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE ).tensor
+    
+    z_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE).tensor
+    z_dna_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_dna" ).tensor
+    z_rna_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_rna" ).tensor
+    z_meth_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_meth" ).tensor
+    
     z_gen_space_tensor = self.network.GetLayer( GEN_Z_SPACE ).tensor
 
-  
+
+    z_rec_space_dna        = sess.run( z_dna_rec_space_tensor, feed_dict = feed_dict )
+    z_rec_space_rna        = sess.run( z_rna_rec_space_tensor, feed_dict = feed_dict )
+    z_rec_space_meth        = sess.run( z_meth_rec_space_tensor, feed_dict = feed_dict )
+    
     z_rec_space        = sess.run( z_rec_space_tensor, feed_dict = feed_dict )
     z_gen_space        = sess.run( z_gen_space_tensor, feed_dict = feed_dict )
     
     
     for idx, z_s in zip( range(len(z_rec_space)),z_rec_space ):
+      self.latent_store[ REC_Z_SPACE +"_dna" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_dna[idx], index = barcodes, columns=self.z_columns)
+      self.latent_store[ REC_Z_SPACE +"_rna" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_rna[idx], index = barcodes, columns=self.z_columns)
+      self.latent_store[ REC_Z_SPACE +"_meth" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_meth[idx], index = barcodes, columns=self.z_columns)
       self.latent_store[ REC_Z_SPACE + "/s%d/"%(idx)] = pd.DataFrame( z_s, index = barcodes, columns=self.z_columns)
 
     for idx, z_s in zip( range(len(z_gen_space)),z_gen_space ):
@@ -1112,81 +1125,103 @@ class TCGABatcher( object ):
     print "** VIZ Latent"
     self.latent_store.open()
   
-    mean_rec_z = self.latent_store[ REC_Z_SPACE + "/s%d/"%(0)]
+    #pdb.set_trace()
+    rec_z_dna = self.latent_store[ REC_Z_SPACE + "_dna" + "/s%d/"%(0)]
+    rec_z_rna = self.latent_store[ REC_Z_SPACE + "_rna" + "/s%d/"%(0)]
+    rec_z_meth = self.latent_store[ REC_Z_SPACE + "_meth" + "/s%d/"%(0)]
+    rec_z = self.latent_store[ REC_Z_SPACE + "/s%d/"%(0)]
     mean_gen_z = self.latent_store[ GEN_Z_SPACE + "/s%d/"%(0)]
 
-    f = pp.figure()
+    
+    mean_rec_z      = rec_z.mean().values
+    std_rec_z      = rec_z.std().values
+    mean_rec_z_dna  = rec_z_dna.mean().values
+    mean_rec_z_rna  = rec_z_rna.mean().values
+    mean_rec_z_meth = rec_z_meth.mean().values
+    std_rec_z_dna  = rec_z_dna.std().values
+    std_rec_z_rna  = rec_z_rna.std().values
+    std_rec_z_meth = rec_z_meth.std().values
     
     mean_gen_z_mean = mean_gen_z.mean().values
     mean_gen_z_std  = mean_gen_z.std().values
     
-    pp.plot( mean_gen_z_mean, "wo", lw=1 )
+    f = pp.figure()
+    pp.plot( mean_gen_z_mean, "ko", lw=1 )
     pp.plot( mean_gen_z_mean + 2*mean_gen_z_std, "k-", lw=0.5 )
     pp.plot( mean_gen_z_mean - 2*mean_gen_z_std, "k-", lw=0.5 )
     pp.fill_between( np.arange(len(mean_gen_z_mean)), mean_gen_z_mean - 2*mean_gen_z_std, mean_gen_z_mean + 2*mean_gen_z_std, color="k", alpha=0.5 )
-    
     sns.violinplot( x=None, y=None, data=mean_rec_z)
     pp.grid('on')
     pp.savefig( self.viz_filename_z_rec_on_z_gen, dpi = 300, fmt="png", bbox_inches = "tight")
-    ##
     pp.close(f)
+    
+    f = pp.figure()
+    z_idx = 0
+    I = np.argsort( rec_z.values[:,z_idx] )
+    pp.plot( rec_z_dna.values[I,z_idx], "go", lw=1 ) 
+    pp.plot( rec_z_rna.values[I,z_idx], "bo", lw=1 ) 
+    pp.plot( rec_z_meth.values[I,z_idx], "ro", lw=1 ) 
+    pp.plot( rec_z.values[I,z_idx], "k-", lw=1 ) 
+    
+    pp.savefig( self.viz_filename_z_rec_scatter, dpi = 300, fmt="png", bbox_inches = "tight")
+    pp.close()
     
     pp.close('all')
     
-    rna_predict_test  = self.latent_store[ RNA + "/test/predict"].values
-    rna_target_test   = self.latent_store[ RNA + "/test/target"].values
-    rna_predict_batch = self.latent_store[ RNA + "/batch/predict"].values
-    rna_target_batch  = self.latent_store[ RNA + "/batch/target"].values
-    
-    f = pp.figure()
-    pp.plot( rna_target_test.flatten(), rna_predict_test.flatten(), 'r.', alpha = 0.3)
-    pp.plot( rna_target_batch.flatten(), rna_predict_batch.flatten(), 'b.', alpha = 0.3)
-    pp.xlim(0,1)
-    pp.ylim(0,1)
-    pp.legend( ["Test", "Batch"])
-    pp.xlabel( "TARGET" ); pp.ylabel("PREDICTION")
-    pp.title("Test RNA Prediction")
-    pp.grid('on')
-    pp.savefig( self.viz_filename_rna_prediction_scatter, dpi = 300, fmt="png", bbox_inches = "tight")
-    ##
-    pp.close(f)
-    
-    aucs = []
-    rocs = []
-    
-    for channel_idx in range(self.n_dna_channels):
-      f = pp.figure()
-      pp.matshow(self.latent_store[ DNA + "/batch/target/c%d/"%channel_idx])
-      pp.title("Batch DNA Target")
-      pp.grid('on')
-      pp.savefig( self.viz_filename_dna_batch_target+"%d.png"%(channel_idx), dpi = 300, fmt="png", bbox_inches = "tight")
-      pp.close()  
-      f = pp.figure()
-      pp.matshow(self.latent_store[ DNA + "/batch/predict/c%d"%channel_idx])
-      pp.title("Batch DNA Prediction")
-      pp.grid('on')
-      pp.savefig( self.viz_filename_dna_batch_predict+"%d.png"%(channel_idx), dpi = 300, fmt="png", bbox_inches = "tight")
-      pp.close()    
-      
-      flattened_dna_predict = self.latent_store[ DNA + "/test/predict/c%d"%channel_idx].values.flatten()
-      flattened_dna_target = self.latent_store[ DNA + "/test/target/c%d"%channel_idx].values.flatten()
-      test_auc = roc_auc_score(flattened_dna_target,flattened_dna_predict)
-      aa,cc,dd = roc_curve(flattened_dna_target,flattened_dna_predict)
-      aucs.append(test_auc)
-      rocs.append([aa,cc,dd])
-      
-    f_auc = pp.figure()
-    s_auc = f_auc.add_subplot(111)
-    title="DNA AUC: "
-    for auc,roc in zip(aucs,rocs):
-      pp.plot( roc[0],roc[1], '-',lw=4, alpha=1)
-      title+= "%0.2f "%(auc)
-    pp.legend(["channel %d"%idx for idx in range(self.n_dna_channels)], loc="lower right")
-    pp.title(title )
-    pp.plot( [0,1],[0,1], 'k--')
-    pp.grid('on')
-    pp.savefig( self.viz_filename_dna_aucs, dpi = 300, fmt="png", bbox_inches = "tight")
-    pp.close()
+    # rna_predict_test  = self.latent_store[ RNA + "/test/predict"].values
+    # rna_target_test   = self.latent_store[ RNA + "/test/target"].values
+    # rna_predict_batch = self.latent_store[ RNA + "/batch/predict"].values
+    # rna_target_batch  = self.latent_store[ RNA + "/batch/target"].values
+    #
+    # f = pp.figure()
+    # pp.plot( rna_target_test.flatten(), rna_predict_test.flatten(), 'r.', alpha = 0.3)
+    # pp.plot( rna_target_batch.flatten(), rna_predict_batch.flatten(), 'b.', alpha = 0.3)
+    # pp.xlim(0,1)
+    # pp.ylim(0,1)
+    # pp.legend( ["Test", "Batch"])
+    # pp.xlabel( "TARGET" ); pp.ylabel("PREDICTION")
+    # pp.title("Test RNA Prediction")
+    # pp.grid('on')
+    # pp.savefig( self.viz_filename_rna_prediction_scatter, dpi = 300, fmt="png", bbox_inches = "tight")
+    # ##
+    # pp.close(f)
+    #
+    # aucs = []
+    # rocs = []
+    #
+    # for channel_idx in range(self.n_dna_channels):
+    #   f = pp.figure()
+    #   pp.matshow(self.latent_store[ DNA + "/batch/target/c%d/"%channel_idx])
+    #   pp.title("Batch DNA Target")
+    #   pp.grid('on')
+    #   pp.savefig( self.viz_filename_dna_batch_target+"%d.png"%(channel_idx), dpi = 300, fmt="png", bbox_inches = "tight")
+    #   pp.close()
+    #   f = pp.figure()
+    #   pp.matshow(self.latent_store[ DNA + "/batch/predict/c%d"%channel_idx])
+    #   pp.title("Batch DNA Prediction")
+    #   pp.grid('on')
+    #   pp.savefig( self.viz_filename_dna_batch_predict+"%d.png"%(channel_idx), dpi = 300, fmt="png", bbox_inches = "tight")
+    #   pp.close()
+    #
+    #   flattened_dna_predict = self.latent_store[ DNA + "/test/predict/c%d"%channel_idx].values.flatten()
+    #   flattened_dna_target = self.latent_store[ DNA + "/test/target/c%d"%channel_idx].values.flatten()
+    #   test_auc = roc_auc_score(flattened_dna_target,flattened_dna_predict)
+    #   aa,cc,dd = roc_curve(flattened_dna_target,flattened_dna_predict)
+    #   aucs.append(test_auc)
+    #   rocs.append([aa,cc,dd])
+    #
+    # f_auc = pp.figure()
+    # s_auc = f_auc.add_subplot(111)
+    # title="DNA AUC: "
+    # for auc,roc in zip(aucs,rocs):
+    #   pp.plot( roc[0],roc[1], '-',lw=4, alpha=1)
+    #   title+= "%0.2f "%(auc)
+    # pp.legend(["channel %d"%idx for idx in range(self.n_dna_channels)], loc="lower right")
+    # pp.title(title )
+    # pp.plot( [0,1],[0,1], 'k--')
+    # pp.grid('on')
+    # pp.savefig( self.viz_filename_dna_aucs, dpi = 300, fmt="png", bbox_inches = "tight")
+    # pp.close()
       
     self.latent_store.close()
     
