@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from tcga_encoder.models.layers import *
 from tcga_encoder.models.regularizers import *
-from tcga_encoder.models.algorithms import *
+from tcga_encoder.algorithms import *
 
 #from models.vae.tcga_models import *
 from tcga_encoder.utils.helpers import *
