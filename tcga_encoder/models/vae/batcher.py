@@ -1160,12 +1160,6 @@ class TCGABatcher( object ):
       #z_idx = 0
       I = np.argsort( rec_z.values[:,z_idx] )
       pp.subplot(2,5,z_idx+1)
-      pp.plot( rec_z_dna.values[I,z_idx], 'o-', \
-               color=self.source2mediumcolor[DNA],\
-               mec=self.source2darkcolor[DNA], mew=1, \
-               mfc=self.source2lightcolor[DNA], lw=2, \
-               ms = 6, \
-               label="z-DNA" )
       pp.plot( rec_z_rna.values[I,z_idx], 'o-', \
                color=self.source2mediumcolor[RNA],\
                mec=self.source2darkcolor[RNA], mew=1, \
@@ -1178,6 +1172,12 @@ class TCGABatcher( object ):
                mfc=self.source2lightcolor[METH], lw=2, \
                ms = 6, \
                label="z-METH" )
+      pp.plot( rec_z_dna.values[I,z_idx], 'o-', \
+               color=self.source2mediumcolor[DNA],\
+               mec=self.source2darkcolor[DNA], mew=1, \
+               mfc=self.source2lightcolor[DNA], lw=2, \
+               ms = 6, \
+               label="z-DNA" )
       pp.plot( rec_z.values[I,z_idx], 's-', \
                color='k',\
                mec='k', mew=1, \
