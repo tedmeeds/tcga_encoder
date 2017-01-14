@@ -1,6 +1,6 @@
 import tensorflow as tf
 #from tensorflow import *
-
+import pdb
 from tcga_encoder.models.layers import *
 from tcga_encoder.models.regularizers import *
 from tcga_encoder.algorithms import *
@@ -1132,6 +1132,11 @@ class TCGABatcher( object ):
     rec_z = self.latent_store[ REC_Z_SPACE + "/s%d/"%(0)]
     mean_gen_z = self.latent_store[ GEN_Z_SPACE + "/s%d/"%(0)]
 
+    obs = info_dict['test_feed_imputation']['observed_sources']
+    
+    dna_obs = obs[:,self.observed_source2idx[DNA]].astype(bool)
+    rna_obs = obs[:,self.observed_source2idx[RNA]].astype(bool)
+    meth_obs = obs[:,self.observed_source2idx[METH]].astype(bool)
     
     mean_rec_z      = rec_z.mean().values
     std_rec_z      = rec_z.std().values
@@ -1145,6 +1150,7 @@ class TCGABatcher( object ):
     mean_gen_z_mean = mean_gen_z.mean().values
     mean_gen_z_std  = mean_gen_z.std().values
     
+    #pdb.set_trace()
     f = pp.figure()
     pp.plot( mean_gen_z_mean, "ko", lw=1 )
     pp.plot( mean_gen_z_mean + 2*mean_gen_z_std, "k-", lw=0.5 )
@@ -1159,29 +1165,30 @@ class TCGABatcher( object ):
     for z_idx in range(self.n_z):
       #z_idx = 0
       I = np.argsort( rec_z.values[:,z_idx] )
+      x = np.arange(len(I))
       pp.subplot(2,5,z_idx+1)
-      pp.plot( rec_z_rna.values[I,z_idx], 'o', \
+      pp.plot( x[rna_obs[I]], rec_z_rna.values[I,z_idx][rna_obs[I]], 'o', \
                color=self.source2mediumcolor[RNA],\
                mec=self.source2darkcolor[RNA], mew=0.5, \
                mfc=self.source2lightcolor[RNA], lw=2, \
                ms = 4, \
                alpha=0.5,\
                label="z-RNA" )
-      pp.plot( rec_z_meth.values[I,z_idx], 'o', \
+      pp.plot( x[meth_obs[I]], rec_z_meth.values[I,z_idx][meth_obs[I]], 'o', \
                color=self.source2mediumcolor[METH],\
                mec=self.source2darkcolor[METH], mew=0.5, \
                mfc=self.source2lightcolor[METH], lw=2, \
                ms = 4, \
                alpha=0.5,\
                label="z-METH" )
-      pp.plot( rec_z_dna.values[I,z_idx], 'o', \
+      pp.plot( x[dna_obs[I]], rec_z_dna.values[I,z_idx][dna_obs[I]], 'o', \
                color=self.source2mediumcolor[DNA],\
                mec=self.source2darkcolor[DNA], mew=0.5, \
                mfc=self.source2lightcolor[DNA], lw=2, \
                ms = 4, \
                alpha=0.5,\
                label="z-DNA" )
-      pp.plot( rec_z.values[I,z_idx], 's', \
+      pp.plot( rec_z.values[I,z_idx], '.', \
                color='k',\
                mec='k', mew=0.5, \
                mfc='w', lw=2, \

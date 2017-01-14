@@ -37,21 +37,21 @@ algorithm:
   
   call_backs:
     - name: "test_fill"
-      rate: 2000
+      rate: 20
     - name: "save_model"
-      rate: 2000
-    # - name: "save_latent"
-    #   rate: 2000000
+      rate: 20
+    - name: "save_latent"
+      rate: 20
     - name: "batch_epoch"
-      rate: 2000
+      rate: 20
     - name: "test_epoch"
-      rate: 2000
+      rate: 20
     - name: "epoch_viz"
-      rate: 2000
-    # - name: "latent_viz"
-    #   rate: 4000
+      rate: 20
+    - name: "latent_viz"
+      rate: 20
     - name: "model_viz"
-      rate: 2000
+      rate: 20
     - name: "learning_decay"
       rate: 5000
     - name: "beta"
