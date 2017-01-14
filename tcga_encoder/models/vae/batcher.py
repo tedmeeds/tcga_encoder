@@ -1156,7 +1156,7 @@ class TCGABatcher( object ):
     pp.close(f)
     
     f = pp.figure()
-    for z_idx in range(self.n_z)
+    for z_idx in range(self.n_z):
       #z_idx = 0
       I = np.argsort( rec_z.values[:,z_idx] )
       pp.subplot(2,5,z_idx+1)
