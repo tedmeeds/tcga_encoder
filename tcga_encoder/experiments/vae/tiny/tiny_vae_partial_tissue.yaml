@@ -8,7 +8,7 @@ data:
   n_dna_channels: 1
   
 algorithm:
-  r1: 0.75
+  r1: 0.25
   r2: 0.05
   beta_init: 0.01
   beta_growth: 2.0

@@ -1627,7 +1627,7 @@ class TCGABatcher( object ):
     return 0.0005+0.999*X
     return X
     
-  def AddNoiseOld( self, X, rate1=0.01, rate2=0.001 ):
+  def AddNoise( self, X, rate1=0.01, rate2=0.001 ):
     #return X
     
     a,b = X.shape
@@ -1645,8 +1645,8 @@ class TCGABatcher( object ):
 
     return x.reshape((a,b))
     
-  def AddNoise( self, X, rate1, rate2 ):
-    #return X
+  def AddNoiseOld( self, X, rate1, rate2 ):
+    return X
     
     a,b = X.shape
 
