@@ -1452,7 +1452,8 @@ class TCGABatcher( object ):
         
       elif layer_name == DNA_INPUT or layer_name == DNA_TARGET:
         dna_data = np.zeros( (len(batch_barcodes), self.dna_dim) )
-        for idx,DNA_key in zip(range(len(self.DNA_keys)-1),self.DNA_keys[:-1]):
+        #for idx,DNA_key in zip(range(len(self.DNA_keys)-1),self.DNA_keys[:-1]):
+        for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
           batch_data = self.data_store[DNA_key].loc[ batch_barcodes ].fillna( 0 ).values
           if mode == "TEST" or mode == "VAL":
             dna_data += batch_data
@@ -1461,7 +1462,10 @@ class TCGABatcher( object ):
               dna_data += self.AddNoise( batch_data, self.r1, self.r2 )
           #
           #dna_data.append(batch_data.fillna( 0 ).values)
+        
         batch[ layer_name ] = np.minimum(1.0,dna_data)# np.array( dna_data )
+        #pdb.set_trace()
+        #print "DNA batch count: %d"%(batch[ layer_name ].sum())
         
       elif layer_name == METH_INPUT or layer_name == METH_TARGET:
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
