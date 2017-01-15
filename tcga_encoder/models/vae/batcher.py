@@ -1166,7 +1166,7 @@ class TCGABatcher( object ):
       #z_idx = 0
       I = np.argsort( rec_z.values[:,z_idx] )
       x = np.arange(len(I))
-      pp.subplot(2,5,z_idx+1)
+      pp.subplot(4,5,z_idx+1)
       pp.plot( x[rna_obs[I]], rec_z_rna.values[I,z_idx][rna_obs[I]], 'o', \
                color=self.source2mediumcolor[RNA],\
                mec=self.source2darkcolor[RNA], mew=0.5, \

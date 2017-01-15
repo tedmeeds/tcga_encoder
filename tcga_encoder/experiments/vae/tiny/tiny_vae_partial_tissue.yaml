@@ -64,7 +64,7 @@ architecture:
   kind: vanilla_vae
   network: !!python/name:tcga_encoder.models.networks.VanillaVariationalAutoEncoder
   variables:
-    n_z: 10
+    n_z: 20
     min_variance: 0.1
     max_variance: 1000.0
     n_rna_units: 20
