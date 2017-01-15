@@ -1,6 +1,6 @@
 logging:
   location: "results/tcga_vae_post_recomb/"
-  experiment: "tiny_vae_z10_d_partial_tissue"
+  experiment: "tiny_vae_z20_d_partial_tissue"
     
 data: 
   location: "data/broad_processed_post_recomb/20160128/pan_tiny_multi_set"
