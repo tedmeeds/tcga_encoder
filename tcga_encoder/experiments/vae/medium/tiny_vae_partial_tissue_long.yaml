@@ -1,6 +1,6 @@
 logging:
   location: "results/tcga_vae_post_recomb/"
-  experiment: "medium_vae_z20_d_partial_tissue"
+  experiment: "medium_vae_z20_d_partial_tissue_long"
     
 data: 
   location: "data/broad_processed_post_recomb/20160128/pan_tiny_multi_set"
@@ -37,19 +37,19 @@ algorithm:
   
   call_backs:
     - name: "test_fill"
-      rate: 10
+      rate: 1000
     - name: "save_model"
-      rate: 10
+      rate: 1000
     - name: "save_latent"
-      rate: 10
+      rate: 1000
     - name: "batch_epoch"
-      rate: 10
+      rate: 1000
     - name: "test_epoch"
-      rate: 10
+      rate: 1000
     - name: "epoch_viz"
-      rate: 10
+      rate: 1000
     - name: "latent_viz"
-      rate: 10
+      rate: 1000
     - name: "model_viz"
       rate: 1000
     - name: "learning_decay"

@@ -1,9 +1,9 @@
 logging:
   location: "results/tcga_vae_post_recomb/"
-  experiment: "medium_vae_z20_d_partial_tissue"
+  experiment: "medium_vae_z20_e_partial_tissue_dna_out_long"
     
 data: 
-  location: "data/broad_processed_post_recomb/20160128/pan_tiny_multi_set"
+  location: "data/broad_processed_post_recomb/20160128/pan_medium_multi_set"
   name_of_store: "data"
   n_dna_channels: 1
   
@@ -33,23 +33,23 @@ algorithm:
   min_learning_rate: 1e-8
   batch_size: 200
   optimizer: !!python/name:tensorflow.python.training.training.AdamOptimizer
-  batcher: !!python/name:tcga_encoder.models.vae.batcher.TCGABatcher
+  batcher: !!python/name:tcga_encoder.models.vae.batcher_dna_out.TCGABatcher
   
   call_backs:
     - name: "test_fill"
-      rate: 10
+      rate: 1000
     - name: "save_model"
-      rate: 10
+      rate: 1000
     - name: "save_latent"
-      rate: 10
+      rate: 1000
     - name: "batch_epoch"
-      rate: 10
+      rate: 1000
     - name: "test_epoch"
-      rate: 10
+      rate: 1000
     - name: "epoch_viz"
-      rate: 10
+      rate: 1000
     - name: "latent_viz"
-      rate: 10
+      rate: 1000
     - name: "model_viz"
       rate: 1000
     - name: "learning_decay"
@@ -69,7 +69,7 @@ architecture:
     max_variance: 1000.0
     n_rna_units: 100
     n_meth_units: 100
-    n_dna_units: 20
+    n_dna_units: 10
     n_gen_units_shared: 100
     rec_l1:  0.0
     rec_l1_dna: 0.0
@@ -78,7 +78,7 @@ architecture:
     gen_l1:  0.0
     gen_l2:  0.0
     n_dna_channels: 1
-    n_input_sources: 3
+    n_input_sources: 2
   
   keep_rates:
     - layer: "RNA_dropout"
@@ -90,6 +90,7 @@ architecture:
   
   sources: ["RNA","DNA","METH"]
   input_sources: ["RNA","DNA","METH"]
+  product_sources: ["RNA","METH"]
   target_sources: ["RNA","DNA","METH"]
   
   # inter_z_kl_penalty: 0.0
@@ -113,13 +114,13 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.DataLayer
         shape: ["n_input_sources"]
         
-      - name: "INPUT_missing"
-        layer: !!python/name:tcga_encoder.models.layers.DataLayer
-        shape: ["n_input_sources"]
+      # - name: "INPUT_missing"
+      #   layer: !!python/name:tcga_encoder.models.layers.DataLayer
+      #   shape: ["n_input_sources"]
         
-      - name: "INPUT_weighted_observations"
-        layer: !!python/name:tcga_encoder.models.layers.DataLayer
-        shape: ["n_input_sources"]
+      # - name: "INPUT_weighted_observations"
+      #   layer: !!python/name:tcga_encoder.models.layers.DataLayer
+      #   shape: ["n_input_sources"]
                 
       - name: "RNA_input"
         layer: !!python/name:tcga_encoder.models.layers.DataLayer
@@ -154,7 +155,7 @@ architecture:
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["RNA_dropout"]
         shape: ["n_rna_units"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh
         biases: False
         
       - name: "rec_hidden_dna"
@@ -162,7 +163,7 @@ architecture:
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["DNA_input"]
         shape: ["n_dna_units"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh
         biases: False
 
       - name: "rec_hidden_meth"
@@ -170,7 +171,7 @@ architecture:
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["METH_dropout"]
         shape: ["n_meth_units"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu     
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh     
         biases: False   
         
       # - name: "rec_hidden_shared"
@@ -182,23 +183,23 @@ architecture:
 
       - name: "rec_z_space_rna"
         layer: !!python/name:tcga_encoder.models.layers.GaussianModelLayer
-        inputs: ["rec_hidden_rna"]
+        inputs: ["rec_hidden_rna","rec_hidden_dna"]
         shape: ["n_z"]
         min_variance: "min_variance"
         max_variance: "max_variance"
         biases: False
 
-      - name: "rec_z_space_dna"
-        layer: !!python/name:tcga_encoder.models.layers.GaussianModelLayer
-        inputs: ["rec_hidden_dna"]
-        shape: ["n_z"]
-        min_variance: "min_variance"
-        max_variance: "max_variance"
-        biases: False
+      # - name: "rec_z_space_dna"
+      #   layer: !!python/name:tcga_encoder.models.layers.GaussianModelLayer
+      #   inputs: ["rec_hidden_dna"]
+      #   shape: ["n_z"]
+      #   min_variance: "min_variance"
+      #   max_variance: "max_variance"
+      #   biases: False
 
       - name: "rec_z_space_meth"
         layer: !!python/name:tcga_encoder.models.layers.GaussianModelLayer
-        inputs: ["rec_hidden_meth"]
+        inputs: ["rec_hidden_meth","rec_hidden_dna"]
         shape: ["n_z"]
         min_variance: "min_variance"
         max_variance: "max_variance"
@@ -207,9 +208,9 @@ architecture:
                                       
       - name: "rec_z_space"
         layer: !!python/name:tcga_encoder.models.layers.GaussianProductLayer
-        inputs: ["rec_z_space_rna","rec_z_space_dna", "rec_z_space_meth","INPUT_observations"]
+        inputs: ["rec_z_space_rna", "rec_z_space_meth","INPUT_observations"]
         shape: ["n_z"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh
         
       - name: "rec_z"
         layer: !!python/name:tcga_encoder.models.layers.GeneratedDataLayer
@@ -237,7 +238,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         inputs: ["rec_z"]
         shape: ["n_gen_units_shared"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh
         biases: False
       # - name: "gen_hidden2"
       #   layer: !!python/name:models.layers.HiddenLayer
@@ -312,9 +313,9 @@ architecture:
     - reg: !!python/name:tcga_encoder.models.regularizers.L2Regularizer
       layer: "gen_hidden_shared"
       lambda: "gen_l2"
-    - reg: !!python/name:tcga_encoder.models.regularizers.L1Regularizer
-      layer: "rec_z_space_dna"
-      lambda: "rec_l1_dna"
+    # - reg: !!python/name:tcga_encoder.models.regularizers.L1Regularizer
+    #   layer: "rec_z_space_dna"
+    #   lambda: "rec_l1_dna"
     # - reg: !!python/name:models.regularizers.L2Regularizer
     #   layer: "rec_hidden2"
     #   lambda: "rec_l2"

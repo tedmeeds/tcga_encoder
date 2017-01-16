@@ -667,7 +667,7 @@ class TCGABatcher( object ):
     meth_expectation_tensor = self.network.GetLayer( "gen_meth_space" ).expectation
     
     dna_data = np.zeros( (len(barcodes),self.dna_dim) )
-    for idx,DNA_key in zip(range(len(self.DNA_keys)-1),self.DNA_keys[:-1]):
+    for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
       batch_data = self.data_store[DNA_key].loc[ barcodes ].fillna( 0 ).values
       dna_data += batch_data
       
@@ -774,7 +774,8 @@ class TCGABatcher( object ):
       
       meth_expectation[:,drop_meth_ids]   = tensor2fill_eval[4][:,drop_meth_ids]
       meth_loglikelihood[:,drop_meth_ids] = tensor2fill_eval[5][:,drop_meth_ids]
-          
+    
+    #pdb.set_trace()      
     self.WriteRunFillExpectation( epoch, RNA, barcodes, self.rna_genes, rna_observed_query, rna_expectation, self.data_store[self.RNA_key].loc[ barcodes ].values, mode )
     self.WriteRunFillExpectation( epoch, METH, barcodes, self.meth_genes, meth_observed_query, meth_expectation, self.data_store[self.METH_key].loc[ barcodes ].values, mode )
     self.WriteRunFillExpectation( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
