@@ -154,7 +154,7 @@ architecture:
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["RNA_dropout"]
         shape: ["n_rna_units"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh
         biases: False
         
       - name: "rec_hidden_dna"
@@ -162,7 +162,7 @@ architecture:
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["DNA_input"]
         shape: ["n_dna_units"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh
         biases: False
 
       - name: "rec_hidden_meth"
@@ -170,7 +170,7 @@ architecture:
         #inputs: ["RNA_input","DNA_input","METH_input","INPUT_weighted_observations"]
         inputs: ["METH_dropout"]
         shape: ["n_meth_units"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu     
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh     
         biases: False   
         
       # - name: "rec_hidden_shared"
@@ -209,7 +209,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.GaussianProductLayer
         inputs: ["rec_z_space_rna","rec_z_space_dna", "rec_z_space_meth","INPUT_observations"]
         shape: ["n_z"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh
         
       - name: "rec_z"
         layer: !!python/name:tcga_encoder.models.layers.GeneratedDataLayer
@@ -237,7 +237,7 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.HiddenLayer
         inputs: ["rec_z"]
         shape: ["n_gen_units_shared"]
-        transfer: !!python/name:tensorflow.python.ops.nn.relu
+        transfer: !!python/name:tensorflow.python.ops.nn.tanh
         biases: False
       # - name: "gen_hidden2"
       #   layer: !!python/name:models.layers.HiddenLayer
