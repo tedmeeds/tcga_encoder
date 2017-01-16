@@ -1460,7 +1460,7 @@ class TCGABatcher( object ):
         
         nbr_observed = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool).sum()
         
-        print "-- DNA observed = %d"%(nbr_observed)
+        #print "-- DNA observed = %d"%(nbr_observed)
         
       elif layer_name == DNA_INPUT or layer_name == DNA_TARGET:
         dna_data = np.zeros( (len(batch_barcodes), self.dna_dim) )
