@@ -1479,11 +1479,18 @@ class TCGABatcher( object ):
         #pdb.set_trace()
         #print "DNA batch count: %d"%(batch[ layer_name ].sum())
         
-      elif layer_name == METH_INPUT or layer_name == METH_TARGET:
+      elif layer_name == METH_INPUT :
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
-        batch[ layer_name ] = batch_data.fillna( 0 ).values
-
+        batch[ layer_name ] = self.NormalizeMethInput( batch_data.fillna( 0 ).values )
+        batch[ layer_name ][nans] = 0
+        
+      elif layer_name == METH_TARGET:
+        batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
+        nans = np.isnan( batch_data.values )
+        batch[ layer_name ] = self.NormalizeMethTarget( batch_data.fillna( 0 ).values )
+        batch[ layer_name ][nans] = 0
+        
       elif layer_name == METH_TARGET_MASK:
         #batch_data = self.store[self.RNA_key].loc[ batch_barcodes ]
         batch[ layer_name ] = batch_observed[:,self.observed_source2idx[ METH ]].astype(bool)
@@ -1642,13 +1649,22 @@ class TCGABatcher( object ):
         
     return batch            
     
+  def NormalizeMethInput( self, X ):
+    #return X
+    return 2*X-1.0
+
+  def NormalizeMethTarget( self, X ):
+    return 0.0001+0.9999*X
+    return X
+
   def NormalizeRnaInput( self, X ):
     #return X
     return 2*X-1.0
 
   def NormalizeRnaTarget( self, X ):
-    return 0.0005+0.999*X
+    return 0.0001+0.9999*X
     return X
+
     
   def AddNoise( self, X, rate1=0.01, rate2=0.001 ):
     #return X
