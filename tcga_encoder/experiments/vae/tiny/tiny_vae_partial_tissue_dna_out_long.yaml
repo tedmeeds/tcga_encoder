@@ -24,7 +24,7 @@ algorithm:
   include_validation: 1
   include_brca: 0
   train_mode: "all"
-  epochs: 20000
+  epochs: 40000
   n_train_full: 2000
   n_train_non_full: 3000
   split_seed: 0
@@ -37,21 +37,21 @@ algorithm:
   
   call_backs:
     - name: "test_fill"
-      rate: 1000
+      rate: 4000
     - name: "save_model"
-      rate: 1000
+      rate: 4000
     - name: "save_latent"
-      rate: 1000
+      rate: 4000
     - name: "batch_epoch"
-      rate: 1000
+      rate: 4000
     - name: "test_epoch"
-      rate: 1000
+      rate: 4000
     - name: "epoch_viz"
-      rate: 1000
+      rate: 4000
     - name: "latent_viz"
-      rate: 1000
+      rate: 4000
     - name: "model_viz"
-      rate: 1000
+      rate: 4000
     - name: "learning_decay"
       rate: 5000
     - name: "beta"
