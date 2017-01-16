@@ -15,22 +15,28 @@ pd.set_option('display.width', 1000)
 
 import tensorflow as tf
 
-#load_data_from_dict
+from tcga_encoder.models.svd.batcher_dna_out import *
 
-#from tensorflow import *
+def train( algo_dict, data_dict, logging_dict, results_dict ):
+  # -------------------------------------------------- #
+  # SET-UP NETWORK'S PARAMS                            #
+  # -------------------------------------------------- #
+  cb_info = OrderedDict()
+  batcher = algo_dict[BATCHER]
 
+  train_feed_imputation = batcher.TrainBatch()
+  test_feed_imputation = batcher.TestBatch()
+  val_feed_imputation = batcher.ValBatch()
+  
+  cb_info[TEST_FEED_IMPUTATION] = test_feed_imputation
+  cb_info[VAL_FEED_IMPUTATION] = val_feed_imputation
+  cb_info[TRAIN_FEED_IMPUTATION] = train_feed_imputation
 
-
-#from models.layers import *
-#from models.regularizers import *
-#from models.algorithms import *
-
-#from models.vae.tcga_models import *
-#from utils.utils import *
-#from data.load_datasets_from_broad import load_sources
-
-#from utils.image_utils import *
-
+  # -------------------------------------------------- #
+  # TRAIN                                              #
+  # -------------------------------------------------- #
+  batcher.Train( train_feed_imputation )
+  batcher.TestFill2( cb_info )
 
 def add_variables( var_dict, data_dict ):
   # add very specific numbers:
@@ -71,7 +77,7 @@ if __name__ == "__main__":
   logging_dict[SAVEDIR] = os.path.join( HOME_DIR, os.path.join( logging_dict[LOCATION], logging_dict[EXPERIMENT] ) )
   # #networks = load_architectures( y[ARCHITECTURES], y[DATA] )
   #add_variables( arch_dict[VARIABLES], data_dict )
-  network = load_architecture( arch_dict, data_dict )
+  #network = load_architecture( arch_dict, data_dict )
   network_name = arch_dict[NAME]
 
   #
@@ -81,12 +87,12 @@ if __name__ == "__main__":
 
 
   algo_dict[BATCHER].network_name   = network_name
-  algo_dict[BATCHER].network        = network
+  #algo_dict[BATCHER].network        = network
   
   sess = tf.InteractiveSession()
   
   results_dict = {}
-  train( sess, network, algo_dict, data_dict, logging_dict, results_dict )
+  train( algo_dict, data_dict, logging_dict, results_dict )
 
   batcher = algo_dict[BATCHER]
   model_store   = algo_dict[BATCHER].model_store
@@ -117,6 +123,13 @@ if __name__ == "__main__":
   #dna_3_train  = data_store["/DNA/channel/3"].loc[ batcher.train_barcodes ]
   meth_train   = data_store["/METH/FAIR"].loc[ batcher.train_barcodes ]
   tissue_train = data_store["/CLINICAL/TISSUE"].loc[ batcher.train_barcodes ]
+  
+  epoch_store.open()
+  print "TEST:"
+  print epoch_store["Test_Error"]
+  print "VAL:"
+  print epoch_store["Val_Error"]
+  
   
   # other_barcodes = np.setdiff1d( data_store["/RNA/FAIR"].index, np.union1d(batcher.train_barcodes,batcher.test_barcodes))
   # rna_other    = data_store["/RNA/FAIR"].loc[ other_barcodes ]
