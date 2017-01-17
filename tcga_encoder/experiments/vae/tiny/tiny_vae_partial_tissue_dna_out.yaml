@@ -1,6 +1,6 @@
 logging:
   location: "results/tcga_vae_post_recomb/"
-  experiment: "tiny_vae_z20_e_partial_tissue_dna_out"
+  experiment: "tiny_vae_z20_e_partial_tissue_dna_out_survival"
     
 data: 
   location: "data/broad_processed_post_recomb/20160128/pan_tiny_multi_set"
@@ -24,11 +24,11 @@ algorithm:
   include_validation: 1
   include_brca: 0
   train_mode: "all"
-  epochs: 20000
+  epochs: 5000
   n_train_full: 2000
   n_train_non_full: 3000
   split_seed: 0
-  learning_rate: 0.005
+  learning_rate: 0.001
   learning_rate_decay: 0.5
   min_learning_rate: 1e-8
   batch_size: 200
