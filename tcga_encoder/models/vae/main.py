@@ -170,7 +170,9 @@ if __name__ == "__main__":
       Z = disease_survival[z_columns].values
       if len(T)>0:
         kmf.fit(T, event_observed=E, label = disease)
-        ax=kmf.plot(ax=ax)
+        ax=kmf.plot(ax=ax, ci_force_lines=True)
+      else:
+        continue
       
       kmeans = KMeans(n_clusters=K ).fit(Z)
       for k in range(K):
@@ -181,6 +183,48 @@ if __name__ == "__main__":
         if len(Ti)>0:
           kmf.fit(Ti, event_observed=Ei, label = disease + "_k=%d"%k)
           ax=kmf.plot(ax=ax)
+          
+  def kmf_quantiles( predict_survival, diseases = ["lgg"], z=0, quants = [0.0,0.1,0.9,1.0] ):
+
+    z_columns = ["z%d"%z]
+
+    for disease in diseases: #batcher.tissue_names:
+      f = pp.figure()
+      kmf = KaplanMeierFitter()
+      ax = f.add_subplot(111)
+      
+      disease_query = predict_survival["disease"].values == disease
+      disease_survival = predict_survival[ disease_query ]
+
+      
+      T = disease_survival["T"].values
+      E = disease_survival["E"].values
+      Z = np.squeeze( disease_survival[z_columns].values )
+      print Z
+      
+      iZ = np.argsort(Z)
+      nz = len(iZ)
+      Is = []
+      for a,b in zip(quants[:-1],quants[1:]):
+        Is.append( iZ[ a*nz : b*nz ] )
+        
+      if len(T)>0:
+        kmf.fit(T, event_observed=E, label = disease)
+        ax=kmf.plot(ax=ax, ci_force_lines=True)
+      else:
+        continue
+      
+      #kmeans = KMeans(n_clusters=K ).fit(Z)
+      for k,I in zip(range(len(Is)),Is):
+        #I = pp.find( kmeans.labels_==k)
+        Ti=T[I]
+        Ei=E[I]
+      
+        if len(Ti)>0:
+          kmf.fit(Ti, event_observed=Ei, label = disease + "_q=%d"%k)
+          ax=kmf.plot(ax=ax)
+  for disease in batcher.tissue_names:
+    kmf_split( predict_survival, K=3, diseases = [disease], Zs = [2] )
   pp.show()
      
   # other_barcodes = np.setdiff1d( data_store["/RNA/FAIR"].index, np.union1d(batcher.train_barcodes,batcher.test_barcodes))
