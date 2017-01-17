@@ -1417,7 +1417,8 @@ class BetaModelLayer(HiddenLayer):
     self.prior_a     = self.model[PRIOR][0]
     self.prior_b     = self.model[PRIOR][1]
     
-    self.expectation = (self.a + self.prior_a)/(self.b + self.prior_b + self.a + self.prior_a)
+    self.expectation = (self.a + self.prior_a -1.0)/(self.b + self.prior_b + self.a + self.prior_a - 2.0)
+    #self.expectation = (self.a + self.prior_a)/(self.b + self.prior_b + self.a + self.prior_a)
     self.name             = name
     self.tensor           = [self.a, self.b]
     

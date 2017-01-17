@@ -255,7 +255,8 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.BetaModelLayer
         inputs: ["gen_hidden_shared","TISSUE_input"]
         shape: ["rna_dim"]
-        prior: [0.001,0.001]
+        prior: [1.001,1.001]
+        #prior: [0.001,0.001]
         biases: False
         
       - name: "RNA_target"
@@ -275,7 +276,8 @@ architecture:
         layer: !!python/name:tcga_encoder.models.layers.BetaModelLayer
         inputs: ["gen_hidden_shared"]
         shape: ["meth_dim"]
-        prior: [0.001,0.001]
+        prior: [1.001,1.001]
+        #prior: [0.001,0.001]
         biases: False
         
       - name: "DNA_target"
