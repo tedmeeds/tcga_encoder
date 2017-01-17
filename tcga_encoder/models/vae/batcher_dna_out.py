@@ -1168,7 +1168,7 @@ class TCGABatcher( object ):
     pp.savefig( self.viz_filename_z_rec_on_z_gen, dpi = 300, fmt="png", bbox_inches = "tight")
     pp.close(f)
     
-    if self.n_z = 2:
+    if self.n_z == 2:
       sp_a = 1
       sp_b = 2
     elif self.n_z < 10:
