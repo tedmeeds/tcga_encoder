@@ -1168,12 +1168,35 @@ class TCGABatcher( object ):
     pp.savefig( self.viz_filename_z_rec_on_z_gen, dpi = 300, fmt="png", bbox_inches = "tight")
     pp.close(f)
     
-    f = pp.figure()
-    for z_idx in range(self.n_z):
+    if self.n_z = 2:
+      sp_a = 1
+      sp_b = 2
+    elif self.n_z < 10:
+      sp_a = 3
+      sp_b = 3
+    elif self.n_z == 10:
+      sp_a = 2
+      sp_b = 5
+    elif self.n_z <=16:
+      sp_a = 4
+      sp_b = 4
+    elif self.n_Z <= 25:
+      sp_a = 5
+      sp_b = 5
+    elif self.n_Z <= 36:
+      sp_a = 6
+      sp_b = 6
+    elif self.n_Z <= 80:
+      sp_a = 8
+      sp_b = 10
+    max_figs = sp_a*sp_b
+    
+    f = pp.figure(figsize=(14,12))
+    for z_idx in range( min(max_figs,self.n_z) ):
       #z_idx = 0
       I = np.argsort( rec_z.values[:,z_idx] )
       x = np.arange(len(I))
-      pp.subplot(4,5,z_idx+1)
+      pp.subplot(sp_a,sp_b,z_idx+1)
       pp.plot( x[rna_obs[I]], rec_z_rna.values[I,z_idx][rna_obs[I]], 'o', \
                color=self.source2mediumcolor[RNA],\
                mec=self.source2darkcolor[RNA], mew=0.5, \
