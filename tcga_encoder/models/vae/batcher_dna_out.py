@@ -1180,13 +1180,13 @@ class TCGABatcher( object ):
     elif self.n_z <=16:
       sp_a = 4
       sp_b = 4
-    elif self.n_Z <= 25:
+    elif self.n_z <= 25:
       sp_a = 5
       sp_b = 5
-    elif self.n_Z <= 36:
+    elif self.n_z <= 36:
       sp_a = 6
       sp_b = 6
-    elif self.n_Z <= 80:
+    elif self.n_z <= 80:
       sp_a = 8
       sp_b = 10
     max_figs = sp_a*sp_b
