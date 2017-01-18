@@ -1520,7 +1520,7 @@ class TCGABatcher( object ):
           batch_data_values = batch_data.values
         batch[ layer_name ] = self.NormalizeMethInput( batch_data_values )
         batch[ layer_name ][nans] = 0
-        pdb.set_trace()
+        #pdb.set_trace()
         
       elif layer_name == METH_TARGET:
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
