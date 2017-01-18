@@ -1459,7 +1459,8 @@ class TCGABatcher( object ):
       if layer_name == RNA_INPUT:
         batch_data = self.data_store[self.RNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
-        batch[ layer_name ] = self.NormalizeRnaInput( batch_data.fillna( 0 ).values )
+        batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.5 )
+        batch[ layer_name ] = self.NormalizeRnaInput( batch_data_values )
         batch[ layer_name ][nans] = 0
         #pdb.set_trace()
         
@@ -1494,8 +1495,9 @@ class TCGABatcher( object ):
           if mode == "TEST" or mode == "VAL":
             dna_data += batch_data
           else:
-            if layer_name == DNA_TARGET or layer_name == DNA_INPUT:
-              dna_data = self.AddNoise( batch_data, self.r1, self.r2 )
+            #if layer_name == DNA_TARGET or layer_name == DNA_INPUT:
+            if layer_name == DNA_INPUT:
+              dna_data = self.AddDnaNoise( batch_data, rate = 0.5 )
           #
           #dna_data.append(batch_data.fillna( 0 ).values)
         
@@ -1506,7 +1508,10 @@ class TCGABatcher( object ):
       elif layer_name == METH_INPUT :
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
-        batch[ layer_name ] = self.NormalizeMethInput( batch_data.fillna( 0 ).values )
+
+        batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.5 )
+        #batch_data.values = self.AddMethNoise( batch_data.values, rate = 0.5 )
+        batch[ layer_name ] = self.NormalizeMethInput( batch_data_values )
         batch[ layer_name ][nans] = 0
         
       elif layer_name == METH_TARGET:
@@ -1689,6 +1694,64 @@ class TCGABatcher( object ):
     return 0.0001+0.9999*X
     return X
 
+  def AddMethNoise( self, X, rate=0.5 ):
+    #return X
+    
+    a,b = X.shape
+
+    x = X.flatten()
+
+    #I = 
+    #I=pp.find(x>0)
+    #J=pp.find(x==0)
+
+    r1 = np.random.rand(len(x)) < rate
+    #r2 = np.random.rand(len(J)) < rate2
+
+    x[r1]=1.0-x[r1]
+    #x[J[r2]]=1
+
+    return x.reshape((a,b))
+
+
+  def AddRnaNoise( self, X, rate=0.5 ):
+    #return X
+    
+    a,b = X.shape
+
+    x = X.flatten()
+
+    #I = 
+    #I=pp.find(x>0)
+    #J=pp.find(x==0)
+
+    r1 = np.random.rand(len(x)) < rate
+    #r2 = np.random.rand(len(J)) < rate2
+
+    x[r1]=1.0-x[r1]
+    #x[J[r2]]=1
+
+    return x.reshape((a,b))
+    
+  def AddDnaNoise( self, X, rate=0.5 ):
+    #return X
+    
+    a,b = X.shape
+
+    x = X.flatten()
+
+    #I = 
+    I=pp.find(x>0)
+    #J=pp.find(x==0)
+
+    r1 = np.random.rand(len(I)) < rate
+    #r2 = np.random.rand(len(J)) < rate2
+
+    x[I[r1]]=0
+    #x[J[r2]]=1
+
+    return x.reshape((a,b))
+    
     
   def AddNoise( self, X, rate1=0.01, rate2=0.001 ):
     #return X

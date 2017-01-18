@@ -1,6 +1,6 @@
 logging:
   location: "results/tcga_vae_post_recomb/"
-  experiment: "tiny_vae_z20_e_partial_tissue_dna_out"
+  experiment: "tiny_svd_z30_dna_out"
     
 data: 
   location: "data/broad_processed_post_recomb/20160128/pan_tiny_multi_set"
@@ -64,7 +64,7 @@ architecture:
   kind: vanilla_vae
   #network: !!python/name:tcga_encoder.models.networks.VanillaVariationalAutoEncoder
   variables:
-    n_z: 20
+    n_z: 30
     min_variance: 0.1
     max_variance: 1000.0
     n_rna_units: 50
