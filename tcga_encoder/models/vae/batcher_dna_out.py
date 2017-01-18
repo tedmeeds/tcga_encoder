@@ -1459,7 +1459,11 @@ class TCGABatcher( object ):
       if layer_name == RNA_INPUT:
         batch_data = self.data_store[self.RNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
-        batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.5 )
+        if mode == "BATCH":
+          batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.5 )
+        else:
+          batch_data_values = batch_data.values
+          
         batch[ layer_name ] = self.NormalizeRnaInput( batch_data_values )
         batch[ layer_name ][nans] = 0
         #pdb.set_trace()
@@ -1509,8 +1513,10 @@ class TCGABatcher( object ):
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
 
-        batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.5 )
-        #batch_data.values = self.AddMethNoise( batch_data.values, rate = 0.5 )
+        if mode == "BATCH":
+          batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.5 )
+        else:
+          batch_data_values = batch_data.values
         batch[ layer_name ] = self.NormalizeMethInput( batch_data_values )
         batch[ layer_name ][nans] = 0
         
