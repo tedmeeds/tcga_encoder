@@ -1500,7 +1500,7 @@ class TCGABatcher( object ):
             dna_data += batch_data
           else:
             #if layer_name == DNA_TARGET or layer_name == DNA_INPUT:
-            if layer_name == DNA_INPUT:
+            if layer_name == DNA_TARGET:
               dna_data = self.AddDnaNoise( batch_data, rate = 0.1 )
           #
           #dna_data.append(batch_data.fillna( 0 ).values)
