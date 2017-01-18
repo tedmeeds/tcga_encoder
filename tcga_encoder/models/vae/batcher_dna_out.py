@@ -1459,10 +1459,9 @@ class TCGABatcher( object ):
       if layer_name == RNA_INPUT:
         batch_data = self.data_store[self.RNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
+        batch_data_values = batch_data.values
         if mode == "BATCH":
-          batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.1 )
-        else:
-          batch_data_values = batch_data.values
+         batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.1 )
           
         batch[ layer_name ] = self.NormalizeRnaInput( batch_data_values )
         batch[ layer_name ][nans] = 0
@@ -1471,6 +1470,11 @@ class TCGABatcher( object ):
       elif layer_name == RNA_TARGET:
         batch_data = self.data_store[self.RNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
+        
+        batch_data_values = batch_data.values
+        # if mode == "BATCH":
+        #   batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.1 )
+          
         batch[ layer_name ] = self.NormalizeRnaTarget( batch_data.fillna( 0 ).values )
         batch[ layer_name ][nans] = 0
         
@@ -1513,11 +1517,10 @@ class TCGABatcher( object ):
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
 
+        batch_data_values = batch_data.values
         if mode == "BATCH":
-          batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.1 )
+         batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.1 )
           
-        else:
-          batch_data_values = batch_data.values
         batch[ layer_name ] = self.NormalizeMethInput( batch_data_values )
         batch[ layer_name ][nans] = 0
         #pdb.set_trace()
@@ -1525,7 +1528,11 @@ class TCGABatcher( object ):
       elif layer_name == METH_TARGET:
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
-        batch[ layer_name ] = self.NormalizeMethTarget( batch_data.fillna( 0 ).values )
+        batch_data_values = batch_data.values
+        # if mode == "BATCH":
+        #   batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.1 )
+          
+        batch[ layer_name ] = self.NormalizeMethTarget( batch_data_values )
         batch[ layer_name ][nans] = 0
         
       elif layer_name == METH_TARGET_MASK:
@@ -1687,7 +1694,7 @@ class TCGABatcher( object ):
     return batch            
     
   def NormalizeMethInput( self, X ):
-    #return X
+    return X
     return 2*X-1.0
 
   def NormalizeMethTarget( self, X ):
@@ -1695,7 +1702,7 @@ class TCGABatcher( object ):
     return X
 
   def NormalizeRnaInput( self, X ):
-    #return X
+    return X
     return 2*X-1.0
 
   def NormalizeRnaTarget( self, X ):
