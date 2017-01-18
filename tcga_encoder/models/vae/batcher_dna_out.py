@@ -1460,7 +1460,7 @@ class TCGABatcher( object ):
         batch_data = self.data_store[self.RNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
         if mode == "BATCH":
-          batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.5 )
+          batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.1 )
         else:
           batch_data_values = batch_data.values
           
@@ -1501,7 +1501,7 @@ class TCGABatcher( object ):
           else:
             #if layer_name == DNA_TARGET or layer_name == DNA_INPUT:
             if layer_name == DNA_INPUT:
-              dna_data = self.AddDnaNoise( batch_data, rate = 0.5 )
+              dna_data = self.AddDnaNoise( batch_data, rate = 0.1 )
           #
           #dna_data.append(batch_data.fillna( 0 ).values)
         
@@ -1514,11 +1514,13 @@ class TCGABatcher( object ):
         nans = np.isnan( batch_data.values )
 
         if mode == "BATCH":
-          batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.5 )
+          batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.1 )
+          
         else:
           batch_data_values = batch_data.values
         batch[ layer_name ] = self.NormalizeMethInput( batch_data_values )
         batch[ layer_name ][nans] = 0
+        pdb.set_trace()
         
       elif layer_name == METH_TARGET:
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
