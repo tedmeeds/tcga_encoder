@@ -480,6 +480,8 @@ class VanillaVariationalAutoEncoder(NeuralNetwork):
     self.use_matrix = True
     
     self.arch = arch_dict
+    self.beta       = tf.placeholder( tf.float32, [], name="beta" )
+    self.free_bits = tf.placeholder( tf.float32, [], name="free_bits" )
     
     self.recognition_names = self.BuildLayers( arch_dict[RECOGNITION], data_dict, arch_dict[VARIABLES] )
     self.generative_names  = self.BuildLayers( arch_dict[GENERATIVE],  data_dict, arch_dict[VARIABLES] )
@@ -504,8 +506,9 @@ class VanillaVariationalAutoEncoder(NeuralNetwork):
     self.log_p_z          = tf.add_n( self.loglikes_prior.values(), name = "log_p_z" )
     self.log_q_z          = tf.add_n( self.loglikes_rec.values(), name = "log_q_z" )
     
-    self.lower_bound = self.log_p_x_given_z + self.log_p_z - self.log_q_z
-  
+    #self.lower_bound = self.log_p_x_given_z + self.log_p_z - self.log_q_z
+    self.lower_bound = self.log_p_x_given_z - self.beta*tf.maximum(self.free_bits, self.log_q_z - self.log_p_z )
+     
     self.batch_log_tensors = [self.lower_bound,self.log_p_x_given_z,self.log_p_z,self.log_q_z]
     self.batch_log_tensors.extend( self.log_p_source_given_z )
     self.batch_log_columns = ["Epoch","Lower Bound","log p(x|z)", "log p(z)", "log q(z|x)"]
@@ -515,6 +518,20 @@ class VanillaVariationalAutoEncoder(NeuralNetwork):
   def CostToMinimize(self):
     return -self.lower_bound + self.weight_penalty
 
+  def FillFeedDict( self, feed_dict, imputation_dict ):
+    # use stuff from imputation_dict to fill feed_dict
+    for name, imputed_values in imputation_dict.iteritems():
+      if self.HasLayer( name ) and self.HasDropout( name ) is False:
+        feed_dict[ self.GetTensor(name) ]  = imputed_values
+      elif self.HasDropout( name ):
+        feed_dict[ self.GetDropout(name).GetKeepRateTensor() ]  = imputed_values
+    if imputation_dict.has_key("beta"):
+      #print "filling beta"
+      feed_dict[self.beta] = imputation_dict["beta"]
+    if imputation_dict.has_key("free_bits"):
+      #print "filling beta"
+      feed_dict[self.free_bits] = imputation_dict["free_bits"]
+      
 class MixtureVariationalAutoEncoder(NeuralNetwork):
   def __init__( self, arch_dict, data_dict ):
     self.layers   = OrderedDict()

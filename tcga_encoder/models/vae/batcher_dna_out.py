@@ -120,6 +120,10 @@ class TCGABatcher( object ):
     self.fill_store_name = self.network_name + "_" + FILL
     self.fill_store = OpenHdfStore(self.savedir, self.fill_store_name, mode="a")
     
+    #self.fill_store["Z/TRAIN/%s/mu"%(target)]  = pd.DataFrame( np.zeros((train_barcodes,self.n_z)), index = self.train_barcodes, columns = columns )
+    #self.fill_store["Z/TRAIN/%s/var"%(target)] = pd.DataFrame( np.zeros((train_barcodes,self.n_z)), index = self.train_barcodes, columns = columns )
+    
+    
     self.fill_store.close()
     self.latent_store.close()
     self.model_store.close()
@@ -471,6 +475,16 @@ class TCGABatcher( object ):
     print self.val_tissue.sum()
     #pdb.set_trace()
     
+    self.fill_store.open()
+    z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
+
+    self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
+    self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
+    
+    
+    self.fill_store.close()
+    
+    
     self.viz_filename_z_rec_scatter          =  os.path.join( self.savedir, "z_rec_scatter.png" )
     self.viz_filename_z_rec_on_z_gen         =  os.path.join( self.savedir, "z_rec_on_z_gen.png" )
     self.viz_filename_rna_prediction_scatter =  os.path.join( self.savedir, "rna_prediction_scatter.png" )
@@ -489,6 +503,7 @@ class TCGABatcher( object ):
   def CallBack( self, function_name, sess, cb_info ):
     if function_name == BATCH_EPOCH:
       self.BatchEpoch( sess, cb_info )
+      self.BatchFillZ( sess, cb_info )
   
     elif function_name == TEST_EPOCH:
       self.TestEpoch( sess, cb_info )
@@ -550,86 +565,38 @@ class TCGABatcher( object ):
     impute_dict = info_dict[VAL_FEED_IMPUTATION]
     
     self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="VAL" )
+    
+    feed_dict   = info_dict[BATCH_FEED_DICT]
+    impute_dict = info_dict[BATCH_FEED_IMPUTATION]
+    self.batch_ids = info_dict["batch_ids"]
+    self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="BATCH" )
+
+  def BatchFillZ( self, sess, info_dict ):
+    epoch       = info_dict[EPOCH]
+    feed_dict   = info_dict[BATCH_FEED_DICT]
+    impute_dict = info_dict[BATCH_FEED_IMPUTATION]
+    self.batch_ids = info_dict["batch_ids"]
+    self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="BATCH" )
+
 
   def RunFillZ( self, epoch, sess, feed_dict, impute_dict, mode ):
     print "FILL Z"
           
     barcodes = impute_dict[BARCODES]
     batch = self.FillBatch( impute_dict[BARCODES], mode )
-    #not_observed = np.setdiff1d( self.input_sources, inputs2use )
         
     rec_z_space_tensors       = self.network.GetTensor( "rec_z_space" )
     rna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_rna" )
     #dna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_dna" )
     meth_rec_z_space_tensors  = self.network.GetTensor( "rec_z_space_meth" )
   
-    #rna_expectation_tensor = self.network.GetLayer( "gen_rna_space" ).expectation
-    #dna_expectation_tensor = self.network.GetLayer( "gen_dna_space" ).expectation
-    #meth_expectation_tensor = self.network.GetLayer( "gen_meth_space" ).expectation
-    
-    #dna_data = np.zeros( (len(barcodes), self.n_dna_channels,self.dna_dim) )
-    #for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
-    #  batch_data = self.data_store[DNA_key].loc[ barcodes ].fillna( 0 ).values
-    #  dna_data[:,idx,:] = batch_data
-      
-      # matrix tensors for each target source
-    #loglikes_data_as_matrix = self.network.loglikes_data_as_matrix
-  
     tensors = []
     tensors.extend(rec_z_space_tensors)
     tensors.extend(rna_rec_z_space_tensors)
     #tensors.extend(dna_rec_z_space_tensors)
     tensors.extend(meth_rec_z_space_tensors)
-    #tensors.extend([rna_expectation_tensor,dna_expectation_tensor,meth_expectation_tensor])
-  
-    #tensor_names = ["z_mu","z_var",\
-    #                "z_mu_rna","z_var_rna",\
-    #                "z_mu_dna","z_var_dna",\
-    #                "z_mu_meth","z_var_meth"]
-  
-    #assert len(tensor_names)==len(tensors), "should be same number"
-    self.network.FillFeedDict( feed_dict, impute_dict )
 
-    #rna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[RNA]] == 1
-    #dna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[DNA]] == 1
-    #meth_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[METH]] == 1
-        
-    #rna_expectation = np.zeros( (len(barcodes), self.dims_dict[RNA] ), dtype=float )
-    #rna_loglikelihood  = np.zeros( (np.sum(rna_observed_query), self.dims_dict[RNA] ), dtype=float )
-    #meth_expectation = np.zeros( (len(barcodes), self.dims_dict[METH] ), dtype=float )
-    #meth_loglikelihood  = np.zeros( (np.sum(meth_observed_query), self.dims_dict[METH] ), dtype=float )
-        
-      #drop_likelihoods = np.zeros( rna_dim )
-    #dna_dim = self.dims_dict[DNA]/self.n_dna_channels
-    
-    #dna_expectation = np.zeros( (len(barcodes), self.n_dna_channels,dna_dim), dtype=float )
-    #dna_loglikelihood = np.zeros( (np.sum(dna_observed_query), self.n_dna_channels,dna_dim), dtype=float )
-        
-    # ------
-    # RNA
-    # -----
-    # batch_data = self.data_store[self.RNA_key].loc[ barcodes ]
-    # nans = batch_data.values==np.nan
-    # batch[ RNA_INPUT ] = self.NormalizeRnaInput( batch_data.fillna( 0 ).values )
-    # batch[ RNA_INPUT ][nans] = 0
-    #
-    #
-    # # ------
-    # # DNA
-    # # -----
-    # dna_data_inputs = dna_data.copy()
-    # batch[ DNA_INPUT ] = dna_data_inputs
-    #
-    # # ------
-    # # METH
-    # # -----
-    # batch_data = self.data_store[self.METH_key].loc[ barcodes ]
-    # batch[ METH_INPUT ] = batch_data.fillna( 0 ).values
-    #
-    # # ---------
-    # # RUN SESS
-    # # ---------
-    # self.network.FillFeedDict( feed_dict, batch )
+    self.network.FillFeedDict( feed_dict, impute_dict )
     
     z_eval = sess.run( tensors, feed_dict = feed_dict )
 
@@ -645,9 +612,21 @@ class TCGABatcher( object ):
     #  inputs += "+%s"%(s)
 
     self.fill_store.open()
-    self.fill_store[ "/Z/%s/%s/mu/"%(mode,target ) ]  = pd.DataFrame( z_mu, index = barcodes, columns = columns )
-    self.fill_store[ "/Z/%s/%s/var/"%(mode,target ) ] = pd.DataFrame( z_var, index = barcodes, columns = columns )
     
+    if mode == "BATCH" and target == "Z":
+      X_mu = self.fill_store["/Z/TRAIN/Z/mu"].values
+      X_mu[self.batch_ids,:] = z_mu
+      X_var = self.fill_store["/Z/TRAIN/Z/var"].values
+      X_var[self.batch_ids,:] = z_var
+      self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
+      self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )
+      #
+      #
+      # for bc,z_mu_val in zip( barcodes, z_mu ):
+      #   for z_mu_val_i, z_column in zip( z_mu_val, columns ):
+      #     self.fill_store["/Z/TRAIN/Z/mu"].loc[bc,z_column] = z_mu_val_i
+      #pdb.set_trace()
+
     self.fill_store.close()
         
   def RunFill2( self, epoch, sess, feed_dict, impute_dict, mode ):
