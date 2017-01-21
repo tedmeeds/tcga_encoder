@@ -428,7 +428,11 @@ class ConditionalVariationalAutoEncoder(NeuralNetwork):
     self.log_p_x_given_z  = tf.add_n( self.loglikes_data.values(), name = "log_p_x_given_z" )
     self.log_p_z          = tf.add_n( self.loglikes_prior.values(), name = "log_p_z" )
     self.log_q_z          = tf.add_n( self.loglikes_rec.values(), name = "log_q_z" )
-    
+
+    self.log_p_source_given_z = self.loglikes_data.values()
+    self.log_p_x_given_z  = tf.add_n( self.loglikes_data.values(), name = "log_p_x_given_z" )
+    self.log_p_z          = tf.add_n( self.loglikes_prior.values(), name = "log_p_z" )
+    self.log_q_z          = tf.add_n( self.loglikes_rec.values(), name = "log_q_z" )    
     #self.beta*tf.nn.relu(-self.log_p_z + self.log_q_z - self.free_bits )
     
     self.lower_bound = self.log_p_x_given_z - self.beta*tf.maximum(self.free_bits, self.log_q_z - self.log_p_z )
