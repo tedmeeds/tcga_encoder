@@ -5,6 +5,7 @@ from tcga_encoder.models.layers import *
 from tcga_encoder.models.regularizers import *
 from tcga_encoder.algorithms import *
 
+from tcga_encoder.models.survival import *
 #from models.vae.tcga_models import *
 from tcga_encoder.utils.helpers import *
 #from tcga_encoder.data import load_sources
@@ -485,6 +486,8 @@ class TCGABatcher( object ):
     self.fill_store.close()
     
     
+    self.viz_filename_survival      =  os.path.join( self.savedir, "survival" )
+    
     self.viz_filename_z_rec_scatter          =  os.path.join( self.savedir, "z_rec_scatter.png" )
     self.viz_filename_z_rec_on_z_gen         =  os.path.join( self.savedir, "z_rec_on_z_gen.png" )
     self.viz_filename_rna_prediction_scatter =  os.path.join( self.savedir, "rna_prediction_scatter.png" )
@@ -523,6 +526,9 @@ class TCGABatcher( object ):
   
     elif function_name == LATENT_VIZ:
       self.VizLatent( sess, cb_info )
+      
+    elif function_name == "survival":
+      self.RunSurvival( sess, cb_info )
   
     elif function_name == TEST_FILL:
       self.TestFill2( sess, cb_info )
@@ -541,6 +547,8 @@ class TCGABatcher( object ):
         self.free_bits = min( self.algo_dict["free_bits_max"], self.free_bits*self.algo_dict["free_bits_growth"] )
       print "FREE_BITS ", self.free_bits
 
+  def RunSurvival( self, sess, cb_info ):
+     kmeans_then_survival( self, sess, cb_info )
   
   def TestFill2( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
