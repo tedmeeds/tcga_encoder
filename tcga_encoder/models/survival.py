@@ -1,8 +1,9 @@
 from tcga_encoder.utils.helpers import *
 from lifelines import KaplanMeierFitter
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, SpectralClustering
 import pdb
-def kmf_split( predict_survival_train, predict_survival_test, K, disease, Zs ):
+
+def kmf_kmeans( predict_survival_train, predict_survival_test, K, disease, Zs ):
 
   z_columns = []
   for z in Zs:
@@ -29,6 +30,75 @@ def kmf_split( predict_survival_train, predict_survival_test, K, disease, Zs ):
   #   continue
   
   kmeans = KMeans(n_clusters=K ).fit(Z_train.astype(float))
+  
+  f = pp.figure()
+  kmf = KaplanMeierFitter()
+  ax1 = f.add_subplot(311)
+  ax2 = f.add_subplot(312)
+  ax3 = f.add_subplot(313)
+  
+  test_labels = []
+  if len(Z_test) > 0:
+    test_labels = kmeans.predict( Z_test.astype(float) )
+    #pdb.set_trace()
+    
+  colours = "brgkmcbrgkmcbrgkmcbrgkmcbrgkmcbrgkmcbrgkmc"
+  for k in range(K):
+    I = pp.find( kmeans.labels_==k)
+    Ti=T_train[I]
+    Ei=E_train[I]
+  
+    if len(Ti)>0:
+      kmf.fit(Ti, event_observed=Ei, label = "train_k=%d"%k)
+      ax1=kmf.plot(ax=ax1, color=colours[k])
+      
+    if len(test_labels) > 0:
+      I_test = pp.find( test_labels==k)
+      Ti_test=T_test[I_test]
+      Ei_test=E_test[I_test]
+  
+      if len(Ti_test)>0:
+        kmf.fit(Ti_test, event_observed=Ei_test, label = "test_k=%d"%k)
+        ax2=kmf.plot(ax=ax2, color=colours[k])
+    
+      T = np.hstack( (Ti,Ti_test))
+      E = np.hstack( (Ei,Ei_test))
+      if len(T)>0:
+        kmf.fit(T, event_observed=E, label = "all_k=%d"%k)
+        ax3=kmf.plot(ax=ax3, color=colours[k])
+    #pdb.set_trace()
+  pp.suptitle("%s"%(disease))
+  
+  return f, kmf, kmeans
+          
+
+def kmf_spectral( predict_survival_train, predict_survival_test, K, disease, Zs ):
+
+  z_columns = []
+  for z in Zs:
+    z_columns.append( "z%d"%z) 
+
+  disease_query_train    = predict_survival_train["disease"].values == disease
+  disease_survival_train = predict_survival_train[ disease_query_train ]
+  T_train = disease_survival_train["T"].values
+  E_train = disease_survival_train["E"].values
+  Z_train = disease_survival_train[z_columns].values
+
+  disease_query_test    = predict_survival_test["disease"].values == disease
+  disease_survival_test = predict_survival_test[ disease_query_test ]
+  T_test = disease_survival_test["T"].values
+  E_test = disease_survival_test["E"].values
+  Z_test = disease_survival_test[z_columns].values
+
+  
+  if len(T_train)==0:
+    return None, None, None
+  #   kmf.fit(T, event_observed=E, label = disease)
+  #   ax=kmf.plot(ax=ax, ci_force_lines=True)
+  # else:
+  #   continue
+  
+  kmeans = SpectralClustering(n_clusters=K, n_neighbors=5, affinity='nearest_neighbors' ).fit(Z_train.astype(float))
   
   f = pp.figure()
   kmf = KaplanMeierFitter()
@@ -69,7 +139,7 @@ def kmf_split( predict_survival_train, predict_survival_test, K, disease, Zs ):
   
   return f, kmf, kmeans
           
-
+          
   
 def kmeans_then_survival( batcher, sess, info ):
   fill_store = batcher.fill_store
@@ -116,7 +186,8 @@ def kmeans_then_survival( batcher, sess, info ):
   #reg_data = pd.DataFrame( predict_survival[columns].values.astype(int), columns=columns)
   
   for disease in batcher.tissue_names:
-    f_disease, kmf, kmeans = kmf_split( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
+    f_disease, kmf, kmeans = kmf_kmeans( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
+    #f_disease, kmf, kmeans = kmf_spectral( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
     if f_disease is not None:
       pp.savefig( batcher.viz_filename_survival + "_%s.png"%(disease), fmt='png', bbox_inches='tight')
     
