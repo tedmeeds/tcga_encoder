@@ -630,8 +630,8 @@ class TCGABatcher( object ):
       self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
       self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )
     else:
-      self.fill_store["Z/%s/Z/mu"%(mode)]  = pd.DataFrame( X_mu, index = barcodes, columns = columns )
-      self.fill_store["Z/%s/Z/var"%(mode)] = pd.DataFrame( X_var, index = barcodes, columns = columns )
+      self.fill_store["Z/%s/Z/mu"%(mode)]  = pd.DataFrame( z_mu, index = barcodes, columns = columns )
+      self.fill_store["Z/%s/Z/var"%(mode)] = pd.DataFrame( z_var, index = barcodes, columns = columns )
       
       #
       #
