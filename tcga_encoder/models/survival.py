@@ -39,7 +39,7 @@ def kmf_split( predict_survival_train, predict_survival_test, K, disease, Zs ):
   test_labels = []
   if len(Z_test) > 0:
     test_labels = kmeans.predict( Z_test.astype(float) )
-    pdb.set_trace()
+    #pdb.set_trace()
     
   for k in range(K):
     I = pp.find( kmeans.labels_==k)
