@@ -65,7 +65,7 @@ def kmf_split( predict_survival_train, predict_survival_test, K, disease, Zs ):
         kmf.fit(T, event_observed=E, label = "all_k=%d"%k)
         ax3=kmf.plot(ax=ax3)
     #pdb.set_trace()
-  pp.title("%s"%(disease))
+  pp.suptitle("%s"%(disease))
   
   return f, kmf, kmeans
           
