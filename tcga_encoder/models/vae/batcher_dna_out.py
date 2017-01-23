@@ -533,6 +533,7 @@ class TCGABatcher( object ):
     elif function_name == TEST_FILL:
       self.TestFill2( sess, cb_info )
       self.TestFillZ( sess, cb_info )
+      
     elif function_name == "beta":
       if self.algo_dict["beta_growth"] < 0:
         self.beta = max( self.algo_dict["beta_min"], -self.beta*self.algo_dict["beta_growth"] )
@@ -628,6 +629,10 @@ class TCGABatcher( object ):
       X_var[self.batch_ids,:] = z_var
       self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
       self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )
+    else:
+      self.fill_store["Z/%s/Z/mu"%(mode)]  = pd.DataFrame( X_mu, index = barcodes, columns = columns )
+      self.fill_store["Z/%s/Z/var"%(mode)] = pd.DataFrame( X_var, index = barcodes, columns = columns )
+      
       #
       #
       # for bc,z_mu_val in zip( barcodes, z_mu ):
