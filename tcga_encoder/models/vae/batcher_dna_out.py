@@ -6,6 +6,7 @@ from tcga_encoder.models.regularizers import *
 from tcga_encoder.algorithms import *
 
 from tcga_encoder.models.survival import *
+from tcga_encoder.models.analyses import *
 #from models.vae.tcga_models import *
 from tcga_encoder.utils.helpers import *
 #from tcga_encoder.data import load_sources
@@ -487,7 +488,7 @@ class TCGABatcher( object ):
     
     
     self.viz_filename_survival      =  os.path.join( self.savedir, "survival" )
-    
+    self.viz_filename_z_to_dna      =  os.path.join( self.savedir, "lda_dna" )
     self.viz_filename_z_rec_scatter          =  os.path.join( self.savedir, "z_rec_scatter.png" )
     self.viz_filename_z_rec_on_z_gen         =  os.path.join( self.savedir, "z_rec_on_z_gen.png" )
     self.viz_filename_rna_prediction_scatter =  os.path.join( self.savedir, "rna_prediction_scatter.png" )
@@ -506,7 +507,7 @@ class TCGABatcher( object ):
   def CallBack( self, function_name, sess, cb_info ):
     if function_name == BATCH_EPOCH:
       self.BatchEpoch( sess, cb_info )
-      self.BatchFillZ( sess, cb_info )
+      #self.BatchFillZ( sess, cb_info )
   
     elif function_name == TEST_EPOCH:
       self.TestEpoch( sess, cb_info )
@@ -533,6 +534,7 @@ class TCGABatcher( object ):
     elif function_name == TEST_FILL:
       self.TestFill2( sess, cb_info )
       self.TestFillZ( sess, cb_info )
+      #self.TrainFillZ( sess, cb_info )
       
     elif function_name == "beta":
       if self.algo_dict["beta_growth"] < 0:
@@ -549,7 +551,8 @@ class TCGABatcher( object ):
       print "FREE_BITS ", self.free_bits
 
   def RunSurvival( self, sess, cb_info ):
-     kmeans_then_survival( self, sess, cb_info )
+     #kmeans_then_survival( self, sess, cb_info )
+     lda_on_mutations( self, sess, cb_info )
   
   def TestFill2( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
@@ -580,6 +583,15 @@ class TCGABatcher( object ):
     self.batch_ids = info_dict["batch_ids"]
     self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="BATCH" )
 
+  def TrainFillZ( self, sess, info_dict ):
+    pass
+    epoch       = info_dict[EPOCH]
+    feed_dict   = {} #info_dict[TEST_FEED_DICT]
+    impute_dict = {} #info_dict[TEST_FEED_IMPUTATION]
+    impute_dict[BARCODES] = self.train_barcodes
+    self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="TRAIN" )
+  
+    
   def BatchFillZ( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
     feed_dict   = info_dict[BATCH_FEED_DICT]
