@@ -551,7 +551,7 @@ class TCGABatcher( object ):
       print "FREE_BITS ", self.free_bits
 
   def RunSurvival( self, sess, cb_info ):
-     #kmeans_then_survival( self, sess, cb_info )
+     kmeans_then_survival( self, sess, cb_info )
      lda_on_mutations( self, sess, cb_info )
   
   def TestFill2( self, sess, info_dict ):
