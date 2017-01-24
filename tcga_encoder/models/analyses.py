@@ -153,7 +153,7 @@ def lda_on_mutations( batcher, sess, info ):
   data_store = batcher.data_store
   #fill_store.open()
   #dna_genes = ["APC","TP53"]
-  dna_genes = data_store[batcher.DNA_keys[0]].columns[:10]
+  dna_genes = data_store[batcher.DNA_keys[0]].columns[:40]
   n_dna = len(dna_genes)
   train_dna_data = np.zeros( (len(train_barcodes),n_dna) )
   test_dna_data  = np.zeros( (len(test_barcodes),n_dna) )
@@ -192,11 +192,11 @@ def lda_on_mutations( batcher, sess, info ):
     x_proj_train_1 = lda.transform( Z_mutation )
     x_proj_train_0 = lda.transform( Z_free )
     
-    h1 = 0.01+np.std(x_proj_train_1)*(4.0/3.0/len(I))**(1.0/5.0)
-    h0 =  0.01+np.std(x_proj_train_0)*(4.0/3.0/len(J))**(1.0/5.0)
+    h1 = 0.001+np.std(x_proj_train_1)*(4.0/3.0/len(I))**(1.0/5.0)
+    h0 =  0.001+np.std(x_proj_train_0)*(4.0/3.0/len(J))**(1.0/5.0)
     
-    x_left  = -0.2 + min( min(x_proj_train_1), min( x_proj_train_0) )
-    x_right = 0.2 + max( max(x_proj_train_1), max( x_proj_train_0) )
+    x_left  = -1.0 + min( min(x_proj_train_1), min( x_proj_train_0) )
+    x_right = 1.0 + max( max(x_proj_train_1), max( x_proj_train_0) )
     x_plot = np.linspace( x_left, x_right, 100 ).reshape( (100,1) )
     
     kde1 = KernelDensity(kernel='gaussian', bandwidth=h1).fit(x_proj_train_1)

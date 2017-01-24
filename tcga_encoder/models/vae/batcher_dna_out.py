@@ -488,6 +488,7 @@ class TCGABatcher( object ):
     
     
     self.viz_filename_survival      =  os.path.join( self.savedir, "survival" )
+    self.viz_filename_survival_lda  =  os.path.join( self.savedir, "survival__lda" )
     self.viz_filename_z_to_dna      =  os.path.join( self.savedir, "lda_dna" )
     self.viz_filename_z_rec_scatter          =  os.path.join( self.savedir, "z_rec_scatter.png" )
     self.viz_filename_z_rec_on_z_gen         =  os.path.join( self.savedir, "z_rec_on_z_gen.png" )
@@ -507,7 +508,7 @@ class TCGABatcher( object ):
   def CallBack( self, function_name, sess, cb_info ):
     if function_name == BATCH_EPOCH:
       self.BatchEpoch( sess, cb_info )
-      #self.BatchFillZ( sess, cb_info )
+      self.BatchFillZ( sess, cb_info )
   
     elif function_name == TEST_EPOCH:
       self.TestEpoch( sess, cb_info )
@@ -552,6 +553,7 @@ class TCGABatcher( object ):
 
   def RunSurvival( self, sess, cb_info ):
      kmeans_then_survival( self, sess, cb_info )
+     lda_then_survival( self, sess, cb_info )
      lda_on_mutations( self, sess, cb_info )
   
   def TestFill2( self, sess, info_dict ):
