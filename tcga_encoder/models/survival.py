@@ -197,8 +197,11 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   
   #pdb.set_trace()
   f = pp.figure()
-  ax1 = f.add_subplot(121)
+  ax1 = f.add_subplot(311)
   predict_train = lda.predict( Z_train, ignore_pi=True )
+  project_train = lda.transform( Z_train )
+  log_joint_train = lda.log_joint( project_train )
+  order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
   #predict_train = lda.predict( Z_train )
   
   I1 = pp.find(predict_train==1)
@@ -207,60 +210,29 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   kmf = KaplanMeierFitter()
   if len(I1) > 0:
     kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
-    ax1=kmf.plot(ax=ax1,at_risk_counts=True,show_censors=True, color='red')
+    ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
   if len(I0) > 0:
     kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
-    ax1=kmf.plot(ax=ax1,at_risk_counts=True,show_censors=True, color='blue')
+    ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
+   
+  colors = ["blue", "green", "orange", "red"] #"bgor"
+  n = len(Z_train)
+  n_chunks = 4
+  ax2 = f.add_subplot(312)
+  kmf2 = KaplanMeierFitter()
+  q_idx=0
+  for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
+    these_ids = order_train[ids]
+    kmf2.fit(T_train[ids], event_observed=E_train[these_ids], label =  "lda q %d E=%d C=%d"%(q_idx,E_train[these_ids].sum(),len(these_ids)-E_train[these_ids].sum()))
+    ax2=kmf2.plot(ax=ax2,at_risk_counts=False,show_censors=True, color= colors[q_idx])
+    q_idx+=1
     
-  ax2 = f.add_subplot(122)
+    
+  ax3 = f.add_subplot(313)
   x_plot = np.linspace( min(np.min(lda.x_proj1),np.min(lda.x_proj0)), max(np.max(lda.x_proj1),np.max(lda.x_proj0)), 500) 
-  lda.plot_joint_density( x_plot, ax=ax2, ignore_pi=True )
-  #ax2.plot( np.squeeze( x_plot ), np.exp( log_dens1 ), 'b-', label = "event" )
-  #ax2.plot( np.squeeze( x_plot ), np.exp( log_dens2 ), 'r-', label = "no event" )
-  #ax2.plot( np.squeeze( x_proj_train_1), 0.1 +0*np.squeeze( x_proj_train_1), 'bo', ms=10, alpha=0.5, label = "event x"  )
-  #ax2.plot( np.squeeze( x_proj_train_0), 0*np.squeeze( x_proj_train_0), 'ro', ms=10, alpha=0.5, label = "no event x"  )
-  
-  ax2.legend()
-  #pdb.set_trace()
-    #
-  #
-  # f = pp.figure()
-  # kmf = KaplanMeierFitter()
-  # ax1 = f.add_subplot(311)
-  # ax2 = f.add_subplot(312)
-  # ax3 = f.add_subplot(313)
-  #
-  # test_labels = []
-  # if len(Z_test) > 0:
-  #   test_labels = kmeans.predict( Z_test.astype(float) )
-  #   #pdb.set_trace()
-  #
-  # for k in range(K):
-  #   I = pp.find( kmeans.labels_==k)
-  #   Ti=T_train[I]
-  #   Ei=E_train[I]
-  #
-  #   if len(Ti)>0:
-  #     kmf.fit(Ti, event_observed=Ei, label = "train_k=%d"%k)
-  #     ax1=kmf.plot(ax=ax1)
-  #
-  #   if len(test_labels) > 0:
-  #     I_test = pp.find( test_labels==k)
-  #     Ti_test=T_test[I_test]
-  #     Ei_test=E_test[I_test]
-  #
-  #     if len(Ti_test)>0:
-  #       kmf.fit(Ti_test, event_observed=Ei_test, label = "test_k=%d"%k)
-  #       ax2=kmf.plot(ax=ax2)
-  #
-  #     T = np.hstack( (Ti,Ti_test))
-  #     E = np.hstack( (Ei,Ei_test))
-  #     if len(T)>0:
-  #       kmf.fit(T, event_observed=E, label = "all_k=%d"%k)
-  #       ax3=kmf.plot(ax=ax3)
-  #   #pdb.set_trace()
-  # pp.suptitle("%s"%(disease))
-  
+  lda.plot_joint_density( x_plot, ax=ax3, ignore_pi=True )
+  ax3.legend()
+    
   return f, kmf, lda
            
           
