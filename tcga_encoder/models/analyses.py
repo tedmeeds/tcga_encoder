@@ -172,6 +172,7 @@ def lda_on_mutations( batcher, sess, info ):
   train_Z = fill_store["/Z/TRAIN/Z/mu"].values.astype(float)
   test_Z  = fill_store["/Z/TEST/Z/mu"].values.astype(float)
   val_Z   = fill_store["/Z/VAL/Z/mu"].values.astype(float)
+  #pdb.set_trace()
   fill_store.close()
   
   #-------

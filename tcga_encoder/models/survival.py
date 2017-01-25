@@ -1,7 +1,8 @@
 from tcga_encoder.utils.helpers import *
 from lifelines import KaplanMeierFitter
 from sklearn.cluster import KMeans, SpectralClustering
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+#from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from tcga_encoder.models.lda import LinearDiscriminantAnalysis
 from sklearn.neighbors import KernelDensity
 import pdb
 
@@ -169,17 +170,19 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   
   X = Z_train
   y = E_train.astype(int)
-  
+  I1 = pp.find(y==1)
+  I0 = pp.find(y==0)
   #kmeans = SpectralClustering(n_clusters=K, n_neighbors=5, affinity='nearest_neighbors' ).fit(Z_train.astype(float))
   lda = LinearDiscriminantAnalysis()
   lda.fit(X, y)
-  
+  #lda = LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto')
+  #lda.fit(X, y)
   #pdb.set_trace()
   
-  x_proj_train_1 = lda.transform( Z_train[E_train,:] )
-  x_proj_train_0 = lda.transform( Z_train[~E_train,:] )
+  x_proj_train_1 = lda.transform( Z_train[I1,:] )[:,np.newaxis]
+  x_proj_train_0 = lda.transform( Z_train[I0,:] )[:,np.newaxis]
   n1 = len(x_proj_train_1)
-  n0 = len(x_proj_train_1)
+  n0 = len(x_proj_train_0)
   h1 = 0.01+np.std(x_proj_train_1)*(4.0/3.0/n1)**(1.0/5.0)
   h0 =  0.01+np.std(x_proj_train_0)*(4.0/3.0/n0)**(1.0/5.0)
   
@@ -202,10 +205,10 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   kmf = KaplanMeierFitter()
   if len(I1) > 0:
     kmf.fit(T_train[I1], event_observed=E_train[I1], label = "lda_1")
-    ax1=kmf.plot(ax=ax1)
+    ax1=kmf.plot(ax=ax1,at_risk_counts=True,show_censors=True)
   if len(I0) > 0:
     kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0")
-    ax1=kmf.plot(ax=ax1)
+    ax1=kmf.plot(ax=ax1,at_risk_counts=True,show_censors=True)
     
   ax2 = f.add_subplot(122)
   ax2.plot( np.squeeze( x_plot ), np.exp( log_dens1 ), 'b-', label = "event" )
@@ -214,6 +217,7 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   ax2.plot( np.squeeze( x_proj_train_0), 0*np.squeeze( x_proj_train_0), 'ro', ms=10, alpha=0.5, label = "no event x"  )
   
   ax2.legend()
+  #pdb.set_trace()
     #
   #
   # f = pp.figure()
@@ -356,6 +360,7 @@ def lda_then_survival( batcher, sess, info ):
     #f_disease, kmf, kmeans = kmf_spectral( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
     if f_disease is not None:
       pp.savefig( batcher.viz_filename_survival_lda + "_%s.png"%(disease), fmt='png', bbox_inches='tight')
+      pp.close('all')
           
 # def kmf_quantiles( predict_survival, diseases = ["lgg"], z=0, quants = [0.0,0.1,0.9,1.0] ):
 #

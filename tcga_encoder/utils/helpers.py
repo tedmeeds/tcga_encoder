@@ -9,6 +9,11 @@ from sklearn.metrics import roc_auc_score, roc_curve
 from collections import *
 import itertools
 
+def chunks(l, n):
+  #Yield successive n-sized chunks from l.
+  for i in xrange(0, len(l), n):
+    yield l[i:i + n]
+        
 def load_yaml( filename ):
   with open(filename, 'r') as f:
     data = yaml.load(f)

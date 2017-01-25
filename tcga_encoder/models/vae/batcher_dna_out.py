@@ -483,7 +483,7 @@ class TCGABatcher( object ):
     self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
     self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
     
-    
+    #pdb.set_trace()
     self.fill_store.close()
     
     
@@ -508,7 +508,7 @@ class TCGABatcher( object ):
   def CallBack( self, function_name, sess, cb_info ):
     if function_name == BATCH_EPOCH:
       self.BatchEpoch( sess, cb_info )
-      self.BatchFillZ( sess, cb_info )
+      #self.BatchFillZ( sess, cb_info )
   
     elif function_name == TEST_EPOCH:
       self.TestEpoch( sess, cb_info )
@@ -535,7 +535,7 @@ class TCGABatcher( object ):
     elif function_name == TEST_FILL:
       self.TestFill2( sess, cb_info )
       self.TestFillZ( sess, cb_info )
-      #self.TrainFillZ( sess, cb_info )
+      self.TrainFillZ( sess, cb_info )
       
     elif function_name == "beta":
       if self.algo_dict["beta_growth"] < 0:
@@ -586,12 +586,16 @@ class TCGABatcher( object ):
     self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="BATCH" )
 
   def TrainFillZ( self, sess, info_dict ):
-    pass
     epoch       = info_dict[EPOCH]
-    feed_dict   = {} #info_dict[TEST_FEED_DICT]
-    impute_dict = {} #info_dict[TEST_FEED_IMPUTATION]
-    impute_dict[BARCODES] = self.train_barcodes
-    self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="TRAIN" )
+    
+    for batch_ids in chunks( np.arange(len(self.train_barcodes)), 500 ):
+      barcodes = self.train_barcodes[batch_ids]
+      impute_dict = self.NextBatch(batch_ids)
+      impute_dict[BARCODES] = barcodes
+      self.batch_ids = batch_ids
+      #pdb.set_trace()
+      #batch = self.FillBatch( impute_dict[BARCODES], mode )
+      self.RunFillZ( epoch, sess, {}, impute_dict, mode="TRAIN" )
   
     
   def BatchFillZ( self, sess, info_dict ):
@@ -606,7 +610,7 @@ class TCGABatcher( object ):
     print "FILL Z"
           
     barcodes = impute_dict[BARCODES]
-    batch = self.FillBatch( impute_dict[BARCODES], mode )
+    #batch = self.FillBatch( impute_dict[BARCODES], mode )
         
     rec_z_space_tensors       = self.network.GetTensor( "rec_z_space" )
     rna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_rna" )
@@ -636,7 +640,8 @@ class TCGABatcher( object ):
 
     self.fill_store.open()
     
-    if mode == "BATCH" and target == "Z":
+    if mode == "TRAIN" and target == "Z":
+      #pdb.set_trace()
       X_mu = self.fill_store["/Z/TRAIN/Z/mu"].values
       X_mu[self.batch_ids,:] = z_mu
       X_var = self.fill_store["/Z/TRAIN/Z/var"].values
@@ -644,8 +649,8 @@ class TCGABatcher( object ):
       self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
       self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )
     else:
-      self.fill_store["Z/%s/Z/mu"%(mode)]  = pd.DataFrame( z_mu, index = barcodes, columns = columns )
-      self.fill_store["Z/%s/Z/var"%(mode)] = pd.DataFrame( z_var, index = barcodes, columns = columns )
+      self.fill_store["Z/%s/%s/mu"%(mode,target)]  = pd.DataFrame( z_mu, index = barcodes, columns = columns )
+      self.fill_store["Z/%s/%s/var"%(mode,target)] = pd.DataFrame( z_var, index = barcodes, columns = columns )
       
       #
       #
@@ -1435,8 +1440,8 @@ class TCGABatcher( object ):
       self.fill_store.close()
      
     
-  def NextBatch( self, batch_ids ):
-    return self.FillBatch( self.train_barcodes[batch_ids], mode = "BATCH" )
+  def NextBatch( self, batch_ids, mode = "BATCH" ):
+    return self.FillBatch( self.train_barcodes[batch_ids], mode )
     
   def TestBatch( self ):
     return self.FillBatch( self.test_barcodes, mode = "TEST" )
@@ -1506,7 +1511,7 @@ class TCGABatcher( object ):
         #for idx,DNA_key in zip(range(len(self.DNA_keys)-1),self.DNA_keys[:-1]):
         for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
           batch_data = self.data_store[DNA_key].loc[ batch_barcodes ].fillna( 0 ).values
-          if mode == "TEST" or mode == "VAL":
+          if mode == "TEST" or mode == "VAL" or mode == "TRAIN":
             dna_data += batch_data
           else:
             if layer_name == DNA_TARGET or layer_name == DNA_INPUT:
