@@ -197,7 +197,7 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   
   #pdb.set_trace()
   f = pp.figure()
-  ax1 = f.add_subplot(311)
+  ax1 = f.add_subplot(131)
   predict_train = lda.predict( Z_train, ignore_pi=True )
   project_train = lda.transform( Z_train )
   log_joint_train = lda.log_joint( project_train )
@@ -218,7 +218,7 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   colors = ["blue", "green", "orange", "red"] #"bgor"
   n = len(Z_train)
   n_chunks = 4
-  ax2 = f.add_subplot(312)
+  ax2 = f.add_subplot(132)
   kmf2 = KaplanMeierFitter()
   q_idx=0
   for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
@@ -228,7 +228,7 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
     q_idx+=1
     
     
-  ax3 = f.add_subplot(313)
+  ax3 = f.add_subplot(133)
   x_plot = np.linspace( min(np.min(lda.x_proj1),np.min(lda.x_proj0)), max(np.max(lda.x_proj1),np.max(lda.x_proj0)), 500) 
   lda.plot_joint_density( x_plot, ax=ax3, ignore_pi=True )
   ax3.legend()
