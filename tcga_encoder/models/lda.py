@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 import pylab as pp
 from collections import OrderedDict
+from sklearn.neighbors import KernelDensity
 
 class LinearDiscriminantAnalysis( object ):
   def __init__(self, epsilon = 1e-12 ):
@@ -15,20 +16,24 @@ class LinearDiscriminantAnalysis( object ):
     self.n, self.d = X.shape
     assert len(y) == self.n, "X and y should have same length"
     
-    self.Sw = np.zeros( (self.d,self.d), dtype=float )
-    self.class_ids = OrderedDict()
-    self.class_X   = OrderedDict()
-    self.class_mean = OrderedDict()
+    self.Sw             = np.zeros( (self.d,self.d), dtype=float )
+    self.class_ids      = OrderedDict()
+    self.class_X        = OrderedDict()
+    self.class_mean     = OrderedDict()
     self.class_X_normed = OrderedDict()
-    self.class_S = OrderedDict()
+    self.class_S        = OrderedDict()
+    self.class_n        = OrderedDict()
+    self.class_pi       = OrderedDict()
+    
     for k in self.classes:
-      self.class_ids[k]  = pp.find( y == k) 
-      self.class_X[k]    = X[self.class_ids[k],:].astype(float)
-      self.class_mean[k] = self.class_X[k].mean(0).astype(float)
-      self.class_X_normed[k]    = X[self.class_ids[k],:].astype(float) - self.class_mean[k].astype(float)
-      self.class_S[k]    = np.dot( self.class_X_normed[k].T, self.class_X_normed[k] ).astype(float)
-      
-      self.Sw += self.class_S[k]
+      self.class_ids[k]      = pp.find( y == k) 
+      self.class_X[k]        = X[self.class_ids[k],:].astype(float)
+      self.class_mean[k]     = self.class_X[k].mean(0).astype(float)
+      self.class_X_normed[k] = X[self.class_ids[k],:].astype(float) - self.class_mean[k].astype(float)
+      self.class_S[k]        = np.dot( self.class_X_normed[k].T, self.class_X_normed[k] ).astype(float)
+      self.class_n[k]        = len(self.class_ids[k])
+      self.class_pi[k]       = float(self.class_n[k])/self.n
+      self.Sw               += self.class_S[k]
       
     self.mean_dif = self.class_mean[self.classes[1]]-self.class_mean[self.classes[0]]
     
@@ -36,6 +41,8 @@ class LinearDiscriminantAnalysis( object ):
     self.w_prop_to = np.dot( self.iSw, self.mean_dif  )
     
     self.fitted = True
+    self.fit_density()
+    
     #self.decision_boundary = self.transform( self.mean_dif )
     
   def transform( self, X ):
@@ -45,18 +52,84 @@ class LinearDiscriminantAnalysis( object ):
       
     return np.dot( X, self.w_prop_to )
     
+
+  def fit_density( self ):
+    self.x_proj1 = self.transform( self.class_X[1] )
+    self.x_proj0 = self.transform( self.class_X[0] )
+    self.h1 = max(0.001, np.std(self.x_proj1)*(4.0/3.0/self.class_n[1])**(1.0/5.0) )
+    self.h0 = max(0.001, np.std(self.x_proj0)*(4.0/3.0/self.class_n[0])**(1.0/5.0) )
+    
+    self.kde1 = KernelDensity(kernel='gaussian', bandwidth=self.h1).fit(self.x_proj1[:,np.newaxis])
+    self.kde0 = KernelDensity(kernel='gaussian', bandwidth=self.h0).fit(self.x_proj0[:,np.newaxis])
+    
+    self.pi1 = self.class_pi[1]
+    self.pi0 = self.class_pi[0]
+    
+    self.log_pi1 = np.log(self.pi1)
+    self.log_pi0 = np.log(self.pi0)
+
   def predict( self, X ):
     x_proj_predicted = self.transform( X ) 
     
     y_predict = np.zeros( len(X), dtype=int)
     
-    I0 = pp.find( x_proj_predicted < 0 )
-    I1 = pp.find( x_proj_predicted >= 0 )
+    log_joint_0, log_joint_1 = self.log_joint( x_proj_predicted )
+    
+    I1 = pp.find( log_joint_1 >= log_joint_0 )
+    I0 = pp.find( log_joint_1 < log_joint_0 )
+    
+    #I0 = pp.find( x_proj_predicted < 0 )
+    #I1 = pp.find( x_proj_predicted >= 0 )
     
     y_predict[I0] = self.classes[0]
     y_predict[I1] = self.classes[1]
     
     return y_predict
+    
+  def prob( self, X ):
+    x_proj_predicted = self.transform( X ) 
+    
+    y_predict = np.zeros( len(X), dtype=int)
+    
+    log_joint_0, log_joint_1 = self.log_joint( x_proj_predicted )
+    
+    log_prob_1 = log_joint_1 - np.log( np.exp(log_joint_0) + np.exp(log_joint_1) )
+        
+    return np.exp(log_prob_1)
+        
+  def log_joint( self, x_proj ):
+    
+    log_prob_0 = self.kde0.score_samples( x_proj[:,np.newaxis] )
+    log_prob_1 = self.kde1.score_samples( x_proj[:,np.newaxis] )
+    
+    log_joint_0 = self.log_pi0 + log_prob_0
+    log_joint_1 = self.log_pi1 + log_prob_1
+    
+    return log_joint_0, log_joint_1
+          
+  def plot_joint_density( self, x_plot, ax = None ):
+    # log_prob_0 = self.kde0.score_samples( x_plot[:,np.newaxis] )
+    # log_prob_1 = self.kde1.score_samples( x_plot[:,np.newaxis] )
+    #
+    # log_joint_0 = self.log_pi0 + log_prob_0
+    # log_joint_1 = self.log_pi1 + log_prob_1
+    
+    log_joint_0, log_joint_1 = self.log_joint( x_plot )
+    
+    I1 = pp.find( np.exp( log_joint_1) > 1e-3 )
+    I0 = pp.find( np.exp( log_joint_0) > 1e-3)
+    #I1 = pp.find( log_joint_1 >= log_joint_0 )
+    #I0 = pp.find( log_joint_1 < log_joint_0 )
+    if ax is None:
+      ax = pp
+      
+    ax.plot( x_plot[I0], np.exp( log_joint_0[I0]), 'b-')
+    ax.plot( x_plot[I1], np.exp( log_joint_1[I1]), 'r-')
+    ax.scatter( self.x_proj1[:,np.newaxis], 0*self.x_proj1[:,np.newaxis], s=80, c="red", marker='+', linewidths=2)
+    ax.scatter( self.x_proj0[:,np.newaxis], 0*self.x_proj0[:,np.newaxis], s=80, c="blue", marker='x', linewidths=2)
+    
+
+  
     
     
        

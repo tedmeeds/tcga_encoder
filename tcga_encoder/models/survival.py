@@ -179,26 +179,28 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   #lda.fit(X, y)
   #pdb.set_trace()
   
-  x_proj_train_1 = lda.transform( Z_train[I1,:] )[:,np.newaxis]
-  x_proj_train_0 = lda.transform( Z_train[I0,:] )[:,np.newaxis]
-  n1 = len(x_proj_train_1)
-  n0 = len(x_proj_train_0)
-  h1 = 0.01+np.std(x_proj_train_1)*(4.0/3.0/n1)**(1.0/5.0)
-  h0 =  0.01+np.std(x_proj_train_0)*(4.0/3.0/n0)**(1.0/5.0)
-  
-  x_left  = -0.2 + min( min(x_proj_train_1), min( x_proj_train_0) )
-  x_right = 0.2 + max( max(x_proj_train_1), max( x_proj_train_0) )
-  x_plot = np.linspace( x_left, x_right, 100 ).reshape( (100,1) )
-  
-  kde1 = KernelDensity(kernel='gaussian', bandwidth=h1).fit(x_proj_train_1)
-  kde2 = KernelDensity(kernel='gaussian', bandwidth=h0).fit(x_proj_train_0)
-  log_dens1 = kde1.score_samples(x_plot)
-  log_dens2 = kde2.score_samples(x_plot)
+  # x_proj_train_1 = lda.transform( Z_train[I1,:] )[:,np.newaxis]
+  # x_proj_train_0 = lda.transform( Z_train[I0,:] )[:,np.newaxis]
+  # n1 = len(x_proj_train_1)
+  # n0 = len(x_proj_train_0)
+  # h1 = 0.01+np.std(x_proj_train_1)*(4.0/3.0/n1)**(1.0/5.0)
+  # h0 =  0.01+np.std(x_proj_train_0)*(4.0/3.0/n0)**(1.0/5.0)
+  #
+  # x_left  = -0.2 + min( min(x_proj_train_1), min( x_proj_train_0) )
+  # x_right = 0.2 + max( max(x_proj_train_1), max( x_proj_train_0) )
+  # x_plot = np.linspace( x_left, x_right, 100 ).reshape( (100,1) )
+  #
+  # kde1 = KernelDensity(kernel='gaussian', bandwidth=h1).fit(x_proj_train_1)
+  # kde2 = KernelDensity(kernel='gaussian', bandwidth=h0).fit(x_proj_train_0)
+  # log_dens1 = kde1.score_samples(x_plot)
+  # log_dens2 = kde2.score_samples(x_plot)
   
   #pdb.set_trace()
   f = pp.figure()
   ax1 = f.add_subplot(121)
   predict_train = lda.predict( Z_train )
+  #predict_train = lda.predict( Z_train )
+  
   I1 = pp.find(predict_train==1)
   I0 = pp.find(predict_train==0)
   #pdb.set_trace()
@@ -211,10 +213,12 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
     ax1=kmf.plot(ax=ax1,at_risk_counts=True,show_censors=True)
     
   ax2 = f.add_subplot(122)
-  ax2.plot( np.squeeze( x_plot ), np.exp( log_dens1 ), 'b-', label = "event" )
-  ax2.plot( np.squeeze( x_plot ), np.exp( log_dens2 ), 'r-', label = "no event" )
-  ax2.plot( np.squeeze( x_proj_train_1), 0.1 +0*np.squeeze( x_proj_train_1), 'bo', ms=10, alpha=0.5, label = "event x"  )
-  ax2.plot( np.squeeze( x_proj_train_0), 0*np.squeeze( x_proj_train_0), 'ro', ms=10, alpha=0.5, label = "no event x"  )
+  x_plot = np.linspace( min(np.min(lda.x_proj1),np.min(lda.x_proj0))*1.2, max(np.max(lda.x_proj1),np.max(lda.x_proj0))*1.2, 500) 
+  lda.plot_joint_density( x_plot, ax=ax2 )
+  #ax2.plot( np.squeeze( x_plot ), np.exp( log_dens1 ), 'b-', label = "event" )
+  #ax2.plot( np.squeeze( x_plot ), np.exp( log_dens2 ), 'r-', label = "no event" )
+  #ax2.plot( np.squeeze( x_proj_train_1), 0.1 +0*np.squeeze( x_proj_train_1), 'bo', ms=10, alpha=0.5, label = "event x"  )
+  #ax2.plot( np.squeeze( x_proj_train_0), 0*np.squeeze( x_proj_train_0), 'ro', ms=10, alpha=0.5, label = "no event x"  )
   
   ax2.legend()
   #pdb.set_trace()
