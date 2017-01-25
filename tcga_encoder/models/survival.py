@@ -198,7 +198,7 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   #pdb.set_trace()
   f = pp.figure()
   ax1 = f.add_subplot(121)
-  predict_train = lda.predict( Z_train )
+  predict_train = lda.predict( Z_train, ignore_pi=True )
   #predict_train = lda.predict( Z_train )
   
   I1 = pp.find(predict_train==1)
@@ -206,15 +206,15 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   #pdb.set_trace()
   kmf = KaplanMeierFitter()
   if len(I1) > 0:
-    kmf.fit(T_train[I1], event_observed=E_train[I1], label = "lda_1")
-    ax1=kmf.plot(ax=ax1,at_risk_counts=True,show_censors=True)
+    kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
+    ax1=kmf.plot(ax=ax1,at_risk_counts=True,show_censors=True, color='red')
   if len(I0) > 0:
-    kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0")
-    ax1=kmf.plot(ax=ax1,at_risk_counts=True,show_censors=True)
+    kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
+    ax1=kmf.plot(ax=ax1,at_risk_counts=True,show_censors=True, color='blue')
     
   ax2 = f.add_subplot(122)
-  x_plot = np.linspace( min(np.min(lda.x_proj1),np.min(lda.x_proj0))*1.2, max(np.max(lda.x_proj1),np.max(lda.x_proj0))*1.2, 500) 
-  lda.plot_joint_density( x_plot, ax=ax2 )
+  x_plot = np.linspace( min(np.min(lda.x_proj1),np.min(lda.x_proj0)), max(np.max(lda.x_proj1),np.max(lda.x_proj0)), 500) 
+  lda.plot_joint_density( x_plot, ax=ax2, ignore_pi=True )
   #ax2.plot( np.squeeze( x_plot ), np.exp( log_dens1 ), 'b-', label = "event" )
   #ax2.plot( np.squeeze( x_plot ), np.exp( log_dens2 ), 'r-', label = "no event" )
   #ax2.plot( np.squeeze( x_proj_train_1), 0.1 +0*np.squeeze( x_proj_train_1), 'bo', ms=10, alpha=0.5, label = "event x"  )
@@ -313,7 +313,7 @@ def kmeans_then_survival( batcher, sess, info ):
     f_disease, kmf, kmeans = kmf_kmeans( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
     #f_disease, kmf, kmeans = kmf_spectral( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
     if f_disease is not None:
-      pp.savefig( batcher.viz_filename_survival + "_%s.png"%(disease), fmt='png', bbox_inches='tight')
+      pp.savefig( batcher.viz_filename_survival + "_%s.png"%(disease), fmt='png')
 
 def lda_then_survival( batcher, sess, info ):
   fill_store = batcher.fill_store
@@ -363,7 +363,7 @@ def lda_then_survival( batcher, sess, info ):
     f_disease, kmf, kmeans = kmf_lda( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
     #f_disease, kmf, kmeans = kmf_spectral( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
     if f_disease is not None:
-      pp.savefig( batcher.viz_filename_survival_lda + "_%s.png"%(disease), fmt='png', bbox_inches='tight')
+      pp.savefig( batcher.viz_filename_survival_lda + "_%s.png"%(disease), fmt='png')
       pp.close('all')
           
 # def kmf_quantiles( predict_survival, diseases = ["lgg"], z=0, quants = [0.0,0.1,0.9,1.0] ):

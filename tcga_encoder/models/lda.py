@@ -68,12 +68,12 @@ class LinearDiscriminantAnalysis( object ):
     self.log_pi1 = np.log(self.pi1)
     self.log_pi0 = np.log(self.pi0)
 
-  def predict( self, X ):
+  def predict( self, X, ignore_pi = False ):
     x_proj_predicted = self.transform( X ) 
     
     y_predict = np.zeros( len(X), dtype=int)
     
-    log_joint_0, log_joint_1 = self.log_joint( x_proj_predicted )
+    log_joint_0, log_joint_1 = self.log_joint( x_proj_predicted, ignore_pi=ignore_pi )
     
     I1 = pp.find( log_joint_1 >= log_joint_0 )
     I0 = pp.find( log_joint_1 < log_joint_0 )
@@ -97,24 +97,29 @@ class LinearDiscriminantAnalysis( object ):
         
     return np.exp(log_prob_1)
         
-  def log_joint( self, x_proj ):
+  def log_joint( self, x_proj, ignore_pi = False ):
     
     log_prob_0 = self.kde0.score_samples( x_proj[:,np.newaxis] )
     log_prob_1 = self.kde1.score_samples( x_proj[:,np.newaxis] )
     
-    log_joint_0 = self.log_pi0 + log_prob_0
-    log_joint_1 = self.log_pi1 + log_prob_1
+    if ignore_pi:
+      # assume even counts
+      log_joint_0 = log_prob_0
+      log_joint_1 = log_prob_1
+    else:
+      log_joint_0 = self.log_pi0 + log_prob_0
+      log_joint_1 = self.log_pi1 + log_prob_1
     
     return log_joint_0, log_joint_1
           
-  def plot_joint_density( self, x_plot, ax = None ):
+  def plot_joint_density( self, x_plot, ax = None, ignore_pi = False ):
     # log_prob_0 = self.kde0.score_samples( x_plot[:,np.newaxis] )
     # log_prob_1 = self.kde1.score_samples( x_plot[:,np.newaxis] )
     #
     # log_joint_0 = self.log_pi0 + log_prob_0
     # log_joint_1 = self.log_pi1 + log_prob_1
     
-    log_joint_0, log_joint_1 = self.log_joint( x_plot )
+    log_joint_0, log_joint_1 = self.log_joint( x_plot, ignore_pi )
     
     I1 = pp.find( np.exp( log_joint_1) > 1e-3 )
     I0 = pp.find( np.exp( log_joint_0) > 1e-3)
