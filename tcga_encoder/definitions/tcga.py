@@ -22,7 +22,7 @@ TISSUE_INPUT     = "TISSUE_input"
 TISSUE_TARGET    = "TISSUE_target"
 TISSUE_GEN_DIST  = "TISSUE_gen_dist"
 FAIR             = "FAIR"
-
+SURVIVAL = "survival"
 CHANNEL      = "channel"
 VARIANT      = "variant"
 DISEASE      = "disease"

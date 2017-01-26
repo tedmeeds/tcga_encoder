@@ -262,7 +262,7 @@ def kmeans_then_survival( batcher, sess, info ):
   #reg_data = pd.DataFrame( predict_survival[columns].values.astype(int), columns=columns)
   
   for disease in batcher.tissue_names:
-    f_disease, kmf, kmeans = kmf_kmeans( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
+    f_disease, kmf, kmeans = kmf_kmeans( predict_survival_train, predict_survival_test, K=2, disease = disease, Zs = np.arange(batcher.n_z) )
     #f_disease, kmf, kmeans = kmf_spectral( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
     if f_disease is not None:
       pp.savefig( batcher.viz_filename_survival + "_%s.png"%(disease), fmt='png')
@@ -314,7 +314,9 @@ def lda_then_survival( batcher, sess, info ):
   for disease in batcher.tissue_names:
     f_disease, kmf, kmeans, g1, g2 = kmf_lda( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
 
+    
     if f_disease is not None:
+      batcher.SaveSurvival( disease, predict_survival_train, g1, g2 )
       pp.savefig( batcher.viz_filename_survival_lda + "_%s.png"%(disease), fmt='png')
       pp.close('all')
           

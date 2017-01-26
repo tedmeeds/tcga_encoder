@@ -112,6 +112,7 @@ class TCGABatcher( object ):
     self.latent_store_name = self.network_name + "_" + LATENT
     self.latent_store = OpenHdfStore(self.savedir, self.latent_store_name, mode=self.default_store_mode )
     self.model_store_name = self.network_name + "_" + MODEL
+    self.survival_store_name = self.network_name + "_" + SURVIVAL
     
     # open in "a" mode
     self.model_store = OpenHdfStore(self.savedir, self.model_store_name, mode="a" )
@@ -122,10 +123,11 @@ class TCGABatcher( object ):
     self.fill_store_name = self.network_name + "_" + FILL
     self.fill_store = OpenHdfStore(self.savedir, self.fill_store_name, mode="a")
     
+    self.survival_store = OpenHdfStore(self.savedir, self.survival_store_name, mode=self.default_store_mode )
     #self.fill_store["Z/TRAIN/%s/mu"%(target)]  = pd.DataFrame( np.zeros((train_barcodes,self.n_z)), index = self.train_barcodes, columns = columns )
     #self.fill_store["Z/TRAIN/%s/var"%(target)] = pd.DataFrame( np.zeros((train_barcodes,self.n_z)), index = self.train_barcodes, columns = columns )
     
-    
+    self.survival_store.close()
     self.fill_store.close()
     self.latent_store.close()
     self.model_store.close()
@@ -551,10 +553,40 @@ class TCGABatcher( object ):
         self.free_bits = min( self.algo_dict["free_bits_max"], self.free_bits*self.algo_dict["free_bits_growth"] )
       print "FREE_BITS ", self.free_bits
 
+  def SaveSurvival( self, disease, predict_survival_train, g1, g2 ):
+    disease_query_train    = predict_survival_train["disease"].values == disease
+    disease_survival_train = predict_survival_train[ disease_query_train ]
+    #T_train = disease_survival_train["T"].values
+    #E_train = disease_survival_train["E"].values
+    #Z_train = disease_survival_train[z_columns].values
+    barcodes = disease_survival_train.index
+    
+    disease_barcodes = [ "%s_%s"%(disease,barcode) for barcode in barcodes]
+    
+    try:
+      dna = self.data_store[self.DNA_keys[0]].loc[ disease_barcodes ]
+    except:
+      print "No DNA for %s"%disease
+      print "Not Saving!"
+      return 
+    
+    index1 = pd.MultiIndex.from_tuples( zip( barcodes, g1 ), names=['barcode', 'group'])
+    index2 = pd.MultiIndex.from_tuples( zip( barcodes, g2 ), names=['barcode', 'group'])
+    self.survival_store.open()
+    self.survival_store["/%s/split1"%(disease)] = pd.DataFrame( dna.fillna(0).values.astype(int), columns = dna.columns, index = index1 )
+    self.survival_store["/%s/split2"%(disease)] = pd.DataFrame( dna.fillna(0).values.astype(int), columns = dna.columns, index = index2 )
+    
+    #pdb.set_trace()
+    self.survival_store.close()
+    
+    
+    
   def RunSurvival( self, sess, cb_info ):
      kmeans_then_survival( self, sess, cb_info )
      lda_then_survival( self, sess, cb_info )
      lda_on_mutations( self, sess, cb_info )
+     
+     #pdb.set_trace()
   
   def TestFill2( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
