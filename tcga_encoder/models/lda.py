@@ -40,7 +40,7 @@ class LinearDiscriminantAnalysis( object ):
     
     self.iSw = np.linalg.pinv( self.Sw + self.epsilon*np.eye(self.d) )
     self.w_prop_to = np.dot( self.iSw, self.mean_dif  )
-    
+    self.w_prop_to = self.w_prop_to / np.linalg.norm(self.w_prop_to)
     self.fitted = True
     self.fit_density()
     

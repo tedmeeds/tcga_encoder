@@ -2,7 +2,7 @@ from tcga_encoder.utils.helpers import *
 from lifelines import KaplanMeierFitter
 from sklearn.cluster import KMeans, SpectralClustering
 from tcga_encoder.models.lda import LinearDiscriminantAnalysis
-#from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA2
 from sklearn.neighbors import KernelDensity
 from tcga_encoder.utils.math_funcs import kl
 
@@ -191,12 +191,20 @@ def lda_on_mutations( batcher, sess, info ):
     Z_free     = train_Z[J,:]
     
     X = train_Z
+    #Xn = X - X.mean(0)
+    #Xn /= Xn.std(0)
     y = train_dna_data[:,gene_idx].astype(int)
-    lda = LinearDiscriminantAnalysis()
+    lda = LinearDiscriminantAnalysis(epsilon=1.0)
     lda.fit(X, y)
     
+    lda2 = LDA2()
+    lda2.fit(X,y)
+    
     predict_train = lda.predict( X, ignore_pi=True )
-    proj_train = lda.transform( X  )
+    proj_train2 = lda.transform( X  )
+    proj_train = lda2.transform( X  )
+    
+    prob_train = lda.prob( X, ignore_pi=True)
     log_prob_train = lda.log_prob_1( X[I,:], ignore_pi=True)
     #pdb.set_trace()
     f = pp.figure()
@@ -219,10 +227,10 @@ def lda_on_mutations( batcher, sess, info ):
         I = pp.find(y)
         m2 = proj_train[I].mean()
         v2 = proj_train[I].var()
-        #auc = roc_auc_score( y, prob_train)
+        auc = roc_auc_score( y, prob_train)
         #proj_train
         #kl( m1, v1, m2, v2 )
-        #log_prob = lda.log_prob_1( X[I,:], ignore_pi=True).mean()
+        log_prob = lda.log_prob_1( X[I,:], ignore_pi=True).mean()
         aucs[gene][ predict_gene ] = -kl( m1, v1, m2, v2 ) #log_prob
     
     genes = np.array( aucs[gene].keys(), dtype=str )
@@ -238,5 +246,20 @@ def lda_on_mutations( batcher, sess, info ):
   print "========================="
   #pdb.set_trace()
       
-
+# def old():
+#   -    x_proj_train_1 = lda.transform( Z_mutation )
+#    -    x_proj_train_0 = lda.transform( Z_free )
+#    -
+#    -    h1 = 0.001+np.std(x_proj_train_1)*(4.0/3.0/len(I))**(1.0/5.0)
+#    -    h0 =  0.001+np.std(x_proj_train_0)*(4.0/3.0/len(J))**(1.0/5.0)
+#    -
+#    -    x_left  = -1.0 + min( min(x_proj_train_1), min( x_proj_train_0) )
+#    -    x_right = 1.0 + max( max(x_proj_train_1), max( x_proj_train_0) )
+#    -    x_plot = np.linspace( x_left, x_right, 100 ).reshape( (100,1) )
+#    -
+#    -    kde1 = KernelDensity(kernel='gaussian', bandwidth=h1).fit(x_proj_train_1)
+#    -    kde2 = KernelDensity(kernel='gaussian', bandwidth=h0).fit(x_proj_train_0)
+#    -    log_dens1 = kde1.score_samples(x_plot)
+#    -    log_dens2 = kde2.score_samples(x_plot)
+   
     
