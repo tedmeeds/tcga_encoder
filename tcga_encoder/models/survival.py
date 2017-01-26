@@ -153,56 +153,34 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   T_train = disease_survival_train["T"].values
   E_train = disease_survival_train["E"].values
   Z_train = disease_survival_train[z_columns].values
-
+  n_train = len(Z_train)
+  
   disease_query_test    = predict_survival_test["disease"].values == disease
   disease_survival_test = predict_survival_test[ disease_query_test ]
   T_test = disease_survival_test["T"].values
   E_test = disease_survival_test["E"].values
   Z_test = disease_survival_test[z_columns].values
 
+  group_split1 = np.zeros( n_train, dtype=int )
+  group_split2 = np.zeros( n_train, dtype=int )
   
   if len(T_train)==0:
-    return None, None, None
-  #   kmf.fit(T, event_observed=E, label = disease)
-  #   ax=kmf.plot(ax=ax, ci_force_lines=True)
-  # else:
-  #   continue
+    return None, None, None, None, None
   
   X = Z_train
   y = E_train.astype(int)
   I1 = pp.find(y==1)
   I0 = pp.find(y==0)
-  #kmeans = SpectralClustering(n_clusters=K, n_neighbors=5, affinity='nearest_neighbors' ).fit(Z_train.astype(float))
   lda = LinearDiscriminantAnalysis()
   lda.fit(X, y)
-  #lda = LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto')
-  #lda.fit(X, y)
-  #pdb.set_trace()
-  
-  # x_proj_train_1 = lda.transform( Z_train[I1,:] )[:,np.newaxis]
-  # x_proj_train_0 = lda.transform( Z_train[I0,:] )[:,np.newaxis]
-  # n1 = len(x_proj_train_1)
-  # n0 = len(x_proj_train_0)
-  # h1 = 0.01+np.std(x_proj_train_1)*(4.0/3.0/n1)**(1.0/5.0)
-  # h0 =  0.01+np.std(x_proj_train_0)*(4.0/3.0/n0)**(1.0/5.0)
-  #
-  # x_left  = -0.2 + min( min(x_proj_train_1), min( x_proj_train_0) )
-  # x_right = 0.2 + max( max(x_proj_train_1), max( x_proj_train_0) )
-  # x_plot = np.linspace( x_left, x_right, 100 ).reshape( (100,1) )
-  #
-  # kde1 = KernelDensity(kernel='gaussian', bandwidth=h1).fit(x_proj_train_1)
-  # kde2 = KernelDensity(kernel='gaussian', bandwidth=h0).fit(x_proj_train_0)
-  # log_dens1 = kde1.score_samples(x_plot)
-  # log_dens2 = kde2.score_samples(x_plot)
-  
-  #pdb.set_trace()
+
   f = pp.figure()
   ax1 = f.add_subplot(131)
   predict_train = lda.predict( Z_train, ignore_pi=True )
+  group_split1 = np.squeeze( predict_train ).astype(int)
   project_train = lda.transform( Z_train )
   log_joint_train = lda.log_joint( project_train )
   order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
-  #predict_train = lda.predict( Z_train )
   
   I1 = pp.find(predict_train==1)
   I0 = pp.find(predict_train==0)
@@ -223,9 +201,11 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   q_idx=0
   for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
     these_ids = order_train[ids]
-    kmf2.fit(T_train[ids], event_observed=E_train[these_ids], label =  "lda q %d E=%d C=%d"%(q_idx,E_train[these_ids].sum(),len(these_ids)-E_train[these_ids].sum()))
+    kmf2.fit(T_train[these_ids], event_observed=E_train[these_ids], label =  "lda q %d E=%d C=%d"%(q_idx,E_train[these_ids].sum(),len(these_ids)-E_train[these_ids].sum()))
     ax2=kmf2.plot(ax=ax2,at_risk_counts=False,show_censors=True, color= colors[q_idx])
+    group_split2[these_ids] = q_idx
     q_idx+=1
+    
     
     
   ax3 = f.add_subplot(133)
@@ -233,7 +213,7 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
   lda.plot_joint_density( x_plot, ax=ax3, ignore_pi=True )
   ax3.legend()
     
-  return f, kmf, lda
+  return f, kmf, lda, group_split1, group_split2
            
           
   
@@ -332,8 +312,8 @@ def lda_then_survival( batcher, sess, info ):
   #reg_data = pd.DataFrame( predict_survival[columns].values.astype(int), columns=columns)
   
   for disease in batcher.tissue_names:
-    f_disease, kmf, kmeans = kmf_lda( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
-    #f_disease, kmf, kmeans = kmf_spectral( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
+    f_disease, kmf, kmeans, g1, g2 = kmf_lda( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
+
     if f_disease is not None:
       pp.savefig( batcher.viz_filename_survival_lda + "_%s.png"%(disease), fmt='png')
       pp.close('all')
