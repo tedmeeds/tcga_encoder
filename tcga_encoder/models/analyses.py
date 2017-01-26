@@ -1,8 +1,10 @@
 from tcga_encoder.utils.helpers import *
 from lifelines import KaplanMeierFitter
 from sklearn.cluster import KMeans, SpectralClustering
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from tcga_encoder.models.lda import LinearDiscriminantAnalysis
+#from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.neighbors import KernelDensity
+from tcga_encoder.utils.math_funcs import kl
 
 import pdb
 
@@ -153,7 +155,9 @@ def lda_on_mutations( batcher, sess, info ):
   data_store = batcher.data_store
   #fill_store.open()
   #dna_genes = ["APC","TP53"]
-  dna_genes = data_store[batcher.DNA_keys[0]].columns[:40]
+  #dna_genes = data_store[batcher.DNA_keys[0]].columns[:40]
+  dna_genes = ["APC", "RB1", "PIK3CA"]
+  #pdb.set_trace()
   n_dna = len(dna_genes)
   train_dna_data = np.zeros( (len(train_barcodes),n_dna) )
   test_dna_data  = np.zeros( (len(test_barcodes),n_dna) )
@@ -176,6 +180,7 @@ def lda_on_mutations( batcher, sess, info ):
   fill_store.close()
   
   #-------
+  aucs = OrderedDict()
   for gene, gene_idx in zip( dna_genes, range(n_dna) ):
     #pdb.set_trace()
     I = pp.find( train_dna_data[:,gene_idx] > 0 )
@@ -190,34 +195,48 @@ def lda_on_mutations( batcher, sess, info ):
     lda = LinearDiscriminantAnalysis()
     lda.fit(X, y)
     
-    x_proj_train_1 = lda.transform( Z_mutation )
-    x_proj_train_0 = lda.transform( Z_free )
-    
-    h1 = 0.001+np.std(x_proj_train_1)*(4.0/3.0/len(I))**(1.0/5.0)
-    h0 =  0.001+np.std(x_proj_train_0)*(4.0/3.0/len(J))**(1.0/5.0)
-    
-    x_left  = -1.0 + min( min(x_proj_train_1), min( x_proj_train_0) )
-    x_right = 1.0 + max( max(x_proj_train_1), max( x_proj_train_0) )
-    x_plot = np.linspace( x_left, x_right, 100 ).reshape( (100,1) )
-    
-    kde1 = KernelDensity(kernel='gaussian', bandwidth=h1).fit(x_proj_train_1)
-    kde2 = KernelDensity(kernel='gaussian', bandwidth=h0).fit(x_proj_train_0)
-    log_dens1 = kde1.score_samples(x_plot)
-    log_dens2 = kde2.score_samples(x_plot)
-    
+    predict_train = lda.predict( X, ignore_pi=True )
+    proj_train = lda.transform( X  )
+    log_prob_train = lda.log_prob_1( X[I,:], ignore_pi=True)
     #pdb.set_trace()
     f = pp.figure()
     ax = f.add_subplot(111)
-    ax.plot( np.squeeze( x_plot ), np.exp( log_dens1 ), 'b-', label = "mutation" )
-    ax.plot( np.squeeze( x_plot ), np.exp( log_dens2 ), 'r-', label = "no mut" )
-    ax.plot( np.squeeze( x_proj_train_1), 0.1 +0*np.squeeze( x_proj_train_1), 'bo', ms=10, alpha=0.5, label = "mutation x"  )
-    ax.plot( np.squeeze( x_proj_train_0), 0*np.squeeze( x_proj_train_0), 'ro', ms=10, alpha=0.5, label = "no mut x"  )
-    
+    x_plot = np.linspace( min(np.min(lda.x_proj1),np.min(lda.x_proj0)), max(np.max(lda.x_proj1),np.max(lda.x_proj0)), 500) 
+    lda.plot_joint_density( x_plot, ax=ax, ignore_pi=True )
+    #pdb.set_trace()
     ax.legend()
     #pdb.set_trace()
     #pp.hist( x_proj_train_0, alpha=0.5 )
     pp.savefig( batcher.viz_filename_z_to_dna + "_%s.png"%(gene), fmt='png', bbox_inches='tight')
     pp.close('all')
-    #pdb.set_trace()
+    aucs[gene] = OrderedDict()
+    
+    m1 = proj_train[I].mean()
+    v1 = proj_train[I].var()
+    for predict_gene in data_store[batcher.DNA_keys[0]].columns:
+      y = data_store[batcher.DNA_keys[0]][predict_gene].loc[ train_barcodes ].fillna( 0 ).values.astype(int)
+      if len(np.unique(y))==2 and y.sum()>10:
+        I = pp.find(y)
+        m2 = proj_train[I].mean()
+        v2 = proj_train[I].var()
+        #auc = roc_auc_score( y, prob_train)
+        #proj_train
+        #kl( m1, v1, m2, v2 )
+        #log_prob = lda.log_prob_1( X[I,:], ignore_pi=True).mean()
+        aucs[gene][ predict_gene ] = -kl( m1, v1, m2, v2 ) #log_prob
+    
+    genes = np.array( aucs[gene].keys(), dtype=str )
+    vals  = np.array( aucs[gene].values(), dtype=float )
+    closest = np.argsort( - vals )
+    print "-------------------------"
+    print "-------------------------"
+    print "%s projection for %10s has log prob = %0.3f"%(gene, gene, aucs[gene][gene])
+    print "-------------------------"
+    for idx in range(20):
+      print "%s projection for %10s has log prob = %0.3f"%(gene, genes[closest[idx]], vals[closest[idx]])
+  
+  print "========================="
+  #pdb.set_trace()
+      
 
     

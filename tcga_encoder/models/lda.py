@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import pylab as pp
+
 from collections import OrderedDict
 from sklearn.neighbors import KernelDensity
 
@@ -56,8 +57,10 @@ class LinearDiscriminantAnalysis( object ):
   def fit_density( self ):
     self.x_proj1 = self.transform( self.class_X[1] )
     self.x_proj0 = self.transform( self.class_X[0] )
-    self.h1 = max(0.001, np.std(self.x_proj1)*(4.0/3.0/self.class_n[1])**(1.0/5.0) )
-    self.h0 = max(0.001, np.std(self.x_proj0)*(4.0/3.0/self.class_n[0])**(1.0/5.0) )
+    self.h1 = max(1e-12,np.std(self.x_proj1)*(4.0/3.0/self.class_n[1])**(1.0/5.0))
+    self.h0 = max(1e-12,np.std(self.x_proj0)*(4.0/3.0/self.class_n[0])**(1.0/5.0))
+    
+    
     
     self.kde1 = KernelDensity(kernel='gaussian', bandwidth=self.h1).fit(self.x_proj1[:,np.newaxis])
     self.kde0 = KernelDensity(kernel='gaussian', bandwidth=self.h0).fit(self.x_proj0[:,np.newaxis])
@@ -85,13 +88,24 @@ class LinearDiscriminantAnalysis( object ):
     y_predict[I1] = self.classes[1]
     
     return y_predict
-    
-  def prob( self, X ):
+
+  def log_prob_1( self, X, ignore_pi = False ):
     x_proj_predicted = self.transform( X ) 
     
     y_predict = np.zeros( len(X), dtype=int)
     
-    log_joint_0, log_joint_1 = self.log_joint( x_proj_predicted )
+    log_joint_0, log_joint_1 = self.log_joint( x_proj_predicted, ignore_pi = ignore_pi )
+    
+    log_prob_1 = log_joint_1 - np.log( np.exp(log_joint_0) + np.exp(log_joint_1) )
+        
+    return log_prob_1
+        
+  def prob( self, X, ignore_pi = False ):
+    x_proj_predicted = self.transform( X ) 
+    
+    y_predict = np.zeros( len(X), dtype=int)
+    
+    log_joint_0, log_joint_1 = self.log_joint( x_proj_predicted, ignore_pi = ignore_pi )
     
     log_prob_1 = log_joint_1 - np.log( np.exp(log_joint_0) + np.exp(log_joint_1) )
         
@@ -130,7 +144,7 @@ class LinearDiscriminantAnalysis( object ):
       
     ax.plot( x_plot[I0], np.exp( log_joint_0[I0]), 'b-')
     ax.plot( x_plot[I1], np.exp( log_joint_1[I1]), 'r-')
-    ax.scatter( self.x_proj1[:,np.newaxis], 0*self.x_proj1[:,np.newaxis], s=80, c="red", marker='+', linewidths=2)
+    ax.scatter( self.x_proj1[:,np.newaxis], 0.1+0*self.x_proj1[:,np.newaxis], s=80, c="red", marker='+', linewidths=2)
     ax.scatter( self.x_proj0[:,np.newaxis], 0*self.x_proj0[:,np.newaxis], s=80, c="blue", marker='x', linewidths=2)
     
 

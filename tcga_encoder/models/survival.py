@@ -361,4 +361,40 @@ def lda_then_survival( batcher, sess, info ):
 #         ax=kmf.plot(ax=ax)
 #
 # pp.show()
+
+def analyze_survival_store( store, disease, split ):
+  s = store["%s/%s"%(disease, split)]
+  
+  genes = s.columns
+  vals  = s.values
+  
+  some_mutations = pp.find( vals.sum(0) )
+  
+  vals  = vals[:,some_mutations]
+  genes = genes[some_mutations]
+  
+  order = np.argsort( -vals.sum(0) )
+  vals = vals[:,order]
+  genes = genes[order]
+  s2 = pd.DataFrame( vals, columns = genes, index=s.index)
+  
+  grouped = s2.groupby(level=1)
+  means = []
+  for name, group in grouped:
+    print name, group.sum().T[:10]
+    means.append( group.values.mean(0) )
+  
+  dif = means[-1] - means[0]
+  
+  order2 = np.argsort( -np.abs(dif) )
+  for g,d in zip( genes[order2][:10], dif[order2][:10] ):
+    print g, d
+    
+    
+  grouped.sum().T.plot()
+  
+  
+
+  
+  
     
