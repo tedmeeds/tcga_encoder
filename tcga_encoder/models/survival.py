@@ -319,48 +319,6 @@ def lda_then_survival( batcher, sess, info ):
       batcher.SaveSurvival( disease, predict_survival_train, g1, g2 )
       pp.savefig( batcher.viz_filename_survival_lda + "_%s.png"%(disease), fmt='png')
       pp.close('all')
-          
-# def kmf_quantiles( predict_survival, diseases = ["lgg"], z=0, quants = [0.0,0.1,0.9,1.0] ):
-#
-#   z_columns = ["z%d"%z]
-#
-#   for disease in diseases: #batcher.tissue_names:
-#     f = pp.figure()
-#     kmf = KaplanMeierFitter()
-#     ax = f.add_subplot(111)
-#
-#     disease_query = predict_survival["disease"].values == disease
-#     disease_survival = predict_survival[ disease_query ]
-#
-#
-#     T = disease_survival["T"].values
-#     E = disease_survival["E"].values
-#     Z = np.squeeze( disease_survival[z_columns].values )
-#     print Z
-#
-#     iZ = np.argsort(Z)
-#     nz = len(iZ)
-#     Is = []
-#     for a,b in zip(quants[:-1],quants[1:]):
-#       Is.append( iZ[ a*nz : b*nz ] )
-#
-#     if len(T)>0:
-#       kmf.fit(T, event_observed=E, label = disease)
-#       ax=kmf.plot(ax=ax, ci_force_lines=True)
-#     else:
-#       continue
-#
-#     #kmeans = KMeans(n_clusters=K ).fit(Z)
-#     for k,I in zip(range(len(Is)),Is):
-#       #I = pp.find( kmeans.labels_==k)
-#       Ti=T[I]
-#       Ei=E[I]
-#
-#       if len(Ti)>0:
-#         kmf.fit(Ti, event_observed=Ei, label = disease + "_q=%d"%k)
-#         ax=kmf.plot(ax=ax)
-#
-# pp.show()
 
 def analyze_survival_store( store, disease, split ):
   s = store["%s/%s"%(disease, split)]
@@ -392,6 +350,58 @@ def analyze_survival_store( store, disease, split ):
     
     
   grouped.sum().T.plot()
+  
+def lda_then_survival_on_disease( batcher, sess, info, disease ):
+  fill_store = batcher.fill_store
+  data_store = batcher.data_store
+  fill_store.open()
+  
+  ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
+  tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
+  surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
+  NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
+  train_survival = pd.concat( [NEW_SURVIVAL, fill_store["/Z/TRAIN/Z/mu"]], axis=1, join = 'inner' )
+  test_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/TEST/Z/mu"]], axis=1, join = 'inner' )
+  val_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
+  
+  fill_store.close()
+  #-------
+  predict_survival_train = pd.concat( [test_survival, val_survival], axis=0, join = 'outer' )
+  predict_barcodes_train = predict_survival_train.index
+  splt = np.array( [ [s.split("_")[0], s.split("_")[1]] for s in predict_barcodes_train ] )
+  predict_survival_train = pd.DataFrame( predict_survival_train.values, index = splt[:,1], columns = predict_survival_train.columns )
+  predict_survival_train["disease"] = splt[:,0]
+  
+  Times_train = predict_survival_train[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+predict_survival_train[ "patient.days_to_death" ].fillna(0).values.astype(int)
+  predict_survival_train["T"] = Times_train
+  Events_train = (1-np.isnan( predict_survival_train[ "patient.days_to_death" ].astype(float)) ).astype(int)
+  predict_survival_train["E"] = Events_train
+  #-------
+  predict_survival_test = pd.concat( [test_survival, val_survival], axis=0, join = 'outer' )
+  predict_barcodes_test = predict_survival_test.index
+  splt = np.array( [ [s.split("_")[0], s.split("_")[1]] for s in predict_barcodes_test ] )
+  predict_survival_test = pd.DataFrame( predict_survival_test.values, index = splt[:,1], columns = predict_survival_test.columns )
+  predict_survival_test["disease"] = splt[:,0]
+  
+  Times_test = predict_survival_test[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+predict_survival_test[ "patient.days_to_death" ].fillna(0).values.astype(int)
+  predict_survival_test["T"] = Times_test
+  Events_test = (1-np.isnan( predict_survival_test[ "patient.days_to_death" ].astype(float)) ).astype(int)
+  predict_survival_test["E"] = Events_test  
+  z_columns = []
+  columns = ["T","E"]
+  for zidx in range(20):
+    columns.append("z%d"%(zidx))
+    z_columns.append("z%d"%(zidx))
+    
+  #reg_data = pd.DataFrame( predict_survival[columns].values.astype(int), columns=columns)
+  
+  f_disease, kmf, kmeans, g1, g2 = kmf_lda( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
+
+    
+  if f_disease is not None:
+    batcher.SaveSurvival( disease, predict_survival_train, g1, g2 )
+    pp.savefig( batcher.viz_filename_survival_lda + "_%s.png"%(disease), fmt='png')
+    pp.close('all')
   
   
 

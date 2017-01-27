@@ -521,6 +521,8 @@ class TCGABatcher( object ):
      #lda_on_mutations( self, sess, cb_info )
      
      #pdb.set_trace()
+     for disease in self.validation_tissues:
+       lda_then_survival_on_disease( self, sess, cb_info, disease )
   
   def TestFill2( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
