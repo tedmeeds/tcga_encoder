@@ -517,7 +517,7 @@ class TCGABatcher( object ):
     
   def RunSurvival( self, sess, cb_info ):
      #kmeans_then_survival( self, sess, cb_info )
-     lda_then_survival( self, sess, cb_info )
+     #lda_then_survival( self, sess, cb_info )
      #lda_on_mutations( self, sess, cb_info )
      
      #pdb.set_trace()

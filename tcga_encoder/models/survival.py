@@ -1,6 +1,7 @@
 from tcga_encoder.utils.helpers import *
 from lifelines import KaplanMeierFitter
 from sklearn.cluster import KMeans, SpectralClustering
+from lifelines.statistics import logrank_test
 #from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from tcga_encoder.models.lda import LinearDiscriminantAnalysis
 from sklearn.neighbors import KernelDensity
@@ -403,7 +404,106 @@ def lda_then_survival_on_disease( batcher, sess, info, disease ):
     pp.savefig( batcher.viz_filename_survival_lda + "_%s.png"%(disease), fmt='png')
     pp.close('all')
   
+  f_disease, g1, g2 = kmf_lda_abc( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
+
+    
+  if f_disease is not None:
+    batcher.SaveSurvival( disease, predict_survival_train, g1, g2 )
+    pp.savefig( batcher.viz_filename_survival_lda + "_ABC_%s.png"%(disease), fmt='png')
+    pp.close('all')
+
+def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease, Zs ):
+
+  z_columns = []
+  for z in Zs:
+    z_columns.append( "z%d"%z) 
+
+  disease_query_train    = predict_survival_train["disease"].values == disease
+  disease_survival_train = predict_survival_train[ disease_query_train ]
+  T_train = disease_survival_train["T"].values
+  E_train = disease_survival_train["E"].values
+  Z_train = disease_survival_train[z_columns].values
+  n_train = len(Z_train)
+
+  group_split1 = np.zeros( n_train, dtype=int )
   
+  if len(T_train)==0:
+    return None, None, None, None, None
+  
+  X = Z_train
+  y = E_train.astype(int)
+  I1 = pp.find(y==1)
+  I0 = pp.find(y==0)
+  lda = LinearDiscriminantAnalysis()
+  lda.fit(X, y)
+
+  w_init = lda.w_prop_to
+  
+  f = pp.figure()
+  ax1 = f.add_subplot(121)
+  ax2 = f.add_subplot(122)
+  predict_train = lda.predict( Z_train, ignore_pi=True )
+  group_split1 = np.squeeze( predict_train ).astype(int)
+  project_train = lda.transform( Z_train )
+  
+  log_joint_train = lda.log_joint( project_train )
+  order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
+  
+  I1 = pp.find(predict_train==1)
+  I0 = pp.find(predict_train==0)
+  #pdb.set_trace()
+  kmf1 = KaplanMeierFitter()
+  if len(I1) > 0:
+    kmf1.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
+    ax1=kmf1.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
+  
+  kmf0 = KaplanMeierFitter()  
+  if len(I0) > 0:
+    kmf0.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
+    ax1=kmf0.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
+  
+  #kmf_dif = kmf1.subtract( kmf0 )
+  
+  results = logrank_test(T_train[I0], T_train[I1], event_observed_A=E_train[I0], event_observed_B=E_train[I1])
+  score_init = results.test_statistic*np.log(1+min(len(I0),len(I1)))
+  best_score = score_init
+  print "ini score: ", best_score
+  w = w_init.copy()
+  for i in range(100):
+    w_new  = w + 0.01*np.random.randn( len(w) )
+    w_new /= np.linalg.norm( w )
+    lda.w_prop_to = w_new
+    predict_train = lda.predict( Z_train, ignore_pi=True )
+    I1 = pp.find(predict_train==1)
+    I0 = pp.find(predict_train==0)
+    if len(I1) > 0 and len(I0) > 0:
+      results = logrank_test(T_train[I0], T_train[I1], event_observed_A=E_train[I0], event_observed_B=E_train[I1])
+      score_new = results.test_statistic*np.log(1+min(len(I0),len(I1)))
+    else:
+      score_new = -np.inf
+      
+    if best_score < score_new:
+      best_score = score_new
+      w = w_new
+      print "new score: ", best_score
+    #project_train = lda.transform( Z_train )
+
+  lda.w_prop_to = w
+  kmf1 = KaplanMeierFitter()
+  kmf0 = KaplanMeierFitter()
+  predict_train = lda.predict( Z_train, ignore_pi=True )
+  I1 = pp.find(predict_train==1)
+  I0 = pp.find(predict_train==0)
+  kmf1.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))  
+  kmf0.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
+  ax2=kmf1.plot(ax=ax2,at_risk_counts=False,show_censors=True, color='red')
+  ax2=kmf0.plot(ax=ax2,at_risk_counts=False,show_censors=True, color='blue')
+  #predict_train = lda.predict( Z_train, ignore_pi=True )
+  group_split1 = np.squeeze( predict_train ).astype(int)
+  
+  #pdb.set_trace()  
+  return f, group_split1, group_split1
+    
 
   
   
