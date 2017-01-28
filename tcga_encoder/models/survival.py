@@ -1,7 +1,7 @@
 from tcga_encoder.utils.helpers import *
 from lifelines import KaplanMeierFitter
 from sklearn.cluster import KMeans, SpectralClustering
-from lifelines.statistics import logrank_test
+from lifelines.statistics import logrank_test, multivariate_logrank_test
 #from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from tcga_encoder.models.lda import LinearDiscriminantAnalysis
 from sklearn.neighbors import KernelDensity
@@ -426,6 +426,7 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease, Zs )
   n_train = len(Z_train)
 
   group_split1 = np.zeros( n_train, dtype=int )
+  group_split2 = np.zeros( n_train, dtype=int )
   
   if len(T_train)==0:
     return None, None, None, None, None
@@ -440,15 +441,21 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease, Zs )
   w_init = lda.w_prop_to
   
   f = pp.figure()
-  ax1 = f.add_subplot(121)
-  ax2 = f.add_subplot(122)
+  ax1 = f.add_subplot(221)
+  ax2 = f.add_subplot(222)
+  ax3 = f.add_subplot(223)
+  ax4 = f.add_subplot(224)
   predict_train = lda.predict( Z_train, ignore_pi=True )
   group_split1 = np.squeeze( predict_train ).astype(int)
   project_train = lda.transform( Z_train )
   
+
+    
   log_joint_train = lda.log_joint( project_train )
-  order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
-  
+
+    
+  ##################
+  ##################  
   I1 = pp.find(predict_train==1)
   I0 = pp.find(predict_train==0)
   #pdb.set_trace()
@@ -500,9 +507,84 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease, Zs )
   ax2=kmf0.plot(ax=ax2,at_risk_counts=False,show_censors=True, color='blue')
   #predict_train = lda.predict( Z_train, ignore_pi=True )
   group_split1 = np.squeeze( predict_train ).astype(int)
+    
+  ##################
+  ##################
+  order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
+  kmfs = []
+  n = len(E_train)
+  colors = ["blue", "green", "orange", "red"]
+  q_idx = 0
+  for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
+    these_ids = order_train[ids]
+    group_split2[these_ids] = q_idx
+    
+    kmfs.append( KaplanMeierFitter()  )
+    kmfs[-1].fit(T_train[these_ids], event_observed=E_train[these_ids], label =  "q %d E=%d C=%d"%(q_idx, E_train[these_ids].sum(),len(these_ids)-E_train[these_ids].sum()))
+    ax3=kmfs[-1].plot(ax=ax3,at_risk_counts=False,show_censors=True, color=colors[q_idx])
+    q_idx+=1
+  
+  #event_durations, groups, event_observed
+  results = multivariate_logrank_test(T_train, group_split2, event_observed_A=E_train )
+  score_init = results.test_statistic
+  best_score = score_init
+  print "ini score: ", best_score
+  w = w_init.copy()
+  for i in range(100):
+    w_new  = w + 0.01*np.random.randn( len(w) )
+    w_new /= np.linalg.norm( w )
+    lda.w_prop_to = w_new
+    lda.fit_density()
+    project_train = lda.transform( Z_train )
+  
+
+    
+    log_joint_train = lda.log_joint( project_train )
+    order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
+    colors = ["blue", "green", "orange", "red"]
+    q_idx = 0
+    for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
+      these_ids = order_train[ids]
+      group_split2[these_ids] = q_idx
+      q_idx+=1
+    
+    results = multivariate_logrank_test(T_train, group_split2, event_observed_A=E_train )
+    score_new = results.test_statistic
+      
+    if best_score < score_new:
+      best_score = score_new
+      w = w_new
+      print "new score: ", best_score
+    #project_train = lda.transform( Z_train )
+
+  lda.w_prop_to = w
+  lda.fit_density()
+  project_train = lda.transform( Z_train )
+
+
+  
+  log_joint_train = lda.log_joint( project_train )
+  order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
+  colors = ["blue", "green", "orange", "red"]
+  q_idx=0
+  for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
+    these_ids = order_train[ids]
+    group_split2[these_ids] = q_idx
+  
+    kmfs.append( KaplanMeierFitter()  )
+    kmfs[-1].fit(T_train[these_ids], event_observed=E_train[these_ids], label =  "q %d E=%d C=%d"%(q_idx, E_train[these_ids].sum(),len(these_ids)-E_train[these_ids].sum()))
+    ax4=kmfs[-1].plot(ax=ax4,at_risk_counts=False,show_censors=True, color=colors[q_idx])
+    q_idx+=1
+
+  #predict_train = lda.predict( Z_train, ignore_pi=True )
+  group_split1 = np.squeeze( predict_train ).astype(int)    
+  group_split2 = np.squeeze( group_split2 ).astype(int)
+  ##################
+  ##################
   
   #pdb.set_trace()  
-  return f, group_split1, group_split1
+  return f, group_split1, group_split2
+
     
 
   
