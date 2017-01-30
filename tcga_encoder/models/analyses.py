@@ -1,4 +1,5 @@
 from tcga_encoder.utils.helpers import *
+from tcga_encoder.definitions.locations import *
 from lifelines import KaplanMeierFitter
 import sklearn
 from sklearn.cluster import KMeans, SpectralClustering
@@ -366,9 +367,18 @@ def compress_survival_prediction( disease, data_h5, survival_h5, K = 10, penalty
     
     
 if __name__ == "__main__":
+  
   disease = "sarc"
-  data_file = "/Users/uvapostdoc/data/broad_processed_post_recomb/20160128/pan_tiny_multi_set/data.h5"
-  survival_file = "/Users/uvapostdoc/results/tcga_vae_post_recomb/tiny_leave_blca_out/full_vae_survival.h5"
+  data_file = "pan_tiny_multi_set"
+  experiment_name = "tiny_leave_blca_out"
+  
+  if len(sys.argv) == 4:
+    disease   = sys.argv[1]
+    data_file = sys.argv[2]
+    experiment_name = sys.argv[3]
+  
+  data_location = os.path.join( HOME_DIR, "data/broad_processed_post_recomb/20160128/%s/data.h5"%(data_file) )
+  survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/%s/full_vae_survival.h5"%(experiment_name) )
   
   #s = pd.HDFStore( survival_file, "r" )
   #S1 = s["/%s/split1"%(disease)]
@@ -384,7 +394,7 @@ if __name__ == "__main__":
   for penalty_idx, penalty,Cs in zip( range(2), penalties,Css ):
     best_values[ penalty ] = []
     for C  in Cs:
-      test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc  = compress_survival_prediction( disease, data_file, survival_file, K, penalty, C )
+      test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc  = compress_survival_prediction( disease, data_location, survival_location, K, penalty, C )
       print "%s %d-fold auc = %0.3f accuracy = %0.3f, log prob = %0.3f (C = %f, reg = %s)"%( disease, K, test_auc, test_accuracy, test_log_prob, C, penalty )
       best_values[ penalty ].append([test_accuracy,test_log_prob,test_auc])
         
@@ -394,7 +404,7 @@ if __name__ == "__main__":
     
     best_C = Cs[ best_idx ]
     
-    test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc  = compress_survival_prediction( disease, data_file, survival_file, K, penalty, best_C )
+    test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc  = compress_survival_prediction( disease, data_location, survival_location, K, penalty, best_C )
     
     mn_models[ penalty ] = np.zeros(models[0].coef_.shape[1])  
     for m in models:
