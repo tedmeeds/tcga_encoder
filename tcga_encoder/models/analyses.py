@@ -385,9 +385,9 @@ if __name__ == "__main__":
   f = pp.figure()
   ax1 = f.add_subplot(211)
   ax2 = f.add_subplot(212)
-  K=20
+  K=10
   penalties = ["l2","l1"]
-  Css = [[ 1.0,0.9,0.75,0.5,0.1,0.01, 0.001, 0.0001],[5.0,2.0,1.0]]
+  Css = [[ 1.0,0.9,0.75,0.5,0.1,0.01, 0.001, 0.0001, 0.00001],[5.0,2.0,1.0,0.1,0.01]]
   best_values = OrderedDict()
   mn_models = OrderedDict() 
   axs = [ax1,ax2]
