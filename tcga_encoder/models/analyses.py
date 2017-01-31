@@ -7,6 +7,7 @@ from tcga_encoder.models.lda import LinearDiscriminantAnalysis
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA2
 from sklearn.neighbors import KernelDensity
 from tcga_encoder.utils.math_funcs import kl
+from tcga_encoder.models.basic import logistic_regression
 
 import pdb
 
@@ -299,6 +300,7 @@ def compress_survival_prediction( disease, data_h5, survival_h5, K = 10, penalty
   # K-Fold xval
   data_for_training = dna_for_training
   d_bcs_for_training = np.array( dna_observed_d_bcs, dtype=str)
+  
   #data_for_training = rna_for_training
   #d_bcs_for_training = np.array( rna_observed_d_bcs, dtype=str)
   #data_for_training = meth_for_training
@@ -343,14 +345,15 @@ def compress_survival_prediction( disease, data_h5, survival_h5, K = 10, penalty
     test_y  = np.squeeze( splits_for_training.loc[test_bcs].values )
     #from sklearn.svm import LinearSVC
     #model = sklearn.svm.LinearSVC(penalty=penalty,C=C, intercept_scaling=2.0, fit_intercept=True)
-    model = sklearn.linear_model.LogisticRegression(penalty=penalty,C=C, intercept_scaling=2.0, fit_intercept=False)
+    model = sklearn.linear_model.LogisticRegression(penalty=penalty,C=C, intercept_scaling=1.0, fit_intercept=False, class_weight = "balanced")
     model.fit( train_x, train_y )
     
     predict_train = model.predict( train_x )
     predict_test  = model.predict( test_x )
     predict_proba  = model.predict_proba( test_x )
+    predict_proba  = model.predict_log_proba( test_x )
     
-    test_prob[subset_ids]          = predict_proba
+    test_prob[subset_ids]          = np.exp(predict_proba)
     test_predictions[ subset_ids ] = predict_test
     y[ subset_ids ] = test_y
     models.append( model )
@@ -363,8 +366,175 @@ def compress_survival_prediction( disease, data_h5, survival_h5, K = 10, penalty
   
   #pdb.set_trace()
   
-  return test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc
+  d.close()
+  s.close()
+  return test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc, feature_names
+
+def logreg_survival_prediction( disease, data_h5, survival_h5, K = 10, penalty = "l2", C = 1.0 ):
+  d = pd.HDFStore( data_h5, "r" )
+  s = pd.HDFStore( survival_h5, "r" )
+  S1 = s["/%s/split1"%(disease)]
+  S2 = s["/%s/split2"%(disease)]
+  
+  # need to add disease in front of s barcodes
+  d_bcs = [ "%s_%s"%(disease,bc) for bc in S1.index.levels[0]]
+  bcs   = S1.index.levels[0]
+  d_bc2_bc = OrderedDict()
+  for d_bc, bc in zip( d_bcs, bcs ):
+    d_bc2_bc[ d_bc ] = bc
+  
+  observed = d["/CLINICAL/observed"].loc[d_bcs]
+  dna  = d["/DNA/channel/0"].loc[d_bcs]
+  rna  = d["/RNA/FAIR"].loc[d_bcs]
+  meth = d["/METH/FAIR"].loc[d_bcs]
+  
+  dna_observed = observed["DNA"].values > 0
+  dna_observed_d_bcs = observed[ dna_observed ].index
+
+  rna_observed = observed["RNA"].values > 0
+  rna_observed_d_bcs = observed[ rna_observed ].index
+  
+  meth_observed = observed["METH"].values > 0
+  meth_observed_d_bcs = observed[ meth_observed ].index
+  
+  dna_for_training  = dna.loc[ dna_observed_d_bcs ]
+  rna_for_training  = rna.loc[ rna_observed_d_bcs ]
+  meth_for_training = meth.loc[ meth_observed_d_bcs ]
+  
+  
+  # K-Fold xval
+  data_for_training = dna_for_training
+  d_bcs_for_training = np.array( dna_observed_d_bcs, dtype=str)
+  
+  #data_for_training = rna_for_training
+  #d_bcs_for_training = np.array( rna_observed_d_bcs, dtype=str)
+  #data_for_training = meth_for_training
+  #d_bcs_for_training = np.array( meth_observed_d_bcs, dtype=str)
+  
+  
+  feature_names = data_for_training.columns
+  split_index = S1.index
+  #pdb.set_trace()
+  S = pd.DataFrame( split_index.get_level_values(1).values.astype(int), columns=["group"], index = split_index.get_level_values(0).values.astype(str) )
+  
+  splits_for_training = S
+  bcs_for_training = np.array( [d_bc2_bc[d_bc] for d_bc in d_bcs_for_training], dtype=str )
+  n   = len(bcs_for_training)
+  #pdb.set_trace()
+  y = np.squeeze( splits_for_training.loc[bcs_for_training].values )
+  test_prob = np.zeros( n, dtype = float )
+  test_predictions = np.zeros( n, dtype = int )
+  models = []
+  for subset_ids in chunks( np.arange(n,dtype=int), int(1+float(n)/K) ):
+    d_bc_subset = d_bcs_for_training[subset_ids]
+    bc_subset   = bcs_for_training[subset_ids]
     
+    #pdb.set_trace()
+    train_d_bcs = np.setdiff1d( d_bcs_for_training, d_bc_subset )
+    test_d_bcs  = d_bc_subset
+    
+    #pdb.set_trace()
+    train_bcs = np.setdiff1d( bcs_for_training, bc_subset )
+    test_bcs  = bc_subset
+    
+    train_x = data_for_training.loc[train_d_bcs].values
+    test_x  = data_for_training.loc[test_d_bcs].values
+    
+    mn = train_x.mean(0)
+    st = train_x.std(0)
+    
+    #train_x -= mn; #train_x /= st
+    #test_x -= mn; #test_x /= st
+    
+    train_y = np.squeeze( splits_for_training.loc[train_bcs].values )
+    test_y  = np.squeeze( splits_for_training.loc[test_bcs].values )
+    #from sklearn.svm import LinearSVC
+    #model = sklearn.svm.LinearSVC(penalty=penalty,C=C, intercept_scaling=2.0, fit_intercept=True)
+    l1 = 0.0
+    l2 = 0.0
+    if penalty=='l1':
+      l1 = C
+    elif penalty =='l2':
+      l2 = C
+      
+    train_acc = logistic_regression( train_x, train_y, test_x, test_y, l1 = l1, l2 = l2 )
+    #model = sklearn.linear_model.LogisticRegression(penalty=penalty,C=C, intercept_scaling=1.0, fit_intercept=False, class_weight = "balanced")
+    # model.fit( train_x, train_y )
+    #
+    # predict_train = model.predict( train_x )
+    # predict_test  = model.predict( test_x )
+    # predict_proba  = model.predict_proba( test_x )
+    # predict_proba  = model.predict_log_proba( test_x )
+    #
+    # test_prob[subset_ids]          = np.exp(predict_proba)
+    # test_predictions[ subset_ids ] = predict_test
+    # y[ subset_ids ] = test_y
+    # models.append( model )
+    
+  
+  # test_log_prob = np.mean( y*np.log( test_prob +1e-12) + (1-y)*np.log(1.0-test_prob+1e-12) )
+  # test_accuracy = np.mean( test_predictions == y )
+  # test_auc = roc_auc_score( y, test_prob)
+  # #print "%s %d-fold accuracy = %0.3f"%( disease, K, test_accuracy )
+  #
+  # #pdb.set_trace()
+  #
+  d.close()
+  s.close()
+  return train_acc
+  #, models, y, test_predictions, test_prob, test_log_prob, test_auc, feature_names
+      
+    
+# if __name__ == "__main__":
+#
+#   disease = "sarc"
+#   data_file = "pan_tiny_multi_set"
+#   experiment_name = "tiny_leave_blca_out"
+#
+#   if len(sys.argv) == 4:
+#     disease   = sys.argv[1]
+#     data_file = sys.argv[2]
+#     experiment_name = sys.argv[3]
+#
+#   data_location = os.path.join( HOME_DIR, "data/broad_processed_post_recomb/20160128/%s/data.h5"%(data_file) )
+#   #survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/%s/full_vae_survival.h5"%(experiment_name) )
+#   survival_location = os.path.join( HOME_DIR, "Dropbox/SYNC/brca_large_full_vae_survival.h5" )
+#   #s = pd.HDFStore( survival_file, "r" )
+#   #S1 = s["/%s/split1"%(disease)]
+#   f1 = pp.figure()
+#   ax0 = f1.add_subplot(111)
+#   f = pp.figure()
+#   ax1 = f.add_subplot(211)
+#   ax2 = f.add_subplot(212)
+#   K=10
+#   penalties = ["l2","l1"]
+#   Css = [[ 1.0,0.9,0.75,0.5,0.1,0.01, 0.001, 0.0001, 0.00001],[5.0,2.0,1.0,0.1,0.01]]
+#   best_values = OrderedDict()
+#   mn_models = OrderedDict()
+#   axs = [ax1,ax2]
+#   for penalty_idx, penalty,Cs in zip( range(2), penalties,Css ):
+#     best_values[ penalty ] = []
+#     for C  in Cs:
+#       test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc, feature_names  = compress_survival_prediction( disease, data_location, survival_location, K, penalty, C )
+#       print "%s %d-fold auc = %0.3f accuracy = %0.3f, log prob = %0.3f (C = %f, reg = %s)"%( disease, K, test_auc, test_accuracy, test_log_prob, C, penalty )
+#       best_values[ penalty ].append([test_accuracy,test_log_prob,test_auc])
+#
+#       I = np.argsort(y)
+#       ax0.plot( test_prob[I], 'o-')
+#     best_values[ penalty ] = np.array(best_values[ penalty ], dtype=float )
+#
+#     best_idx = np.argmin( best_values[ penalty ][:,0] )
+#
+#     best_C = Cs[ best_idx ]
+#
+#     test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc, feature_names  = compress_survival_prediction( disease, data_location, survival_location, K, penalty, best_C )
+#
+#     mn_models[ penalty ] = np.zeros(models[0].coef_.shape[1])
+#     for m in models:
+#       axs[penalty_idx].plot( m.coef_.T, 'o-' )
+#       mn_models[ penalty ] += np.squeeze(m.coef_.T)
+#   pp.show()
+          
     
 if __name__ == "__main__":
   
@@ -378,42 +548,44 @@ if __name__ == "__main__":
     experiment_name = sys.argv[3]
   
   data_location = os.path.join( HOME_DIR, "data/broad_processed_post_recomb/20160128/%s/data.h5"%(data_file) )
-  survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/%s/full_vae_survival.h5"%(experiment_name) )
-  
+  #survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/%s/full_vae_survival.h5"%(experiment_name) )
+  survival_location = os.path.join( HOME_DIR, "Dropbox/SYNC/brca_large_full_vae_survival.h5" )
   #s = pd.HDFStore( survival_file, "r" )
   #S1 = s["/%s/split1"%(disease)]
+  f1 = pp.figure()
+  ax0 = f1.add_subplot(111)
   f = pp.figure()
   ax1 = f.add_subplot(211)
   ax2 = f.add_subplot(212)
   K=10
   penalties = ["l2","l1"]
-  Css = [[ 1.0,0.9,0.75,0.5,0.1,0.01, 0.001, 0.0001, 0.00001],[5.0,2.0,1.0,0.1,0.01]]
+  Css = [[0.0, 0.1, 0.5, 1.0],[0.0, 0.1, 0.5, 1.0]]
   best_values = OrderedDict()
   mn_models = OrderedDict() 
   axs = [ax1,ax2]
   for penalty_idx, penalty,Cs in zip( range(2), penalties,Css ):
     best_values[ penalty ] = []
     for C  in Cs:
-      test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc  = compress_survival_prediction( disease, data_location, survival_location, K, penalty, C )
-      print "%s %d-fold auc = %0.3f accuracy = %0.3f, log prob = %0.3f (C = %f, reg = %s)"%( disease, K, test_auc, test_accuracy, test_log_prob, C, penalty )
-      best_values[ penalty ].append([test_accuracy,test_log_prob,test_auc])
-        
-    best_values[ penalty ] = np.array(best_values[ penalty ], dtype=float )
-    
-    best_idx = np.argmin( best_values[ penalty ][:,0] )
-    
-    best_C = Cs[ best_idx ]
-    
-    test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc  = compress_survival_prediction( disease, data_location, survival_location, K, penalty, best_C )
-    
-    mn_models[ penalty ] = np.zeros(models[0].coef_.shape[1])  
-    for m in models:
-      axs[penalty_idx].plot( m.coef_.T, 'o-' )
-      mn_models[ penalty ] += np.squeeze(m.coef_.T)
-  pp.show()
-          
-    
+      print C, penalty
+      logreg_survival_prediction( disease, data_location, survival_location, K, penalty, C )
+      #print "%s %d-fold auc = %0.3f accuracy = %0.3f, log prob = %0.3f (C = %f, reg = %s)"%( disease, K, test_auc, test_accuracy, test_log_prob, C, penalty )
+      #best_values[ penalty ].append([test_accuracy,test_log_prob,test_auc])
       
+      #I = np.argsort(y)
+      #ax0.plot( test_prob[I], 'o-') 
+    # best_values[ penalty ] = np.array(best_values[ penalty ], dtype=float )
+    #
+    # best_idx = np.argmin( best_values[ penalty ][:,0] )
+    #
+    # best_C = Cs[ best_idx ]
+    #
+    # test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc, feature_names  = compress_survival_prediction( disease, data_location, survival_location, K, penalty, best_C )
+    #
+    # mn_models[ penalty ] = np.zeros(models[0].coef_.shape[1])
+    # for m in models:
+    #   axs[penalty_idx].plot( m.coef_.T, 'o-' )
+    #   mn_models[ penalty ] += np.squeeze(m.coef_.T)
+  pp.show()
   
 
 
