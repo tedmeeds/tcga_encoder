@@ -5,7 +5,7 @@ from tcga_encoder.utils.helpers import *
 from tcga_encoder.definitions.locations import *
 import pdb
 import sys
-import tcga_encoder.models.vae.main_dummy as runner
+import tcga_encoder.models.vae.main as runner
 
 def replace_template(template, disease_group ):
   
