@@ -49,7 +49,9 @@ def load_architecture( arch_dict, data_dict ):
 #     networks[ arch[NAME] ] = load_architecture( arch, data )
 #   return networks
 
-def main(y):
+def main(yaml_file):
+  y = load_yaml( yaml_file)
+  
   logging_dict = {}
   #print "Loading data"
   load_data_from_dict( y[DATA] )
@@ -114,9 +116,9 @@ if __name__ == "__main__":
   yaml_file = sys.argv[1]
   print "Running: ",yaml_file
   
-  y = load_yaml( yaml_file)
+  
     
-  main( y )
+  main( yaml_file )
 
   
   
