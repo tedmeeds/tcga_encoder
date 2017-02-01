@@ -206,13 +206,13 @@ def kmf_lda( predict_survival_train, predict_survival_test, K, disease_list, Zs 
     kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
     ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
    
-  colors = ["blue", "green", "orange", "red"] #"bgor"
+  colors = ["blue", "green","red"] #"bgor"
   n = len(Z_train)
-  n_chunks = 4
+  n_chunks = 3
   ax2 = f.add_subplot(132)
   kmf2 = KaplanMeierFitter()
   q_idx=0
-  for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
+  for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/n_chunks) ):
     these_ids = order_train[ids]
     kmf2.fit(T_train[these_ids], event_observed=E_train[these_ids], label =  "lda q %d E=%d C=%d"%(q_idx,E_train[these_ids].sum(),len(these_ids)-E_train[these_ids].sum()))
     ax2=kmf2.plot(ax=ax2,at_risk_counts=False,show_censors=True, color= colors[q_idx])
@@ -543,9 +543,9 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease_list,
   order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
   kmfs = []
   n = len(E_train)
-  colors = ["blue", "green", "orange", "red"]
+  colors = ["blue", "green", "red"]
   q_idx = 0
-  for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
+  for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/3) ):
     these_ids = order_train[ids]
     group_split2[these_ids] = q_idx
     
@@ -559,12 +559,12 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease_list,
   I0 = pp.find( group_split2 == 0 )
   I1 = pp.find( group_split2 == 1 )
   I2 = pp.find( group_split2 == 2 ) 
-  I3 = pp.find( group_split2 == 3 )
+  #I3 = pp.find( group_split2 == 3 )
   
   #results = 0.0 #multivariate_logrank_test(T_train, group_split2, event_observed_A=E_train )
-  results  = logrank_test(T_train[I0], T_train[I1], event_observed_A=E_train[I0], event_observed_B=E_train[I1]).test_statistic
-  results += logrank_test(T_train[I1], T_train[I2], event_observed_A=E_train[I1], event_observed_B=E_train[I2]).test_statistic
-  results += logrank_test(T_train[I2], T_train[I3], event_observed_A=E_train[I2], event_observed_B=E_train[I3]).test_statistic
+  results  = logrank_test(T_train[I0], T_train[I1], event_observed_A=E_train[I0], event_observed_B=E_train[I1]).test_statistic*np.log(1+min(len(I0),len(I1)))
+  results += logrank_test(T_train[I1], T_train[I2], event_observed_A=E_train[I1], event_observed_B=E_train[I2]).test_statistic*np.log(1+min(len(I2),len(I1)))
+  results += logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2]).test_statistic*np.log(1+min(len(I0),len(I2)))
   score_init = results #.test_statistic
   best_score = score_init
   print "ini score: ", best_score
@@ -580,9 +580,9 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease_list,
     
     log_joint_train = lda.log_joint( project_train )
     order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
-    colors = ["blue", "green", "orange", "red"]
+    colors = ["blue", "green", "red"]
     q_idx = 0
-    for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
+    for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/3) ):
       these_ids = order_train[ids]
       group_split2[these_ids] = q_idx
       q_idx+=1
@@ -591,10 +591,10 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease_list,
     I0 = pp.find( group_split2 == 0 )
     I1 = pp.find( group_split2 == 1 )
     I2 = pp.find( group_split2 == 2 ) 
-    I3 = pp.find( group_split2 == 3 )
-    results  = logrank_test(T_train[I0], T_train[I1], event_observed_A=E_train[I0], event_observed_B=E_train[I1]).test_statistic
-    results += logrank_test(T_train[I1], T_train[I2], event_observed_A=E_train[I1], event_observed_B=E_train[I2]).test_statistic
-    results += logrank_test(T_train[I2], T_train[I3], event_observed_A=E_train[I2], event_observed_B=E_train[I3]).test_statistic
+    #I3 = pp.find( group_split2 == 3 )
+    results  = logrank_test(T_train[I0], T_train[I1], event_observed_A=E_train[I0], event_observed_B=E_train[I1]).test_statistic*np.log(1+min(len(I0),len(I1)))
+    results += logrank_test(T_train[I1], T_train[I2], event_observed_A=E_train[I1], event_observed_B=E_train[I2]).test_statistic*np.log(1+min(len(I2),len(I1)))
+    results += logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2]).test_statistic*np.log(1+min(len(I0),len(I2)))
     #multivariate_logrank_test(T_train, group_split2, event_observed_A=E_train )
     score_new = results #.test_statistic
       
@@ -612,9 +612,9 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease_list,
   
   log_joint_train = lda.log_joint( project_train )
   order_train = np.argsort( log_joint_train[1]-log_joint_train[0] )
-  colors = ["blue", "green", "orange", "red"]
+  colors = ["blue", "green", "red"]
   q_idx=0
-  for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/4) ):
+  for ids in chunks( np.arange(n,dtype=int), int(1+float(n)/3) ):
     these_ids = order_train[ids]
     group_split2[these_ids] = q_idx
   
