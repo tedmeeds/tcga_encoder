@@ -143,20 +143,32 @@ def kmf_spectral( predict_survival_train, predict_survival_test, K, disease, Zs 
   
   return f, kmf, kmeans
  
-def kmf_lda( predict_survival_train, predict_survival_test, K, disease, Zs ):
+def kmf_lda( predict_survival_train, predict_survival_test, K, disease_list, Zs ):
 
   z_columns = []
   for z in Zs:
     z_columns.append( "z%d"%z) 
 
-  disease_query_train    = predict_survival_train["disease"].values == disease
+  if disease_list.__class__ == list:
+    
+    disease_query_train    = predict_survival_train["disease"].values == disease_list[0]
+    disease_query_test    = predict_survival_test["disease"].values == disease_list[0]
+    
+    for disease in disease_list[1:]:
+      disease_query_train    += predict_survival_train["disease"].values == disease
+      disease_query_test     += predict_survival_test["disease"].values == disease
+  else:
+    disease_query_train    = predict_survival_train["disease"].values == disease_list
+    disease_query_test    = predict_survival_test["disease"].values == disease_list
+  
   disease_survival_train = predict_survival_train[ disease_query_train ]
+  #pdb.set_trace()
   T_train = disease_survival_train["T"].values
   E_train = disease_survival_train["E"].values
   Z_train = disease_survival_train[z_columns].values
   n_train = len(Z_train)
   
-  disease_query_test    = predict_survival_test["disease"].values == disease
+  
   disease_survival_test = predict_survival_test[ disease_query_test ]
   T_test = disease_survival_test["T"].values
   E_test = disease_survival_test["E"].values
@@ -352,7 +364,7 @@ def analyze_survival_store( store, disease, split ):
     
   grouped.sum().T.plot()
   
-def lda_then_survival_on_disease( batcher, sess, info, disease ):
+def lda_then_survival_on_disease( batcher, sess, info, disease_list ):
   fill_store = batcher.fill_store
   data_store = batcher.data_store
   fill_store.open()
@@ -396,29 +408,47 @@ def lda_then_survival_on_disease( batcher, sess, info, disease ):
     
   #reg_data = pd.DataFrame( predict_survival[columns].values.astype(int), columns=columns)
   
-  f_disease, kmf, kmeans, g1, g2 = kmf_lda( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
+  f_disease, kmf, kmeans, g1, g2 = kmf_lda( predict_survival_train, predict_survival_test, K=3, disease_list = disease_list, Zs = np.arange(batcher.n_z) )
 
+  if disease_list.__class__ == list:
+    disease = disease_list[0]
+    for d in disease_list[1:]:
+      disease += "_%s"%d
+  else:
+    disease = disease_list
     
   if f_disease is not None:
-    batcher.SaveSurvival( disease, predict_survival_train, g1, g2 )
+    batcher.SaveSurvival( disease_list, predict_survival_train, g1, g2 )
     pp.savefig( batcher.viz_filename_survival_lda + "_%s.png"%(disease), fmt='png')
     pp.close('all')
   
-  f_disease, g1, g2 = kmf_lda_abc( predict_survival_train, predict_survival_test, K=3, disease = disease, Zs = np.arange(batcher.n_z) )
+  f_disease, g1, g2 = kmf_lda_abc( predict_survival_train, predict_survival_test, K=3, disease_list = disease_list, Zs = np.arange(batcher.n_z) )
 
     
   if f_disease is not None:
-    batcher.SaveSurvival( disease, predict_survival_train, g1, g2 )
+    batcher.SaveSurvival( disease_list, predict_survival_train, g1, g2 )
     pp.savefig( batcher.viz_filename_survival_lda + "_ABC_%s.png"%(disease), fmt='png')
     pp.close('all')
 
-def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease, Zs ):
+def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease_list, Zs ):
 
   z_columns = []
   for z in Zs:
     z_columns.append( "z%d"%z) 
+    
+  if disease_list.__class__ == list:
+    
+    disease_query_train    = predict_survival_train["disease"].values == disease_list[0]
+    disease_query_test    = predict_survival_test["disease"].values == disease_list[0]
+    
+    for disease in disease_list[1:]:
+      disease_query_train    += predict_survival_train["disease"].values == disease
+      disease_query_test     += predict_survival_test["disease"].values == disease
+  else:
+    disease_query_train    = predict_survival_train["disease"].values == disease_list
+    disease_query_test    = predict_survival_test["disease"].values == disease_list
 
-  disease_query_train    = predict_survival_train["disease"].values == disease
+  #disease_query_train    = predict_survival_train["disease"].values == disease
   disease_survival_train = predict_survival_train[ disease_query_train ]
   T_train = disease_survival_train["T"].values
   E_train = disease_survival_train["E"].values
@@ -477,7 +507,7 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease, Zs )
   print "ini score: ", best_score
   w = w_init.copy()
   for i in range(100):
-    w_new  = w + 0.01*np.random.randn( len(w) )
+    w_new  = w + 0.001*np.random.randn( len(w) )
     w_new /= np.linalg.norm( w )
     lda.w_prop_to = w_new
     predict_train = lda.predict( Z_train, ignore_pi=True )
@@ -525,16 +555,25 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease, Zs )
     q_idx+=1
   
   #event_durations, groups, event_observed
-  results = multivariate_logrank_test(T_train, group_split2, event_observed_A=E_train )
-  score_init = results.test_statistic
+
+  I0 = pp.find( group_split2 == 0 )
+  I1 = pp.find( group_split2 == 1 )
+  I2 = pp.find( group_split2 == 2 ) 
+  I3 = pp.find( group_split2 == 3 )
+  
+  #results = 0.0 #multivariate_logrank_test(T_train, group_split2, event_observed_A=E_train )
+  results  = logrank_test(T_train[I0], T_train[I1], event_observed_A=E_train[I0], event_observed_B=E_train[I1]).test_statistic
+  results += logrank_test(T_train[I1], T_train[I2], event_observed_A=E_train[I1], event_observed_B=E_train[I2]).test_statistic
+  results += logrank_test(T_train[I2], T_train[I3], event_observed_A=E_train[I2], event_observed_B=E_train[I3]).test_statistic
+  score_init = results #.test_statistic
   best_score = score_init
   print "ini score: ", best_score
   w = w_init.copy()
   for i in range(100):
-    w_new  = w + 0.01*np.random.randn( len(w) )
+    w_new  = w + 0.001*np.random.randn( len(w) )
     w_new /= np.linalg.norm( w )
     lda.w_prop_to = w_new
-    lda.fit_density()
+    lda.fit_density() 
     project_train = lda.transform( Z_train )
   
 
@@ -548,8 +587,16 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease, Zs )
       group_split2[these_ids] = q_idx
       q_idx+=1
     
-    results = multivariate_logrank_test(T_train, group_split2, event_observed_A=E_train )
-    score_new = results.test_statistic
+    
+    I0 = pp.find( group_split2 == 0 )
+    I1 = pp.find( group_split2 == 1 )
+    I2 = pp.find( group_split2 == 2 ) 
+    I3 = pp.find( group_split2 == 3 )
+    results  = logrank_test(T_train[I0], T_train[I1], event_observed_A=E_train[I0], event_observed_B=E_train[I1]).test_statistic
+    results += logrank_test(T_train[I1], T_train[I2], event_observed_A=E_train[I1], event_observed_B=E_train[I2]).test_statistic
+    results += logrank_test(T_train[I2], T_train[I3], event_observed_A=E_train[I2], event_observed_B=E_train[I3]).test_statistic
+    #multivariate_logrank_test(T_train, group_split2, event_observed_A=E_train )
+    score_new = results #.test_statistic
       
     if best_score < score_new:
       best_score = score_new

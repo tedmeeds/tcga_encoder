@@ -17,12 +17,9 @@ def replace_template(template, disease_group ):
   y['data']['validation_tissues'] = []
   if disease_list.__class__ == list:
     y['data']['validation_tissues'] = disease_list
-    diseases = ""
-    if len(disease_list)>1:
-      for d in disease_list:
-        diseases += "%s_"%(d)
-    else:
-      diseases = disease_list[0]   
+    diseases = disease_list[0] 
+    for d in disease_list[1:]:
+      diseases += "_%s"%(d) 
       
   else:
     y['data']['validation_tissues'] = [disease_list]

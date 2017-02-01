@@ -11,7 +11,6 @@ hnsc
 kich
 kirc
 kirp
-laml
 lgg
 lihc
 luad

@@ -52,6 +52,13 @@ class TCGABatcher( object ):
     # these are tissues that have 0 or only tiny fully observed
     
     
+  def CloseAll(self):
+    self.data_store.close()
+    self.survival_store.close()
+    self.fill_store.close()
+    self.latent_store.close()
+    self.model_store.close()
+    self.epoch_store.close()  
     
   def Initialize(self):
     self.beta = self.algo_dict["beta_init"]
@@ -487,15 +494,33 @@ class TCGABatcher( object ):
         self.free_bits = min( self.algo_dict["free_bits_max"], self.free_bits*self.algo_dict["free_bits_growth"] )
       print "FREE_BITS ", self.free_bits
 
-  def SaveSurvival( self, disease, predict_survival_train, g1, g2 ):
-    disease_query_train    = predict_survival_train["disease"].values == disease
+  def SaveSurvival( self, disease_list, predict_survival_train, g1, g2 ):
+    if disease_list.__class__ == list:
+      disease = disease_list[0]
+      disease_query_train    = predict_survival_train["disease"].values == disease_list[0]
+      #disease_query_test    = predict_survival_test["disease"].values == disease_list[0]
+      
+      for disease in disease_list[1:]:
+        disease += "_%s"%(disease)
+        disease_query_train    += predict_survival_train["disease"].values == disease
+        #disease_query_test     += predict_survival_test["disease"].values == disease
+    else:
+      disease = disease_list
+      disease_query_train    = predict_survival_train["disease"].values == disease_list
+      #disease_query_test    = predict_survival_test["disease"].values == disease_list
+
+    #disease_query_train    = predict_survival_train["disease"].values == disease
+    #disease_survival_train = predict_survival_train[ disease_query_train ]
+    
+    
+    #disease_query_train    = predict_survival_train["disease"].values == disease
     disease_survival_train = predict_survival_train[ disease_query_train ]
     #T_train = disease_survival_train["T"].values
     #E_train = disease_survival_train["E"].values
     #Z_train = disease_survival_train[z_columns].values
     barcodes = disease_survival_train.index
-    
-    disease_barcodes = [ "%s_%s"%(disease,barcode) for barcode in barcodes]
+    diseases = disease_survival_train["disease"].values
+    disease_barcodes = [ "%s_%s"%(dis,barcode) for dis,barcode in zip(diseases,barcodes)]
     
     try:
       dna = self.data_store[self.DNA_keys[0]].loc[ disease_barcodes ]
@@ -521,8 +546,8 @@ class TCGABatcher( object ):
      #lda_on_mutations( self, sess, cb_info )
      
      #pdb.set_trace()
-     for disease in self.validation_tissues:
-       lda_then_survival_on_disease( self, sess, cb_info, disease )
+     #for disease in self.validation_tissues:
+     lda_then_survival_on_disease( self, sess, cb_info, self.validation_tissues )
   
   def TestFill2( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]

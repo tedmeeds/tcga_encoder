@@ -78,7 +78,8 @@ def main(yaml_file):
   
   results_dict = {}
   train( sess, network, algo_dict, data_dict, logging_dict, results_dict )
-
+  batcher = algo_dict[BATCHER]
+  batcher.CloseAll()
   # batcher = algo_dict[BATCHER]
   # model_store   = algo_dict[BATCHER].model_store
   # latent_store  = algo_dict[BATCHER].latent_store
