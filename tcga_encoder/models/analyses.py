@@ -6,6 +6,7 @@ from sklearn.cluster import KMeans, SpectralClustering
 from tcga_encoder.models.lda import LinearDiscriminantAnalysis
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA2
 from sklearn.neighbors import KernelDensity
+from sklearn.ensemble import RandomForestClassifier
 from tcga_encoder.utils.math_funcs import kl
 from tcga_encoder.models.basic import logistic_regression
 
@@ -457,9 +458,9 @@ def logreg_survival_prediction( disease, data_h5, survival_h5, K = 10, penalty =
     elif penalty =='l2':
       l2 = C
       
-    train_acc = logistic_regression( train_x, train_y, test_x, test_y, l1 = l1, l2 = l2 )
-    #model = sklearn.linear_model.LogisticRegression(penalty=penalty,C=C, intercept_scaling=1.0, fit_intercept=False, class_weight = "balanced")
-    # model.fit( train_x, train_y )
+    #train_acc = logistic_regression( train_x, train_y, test_x, test_y, l1 = l1, l2 = l2 )
+    model = sklearn.linear_model.LogisticRegression(penalty=penalty,C=C, intercept_scaling=1.0, fit_intercept=False, class_weight = "balanced")
+    #model.fit( train_x, train_y )
     #
     # predict_train = model.predict( train_x )
     # predict_test  = model.predict( test_x )
@@ -548,43 +549,91 @@ if __name__ == "__main__":
     experiment_name = sys.argv[3]
   
   data_location = os.path.join( HOME_DIR, "data/broad_processed_post_recomb/20160128/%s/data.h5"%(data_file) )
-  #survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/%s/full_vae_survival.h5"%(experiment_name) )
-  survival_location = os.path.join( HOME_DIR, "Dropbox/SYNC/brca_large_full_vae_survival.h5" )
-  #s = pd.HDFStore( survival_file, "r" )
-  #S1 = s["/%s/split1"%(disease)]
-  f1 = pp.figure()
-  ax0 = f1.add_subplot(111)
-  f = pp.figure()
-  ax1 = f.add_subplot(211)
-  ax2 = f.add_subplot(212)
-  K=10
-  penalties = ["l2","l1"]
-  Css = [[0.0, 0.1, 0.5, 1.0],[0.0, 0.1, 0.5, 1.0]]
-  best_values = OrderedDict()
-  mn_models = OrderedDict() 
-  axs = [ax1,ax2]
-  for penalty_idx, penalty,Cs in zip( range(2), penalties,Css ):
-    best_values[ penalty ] = []
-    for C  in Cs:
-      print C, penalty
-      logreg_survival_prediction( disease, data_location, survival_location, K, penalty, C )
-      #print "%s %d-fold auc = %0.3f accuracy = %0.3f, log prob = %0.3f (C = %f, reg = %s)"%( disease, K, test_auc, test_accuracy, test_log_prob, C, penalty )
-      #best_values[ penalty ].append([test_accuracy,test_log_prob,test_auc])
-      
-      #I = np.argsort(y)
-      #ax0.plot( test_prob[I], 'o-') 
-    # best_values[ penalty ] = np.array(best_values[ penalty ], dtype=float )
-    #
-    # best_idx = np.argmin( best_values[ penalty ][:,0] )
-    #
-    # best_C = Cs[ best_idx ]
-    #
-    # test_accuracy, models, y, test_predictions, test_prob, test_log_prob, test_auc, feature_names  = compress_survival_prediction( disease, data_location, survival_location, K, penalty, best_C )
-    #
-    # mn_models[ penalty ] = np.zeros(models[0].coef_.shape[1])
-    # for m in models:
-    #   axs[penalty_idx].plot( m.coef_.T, 'o-' )
-    #   mn_models[ penalty ] += np.squeeze(m.coef_.T)
+  fill_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/medium/leave_out_%s/full_vae_fill.h5"%(disease) )
+  survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/medium/leave_out_%s/full_vae_survival.h5"%(disease) )
+  
+  s=pd.HDFStore( survival_location, "r" )
+  d=pd.HDFStore( data_location, "r" )
+  f=pd.HDFStore( fill_location, "r" )
+  S1 = s["/%s/split1"%(disease)]
+  d_bcs = [ "%s_%s"%(disease,bc) for bc in S1.index.levels[0]]
+  bcs   = S1.index.levels[0]
+  d_bc2_bc = OrderedDict()
+  for d_bc, bc in zip( d_bcs, bcs ):
+    d_bc2_bc[ d_bc ] = bc
+  
+  observed = d["/CLINICAL/observed"].loc[d_bcs]
+  dna  = d["/DNA/channel/0"].loc[d_bcs]
+  rna  = d["/RNA/FAIR"].loc[d_bcs]
+  meth = d["/METH/FAIR"].loc[d_bcs]
+  f_dna  = f["/Fill/VAL/DNA"].loc[d_bcs]
+  f_rna  = f["/Fill/VAL/RNA"].loc[d_bcs]
+  f_meth = f["/Fill/VAL/METH"].loc[d_bcs]
+  
+  dna_observed = observed["DNA"].values > 0
+  dna_observed_d_bcs = observed[ dna_observed ].index
+
+  rna_observed = observed["RNA"].values > 0
+  rna_observed_d_bcs = observed[ rna_observed ].index
+  
+  meth_observed = observed["METH"].values > 0
+  meth_observed_d_bcs = observed[ meth_observed ].index
+  
+  dna_for_training  = dna.loc[ dna_observed_d_bcs ]
+  rna_for_training  = rna.loc[ rna_observed_d_bcs ]
+  meth_for_training = meth.loc[ meth_observed_d_bcs ]
+  
+  f_dna_for_training  = f_dna.loc[ dna_observed_d_bcs ]
+  f_rna_for_training  = f_rna.loc[ rna_observed_d_bcs ]
+  f_meth_for_training = f_meth.loc[ meth_observed_d_bcs ]
+  
+  
+  # K-Fold xval
+  data_for_training = dna_for_training
+  d_bcs_for_training = np.array( dna_observed_d_bcs, dtype=str)  
+  #data_for_training = rna_for_training
+  #d_bcs_for_training = np.array( rna_observed_d_bcs, dtype=str)  
+  #data_for_training = meth_for_training
+  #d_bcs_for_training = np.array( meth_observed_d_bcs, dtype=str)  
+  
+  feature_names = data_for_training.columns
+  split_index = S1.index
+  #pdb.set_trace()
+  S = pd.DataFrame( split_index.get_level_values(1).values.astype(int), columns=["group"], index = split_index.get_level_values(0).values.astype(str) )
+  
+  
+  bcs_for_training = np.array( [d_bc2_bc[d_bc] for d_bc in d_bcs_for_training], dtype=str )
+  splits_for_training = S.loc[bcs_for_training]
+  n   = len(bcs_for_training)
+  #pdb.set_trace()
+  y = np.squeeze( splits_for_training.loc[bcs_for_training].values )
+  X = data_for_training.values
+  
+  I0 = pp.find(y==0)
+  I1 = pp.find(y==1)
+  
+  X0 = X[I0,:]
+  X1 = X[I1,:]
+  
+  mn0 = X0.mean(0)
+  mn1 = X1.mean(0)
+  
+  #dif = np.log(mn1)-np.log(mn0)
+  dif = mn1 - mn0
+  
+  I_features = np.argsort( -np.abs(dif) )
+  
+  m = np.vstack( (mn0,mn1,dif) ).T[I_features,:]
+  M = pd.DataFrame( m, columns = ["mean0","mean1","dif"], index = feature_names[I_features])
+  
+  log_y_est = np.dot( dif, X.T )
+  y_est = 1.0 / (1.0 + np.exp( -log_y_est ) )
+  
+  rf = RandomForestClassifier( n_estimators = 100 )
+  rf.fit( X, y )
+  I_rf = np.argsort( -rf.feature_importances_ )
+  print feature_names[I_rf][:20]
+  print M[:20]
   pp.show()
   
 

@@ -70,7 +70,8 @@ def logistic_regression( x_train, y_train, x_test, y_test, l1 = 0.0, l2 = 0.0 ):
       print("Train Accuracy:", acc )
       print("Test Accuracy:", test_acc )
       W = W.eval()
-  return test_acc, W
+      b = b.eval()
+  return test_acc, W, b
   
 # if __name__ == "__main__":
 #
