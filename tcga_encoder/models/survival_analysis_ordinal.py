@@ -88,13 +88,13 @@ def ordinal_regression_with_xval_and_bootstrap( X, e, t, k_fold = 10, n_bootstra
       I=pp.find( np.isinf(test_prob) )
       test_prob[I] = 1
       
-      auc = roc_auc_score( e[test_ids], test_prob )
-      auc_tr = roc_auc_score( e_train, train_prob )
+      #auc = roc_auc_score( e[test_ids], test_prob )
+      #auc_tr = roc_auc_score( e_train, train_prob )
       
       
       test_predict = lda.predict( X_test )
       
-      print "AUCS: ", auc_tr, auc
+      #print "AUCS: ", auc_tr, auc
       # if auc < 0.5:
       #   test_prob = 1.0-test_prob
       #   test_proj *= -1
