@@ -633,6 +633,7 @@ def kmf_lda_abc( predict_survival_train, predict_survival_test, K, disease_list,
   return f, group_split1, group_split2
 
     
+    
 
   
   
