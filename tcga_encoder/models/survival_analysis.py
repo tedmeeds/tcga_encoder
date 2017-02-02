@@ -166,7 +166,7 @@ if __name__ == "__main__":
   d=pd.HDFStore( data_location, "r" )
   f=pd.HDFStore( fill_location, "r" ) 
   
-  projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis( [disease], f, d, k_fold = 80, n_bootstraps = 20, epsilon= 0.1 )  
+  projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis( [disease], f, d, k_fold = 40, n_bootstraps = 10, epsilon= 0.1 )  
   
   avg_proj = averages[0]
   avg_prob = averages[1]

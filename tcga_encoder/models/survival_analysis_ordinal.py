@@ -171,7 +171,7 @@ def run_survival_analysis( disease_list, fill_store, data_store, k_fold = 10, n_
 
 if __name__ == "__main__":
   
-  disease = "blca"
+  disease = "brca"
   data_file = "pan_tiny_multi_set"
   experiment_name = "tiny_leave_%s_out"%(disease)
   
@@ -183,18 +183,20 @@ if __name__ == "__main__":
     data_location = os.path.join( HOME_DIR, "data/broad_processed_post_recomb/20160128/%s/data.h5"%(data_file) )
     fill_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/medium/leave_out_%s/full_vae_fill.h5"%(disease) )
     survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/medium/leave_out_%s/full_vae_survival.h5"%(disease) )
+    savename = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/medium/leave_out_%s/survival_xval_ordinal.png"%(disease))
   else:
     data_location = os.path.join( HOME_DIR, "data/broad_processed_post_recomb/20160128/%s/data.h5"%(data_file) )
     fill_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out_sandbox/tiny/leave_out_%s/full_vae_fill.h5"%(disease) )
     survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out_sandbox/tiny/leave_out_%s/full_vae_survival.h5"%(disease) )
+    savename = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/tiny/leave_out_%s/survival_xval_ordinal.png"%(disease))
   
   s=pd.HDFStore( survival_location, "r" )
   d=pd.HDFStore( data_location, "r" )
   f=pd.HDFStore( fill_location, "r" ) 
   
   l1 = 0.0
-  l2 = 0.01
-  projections, probabilties, weights, averages, X, e, t, E_train, T_train = run_survival_analysis( [disease], f, d, k_fold = 5, n_bootstraps = 0, epsilon= 0.1, l1 = l1, l2 = l2 )  
+  l2 = 0.0
+  projections, probabilties, weights, averages, X, e, t, E_train, T_train = run_survival_analysis( [disease], f, d, k_fold = 20, n_bootstraps = 10, epsilon= 0.1, l1 = l1, l2 = l2 )  
   
   avg_proj = averages[0]
   avg_prob = averages[1]
@@ -245,6 +247,8 @@ if __name__ == "__main__":
   
   
   print "ROC mn_prob ", roc_auc_score(e,mn_prob)
+  pp.savefig(savename, dpi=300, format='png')
   #print "ROC avg_prob ", roc_auc_score(e,avg_prob)
   pp.show()
+  
    
