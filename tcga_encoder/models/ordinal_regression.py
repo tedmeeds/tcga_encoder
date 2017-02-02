@@ -2,8 +2,8 @@ from __future__ import print_function
 import pdb
 import tensorflow as tf
 # Parameters
-learning_rate = 0.05
-training_epochs = 2000
+learning_rate = 0.1
+training_epochs = 500
 batch_size = 100
 display_step = 100
 import pylab as pp
@@ -75,8 +75,8 @@ def ordinal_regression( x_train, e_train, t_train, l1 = 0.0, l2 = 0.0 ):
           r_vals = np.random.rand(len(I_censored))
           
           I_more = pp.find( predicted > t_train[I_censored] )
-          t_batch[ I_censored[I_more] ] += r_vals[I_more]*(predicted[I_more]-t_train[I_censored[I_more]] )
-          #t_batch[ I_censored ] += 0.5*r_vals*max_dif[I_censored]
+          #t_batch[ I_censored[I_more] ] += r_vals[I_more]*(predicted[I_more]-t_train[I_censored[I_more]] )
+          t_batch[ I_censored ] += 0.5*r_vals*max_dif[I_censored]
           #pdb.set_trace()
           _, c = sess.run([optimizer, cost], feed_dict={x: x_train,
                                                         e: e_train,

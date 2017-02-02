@@ -194,7 +194,7 @@ if __name__ == "__main__":
   d=pd.HDFStore( data_location, "r" )
   f=pd.HDFStore( fill_location, "r" ) 
   
-  l1 = 0.0
+  l1 = 0.01
   l2 = 0.0
   projections, probabilties, weights, averages, X, e, t, E_train, T_train = run_survival_analysis( [disease], f, d, k_fold = 20, n_bootstraps = 10, epsilon= 0.1, l1 = l1, l2 = l2 )  
   
