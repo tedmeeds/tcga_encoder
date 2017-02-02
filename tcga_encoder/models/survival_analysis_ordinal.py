@@ -3,16 +3,21 @@ from tcga_encoder.definitions.locations import *
 import sklearn
 from sklearn.model_selection import KFold
 from tcga_encoder.models.lda import LinearDiscriminantAnalysis
+from tcga_encoder.models.ordinal_regression import *
 import pdb
 from lifelines import KaplanMeierFitter
 
-def bootstraps( x, m ):
+def bootstraps( x, m, replace = True ):
   # samples from arange(n) with replacement, m times.
   #x = np.arange(n, dtype=int)
+  if m == 0:
+    m = 1
+    replace = False
+    
   n = len(x)
   N = np.zeros( (m,n), dtype=int)
   for i in range(m):
-    N[i,:] = sklearn.utils.resample( x, replace = True )
+    N[i,:] = sklearn.utils.resample( x, replace = replace )
     
   return N
   
@@ -36,10 +41,11 @@ def xval_folds( n, K, randomize = False, seed = None ):
   
   return train, test
   
-def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, epsilon = 1e-12 ):
+def ordinal_regression_with_xval_and_bootstrap( X, e, t, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, epsilon = 1e-12, l1=0,l2=0 ):
   
   n,d = X.shape
-  assert len(y) == n, "incorrect sizes"
+  assert len(e) == n, "incorrect sizes"
+  assert len(t) == n, "incorrect sizes"
   
   train_folds, test_folds = xval_folds( n, k_fold, randomize = randomize, seed = seed )
   
@@ -63,21 +69,37 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
     for bootstrap_train_ids in bootstrap_ids:
       #pdb.set_trace()
       X_train = X[bootstrap_train_ids,:]
-      y_train = y[bootstrap_train_ids]
+      t_train = t[bootstrap_train_ids]
+      e_train = e[bootstrap_train_ids]
       
+      w_ord,b_ord = ordinal_regression( X_train, e_train, t_train, l1=l1, l2=l2 )
       
       lda = LinearDiscriminantAnalysis(epsilon=epsilon)
-      lda.fit( X_train, y_train )
-      
+      lda.fit( X_train, e_train )
+      lda.w_prop_to = np.squeeze(w_ord)
+      lda.fit_density()
       w = lda.w_prop_to
       
       test_proj = lda.transform( X_test )
-      ranked = np.argsort(test_proj).astype(float) / len(test_proj)
-      test_proj = ranked
+      #ranked = np.argsort(test_proj).astype(float) / len(test_proj)
+      #test_proj = ranked
       test_prob = lda.prob( X_test )
+      train_prob = lda.prob( X_train )
       I=pp.find( np.isinf(test_prob) )
       test_prob[I] = 1
+      
+      auc = roc_auc_score( e[test_ids], test_prob )
+      auc_tr = roc_auc_score( e_train, train_prob )
+      
+      
       test_predict = lda.predict( X_test )
+      
+      print "AUCS: ", auc_tr, auc
+      # if auc < 0.5:
+      #   test_prob = 1.0-test_prob
+      #   test_proj *= -1
+      #   w *= -1
+        
       mean_projections[ test_ids ]   += test_proj
       mean_probabilities[ test_ids ] += test_prob
       
@@ -86,16 +108,20 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
       
       w_mean[k] += w
       w_var[k] += np.square(w)
-    w_mn = w_mean[k] / n_bootstraps
+      #pdb.set_trace()
+    # w_mn = w_mean[k] / n_bootstraps
+    #
+    # lda = LinearDiscriminantAnalysis(epsilon=epsilon)
+    # lda.fit( X[train_ids,:], y[train_ids] )
+    # lda.w_prop_to =   w_mn
+    # lda.fit_density()
+    #
+    # avg_projection[ test_ids ] = lda.transform( X_test )
+    # avg_probability[ test_ids ] = lda.prob( X_test )
    
-    lda = LinearDiscriminantAnalysis(epsilon=epsilon)
-    lda.fit( X[train_ids,:], y[train_ids] )
-    lda.w_prop_to =   w_mn
-    lda.fit_density()
-   
-    avg_projection[ test_ids ] = lda.transform( X_test )
-    avg_probability[ test_ids ] = lda.prob( X_test )
-   
+  if n_bootstraps == 0:
+    n_bootstraps = 1
+    
   w_mean /= n_bootstraps
   w_var   /= n_bootstraps 
   w_var   -= np.square( w_mean )
@@ -110,7 +136,7 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
   
   return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
 
-def run_survival_analysis( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, epsilon = 1e-12 ):
+def run_survival_analysis( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, epsilon = 1e-12, l1=0, l2=0 ):
   fill_store.open()
   data_store.open()
   ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
@@ -136,14 +162,16 @@ def run_survival_analysis( disease_list, fill_store, data_store, k_fold = 10, n_
   
   X_columns = val_survival.columns[2:]
   X = predict_survival_train[X_columns].values.astype(float)
-  y = predict_survival_train["E"].values.astype(int)
-  projections, probabilties, weights, averages = lda_with_xval_and_bootstrap( X, y, k_fold = k_fold, n_bootstraps = n_bootstraps )
+  e = predict_survival_train["E"].values.astype(int)
+  t = predict_survival_train["T"].values.astype(float)
+  t /= 365.0
+  projections, probabilties, weights, averages = ordinal_regression_with_xval_and_bootstrap( X, e, t,  k_fold = k_fold, n_bootstraps = n_bootstraps, l1 = l1, l2 = l2 )
   
-  return projections, probabilties, weights, averages, X, y, Events_train, Times_train
+  return projections, probabilties, weights, averages, X, e, t, Events_train, Times_train
 
 if __name__ == "__main__":
   
-  disease = "brca"
+  disease = "blca"
   data_file = "pan_tiny_multi_set"
   experiment_name = "tiny_leave_%s_out"%(disease)
   
@@ -155,18 +183,18 @@ if __name__ == "__main__":
     data_location = os.path.join( HOME_DIR, "data/broad_processed_post_recomb/20160128/%s/data.h5"%(data_file) )
     fill_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/medium/leave_out_%s/full_vae_fill.h5"%(disease) )
     survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/medium/leave_out_%s/full_vae_survival.h5"%(disease) )
-    savename = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/medium/leave_out_%s/survival_xval.png"%(disease))
   else:
     data_location = os.path.join( HOME_DIR, "data/broad_processed_post_recomb/20160128/%s/data.h5"%(data_file) )
     fill_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out_sandbox/tiny/leave_out_%s/full_vae_fill.h5"%(disease) )
     survival_location = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out_sandbox/tiny/leave_out_%s/full_vae_survival.h5"%(disease) )
-    savename = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/tiny/leave_out_%s/survival_xval.png"%(disease))
-    
+  
   s=pd.HDFStore( survival_location, "r" )
   d=pd.HDFStore( data_location, "r" )
   f=pd.HDFStore( fill_location, "r" ) 
   
-  projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis( [disease], f, d, k_fold = 80, n_bootstraps = 20, epsilon= 0.1 )  
+  l1 = 0.0
+  l2 = 0.01
+  projections, probabilties, weights, averages, X, e, t, E_train, T_train = run_survival_analysis( [disease], f, d, k_fold = 5, n_bootstraps = 0, epsilon= 0.1, l1 = l1, l2 = l2 )  
   
   avg_proj = averages[0]
   avg_prob = averages[1]
@@ -183,16 +211,19 @@ if __name__ == "__main__":
   I = np.argsort(-mn_proj)
   ax1.plot( mn_proj[I], mn_prob[I], 'o')
   ax2 = f.add_subplot(212)
-  ax2.plot( mn_w, 'o-')
+  ax2.plot( mn_w.T, 'o-')
   
   #I = np.argsort( mn_prob )
   I1 = pp.find( mn_prob > np.median(mn_prob) )
   I0 = pp.find( mn_prob <= np.median(mn_prob) )
+  #I1 = pp.find( mn_prob > 0.4 )
+  #I0 = pp.find( mn_prob <= 0.4 )
   #I1 = pp.find( avg_prob > np.median(avg_prob) )
   #I0 = pp.find( avg_prob <= np.median(avg_prob) )
   
   f = pp.figure()
-  ax3 = f.add_subplot(111)
+  ax3 = f.add_subplot(121)
+  ax4 = f.add_subplot(122)
   
   kmf = KaplanMeierFitter()
   if len(I1) > 0:
@@ -201,12 +232,19 @@ if __name__ == "__main__":
   if len(I0) > 0:
     kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
     ax3=kmf.plot(ax=ax3,at_risk_counts=False,show_censors=True, color='blue')
-    
+  I1 = pp.find( mn_prob > 0.5 )
+  I0 = pp.find( mn_prob <= 0.5 )
+  kmf = KaplanMeierFitter()
+  if len(I1) > 0:
+    kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
+    ax4=kmf.plot(ax=ax4,at_risk_counts=False,show_censors=True, color='red')
+  if len(I0) > 0:
+    kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
+    ax4=kmf.plot(ax=ax4,at_risk_counts=False,show_censors=True, color='blue')
+
   
   
-  
-  pp.savefig(savename, dpi=300, format='png')
-  print "ROC mn_prob ", roc_auc_score(y,mn_prob)
-  print "ROC avg_prob ", roc_auc_score(y,avg_prob)
+  print "ROC mn_prob ", roc_auc_score(e,mn_prob)
+  #print "ROC avg_prob ", roc_auc_score(e,avg_prob)
   pp.show()
    
