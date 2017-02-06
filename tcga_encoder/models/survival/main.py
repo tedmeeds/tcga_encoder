@@ -74,13 +74,17 @@ def main(yaml_file, weights_matrix):
       
       #I = np.argsort(-mn_proj)
       I = np.argsort(-mn_prob)
-      half = int(len(I)/2.0)
-      I0 = I[:half]
-      I1 = I[half:]
+      third = int(len(I)/3.0)
+      I0 = I[:third]
+      I1 = I[third:2*third]
+      I2 = I[2*third:]
       kmf = KaplanMeierFitter()
+      if len(I2) > 0:
+        kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
       if len(I1) > 0:
         kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
-        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='green')
       if len(I0) > 0:
         kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
         ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
@@ -121,13 +125,17 @@ def main(yaml_file, weights_matrix):
       
       #I = np.argsort(-mn_proj)
       I = np.argsort(-mn_prob)
-      half = int(len(I)/2.0)
-      I0 = I[:half]
-      I1 = I[half:]
+      third = int(len(I)/3.0)
+      I0 = I[:third]
+      I1 = I[third:2*third]
+      I2 = I[2*third:]
       kmf = KaplanMeierFitter()
+      if len(I2) > 0:
+        kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
       if len(I1) > 0:
         kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
-        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='green')
       if len(I0) > 0:
         kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
         ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
