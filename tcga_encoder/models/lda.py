@@ -76,7 +76,7 @@ class LinearDiscriminantAnalysis( object ):
       self.h0 = max(1e-12,np.std(self.x_proj0)*(4.0/3.0/self.class_n[0])**(1.0/5.0))
     
     
-    
+      print self.h1, self.x_proj1
       self.kde1 = KernelDensity(kernel='gaussian', bandwidth=self.h1).fit(self.x_proj1[:,np.newaxis])
       self.kde0 = KernelDensity(kernel='gaussian', bandwidth=self.h0).fit(self.x_proj0[:,np.newaxis])
     
