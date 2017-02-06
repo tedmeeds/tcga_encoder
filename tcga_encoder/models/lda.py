@@ -46,6 +46,7 @@ class LinearDiscriminantAnalysis( object ):
       self.mean_dif = self.class_mean[self.classes[1]]-self.class_mean[self.classes[0]]
     
       self.iSw = np.linalg.pinv( self.Sw + self.epsilon*np.eye(self.d) )
+      print self.Sw, self.iSw
       self.w_prop_to = np.dot( self.iSw, self.mean_dif  )
       self.w_prop_to = self.w_prop_to / np.linalg.norm(self.w_prop_to)
       self.fitted = True
