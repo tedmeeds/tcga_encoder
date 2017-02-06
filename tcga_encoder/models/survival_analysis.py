@@ -213,11 +213,12 @@ def lda_with_loo( X, y, epsilon = 1e-12 ):
     X_train = X[train_ids,:]
     y_train = y[train_ids]
     
-    sk_lda = sk_LinearDiscriminantAnalysis(solver='lsqr', shrinkage=None)
+    sk_lda = sk_LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto')
     sk_lda.fit( X_train, y_train )
-    sk_test_proj = np.squeeze(sk_lda.predict_log_proba( X_test ))[:,1]
+    #pdb.set_trace()
+    sk_test_proj = np.squeeze(sk_lda.predict_log_proba( X_test ))[1]
     test_proj = sk_test_proj #lda.transform( X_test )
-    test_prob = np.squeeze(sk_lda.predict_proba( X_test )[:,1]) # lda.predict( X_test )
+    test_prob = np.squeeze(sk_lda.predict_proba( X_test ))[1] # lda.predict( X_test )
 
 
     mean_projections[ i ]   += test_proj
@@ -226,6 +227,7 @@ def lda_with_loo( X, y, epsilon = 1e-12 ):
     var_projections[ i ]   += np.square( test_proj )
     var_probabilities[ i ] += np.square( test_prob )
     
+    w = np.squeeze( sk_lda.coef_ )
     w_mean[i] += w
     w_var[i] += np.square(w)
   
@@ -233,14 +235,14 @@ def lda_with_loo( X, y, epsilon = 1e-12 ):
  
   w_var   = w_mean.var(0)
     
-  print "loo     w = ", w_mean
+  print "loo     w = ", w_mn
   print "loo w_var = ", w_var
   
   var_projections   -= np.square( mean_projections )
   var_probabilities -= np.square( mean_probabilities )
   avg_projection=mean_projections
   avg_probability=mean_probabilities
-  return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
+  return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mn,w_var),(avg_projection,avg_probability)
         
 def lda_on_train( X, y, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, epsilon = 1e-12 ):
   

@@ -15,7 +15,7 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 
-def main(yaml_file):
+def main(yaml_file, weights_matrix):
   y = load_yaml( yaml_file)
   load_data_from_dict( y[DATA] )
   data_dict      = y[DATA] #{N_TRAIN:4000}
@@ -37,6 +37,7 @@ def main(yaml_file):
   f=pd.HDFStore( fill_location, "r" ) 
   
   #pdb.set_trace()
+  
   
   for survival_spec in survival_dict:
     name = survival_spec["name"]
@@ -93,7 +94,7 @@ def main(yaml_file):
       bootstraps = survival_spec["bootstraps"]
       epsilon =  survival_spec["epsilon"]
       save_location = os.path.join( logging_dict[SAVEDIR], "survival_lda_loo.png" )  
-      projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis_lda( data_dict['validation_tissues'], f, d, k_fold = folds, n_bootstraps = bootstraps, epsilon= epsilon )  
+      projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis_lda_loo( data_dict['validation_tissues'], f, d, k_fold = folds, n_bootstraps = bootstraps, epsilon= epsilon )  
     
       avg_proj = averages[0]
       avg_prob = averages[1]
@@ -206,6 +207,7 @@ def main(yaml_file):
       
       pp.savefig( save_location, fmt='png', dpi=300 )
       #bootstraps = survival_spec["bootstraps"]
+    weights_matrix.append( weights[0] )
       
   
   

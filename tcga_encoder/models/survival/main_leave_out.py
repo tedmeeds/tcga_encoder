@@ -43,11 +43,26 @@ if __name__ == "__main__":
   print "Running template: ",yaml_template_file
   
   disease_list = open( disease_list_file, "r" ).readlines()
+  weights_matrix = []
+
+  diseases = []
   for disease_group in disease_list:
     print "Running disease_group = %s"%(disease_group)
-    
+    diseases.append( disease_group.rstrip("\n"))
     yaml_file = replace_template( yaml_template_file, disease_group )
-    runner.main( yaml_file )
+    runner.main( yaml_file, weights_matrix )
+    #weights.append( yaml_file["weights"] )
+  
+  #pdb.set_trace()
+  weights_matrix = np.array(weights_matrix)
+  columns = ["z%d"%z for z in range(weights_matrix.shape[1])]
+  df = pd.DataFrame( weights_matrix, columns = columns, index = diseases )
+  y = load_yaml( yaml_template_file )
+  logging_dict   = y[LOGGING]
+  logging_dict[SAVEDIR] = os.path.join( HOME_DIR, logging_dict[LOCATION]  )
+  w_location = os.path.join( logging_dict[SAVEDIR], "weights.csv" )
+  df.to_csv( w_location)
+  print df
     #break
 
   
