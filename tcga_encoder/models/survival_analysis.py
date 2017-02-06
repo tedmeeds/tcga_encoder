@@ -4,6 +4,7 @@ import sklearn
 from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.model_selection import KFold
 from tcga_encoder.models.lda import LinearDiscriminantAnalysis
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as sk_LinearDiscriminantAnalysis
 from tcga_encoder.models.survival import *
 import pdb
 from lifelines import KaplanMeierFitter
@@ -117,11 +118,17 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
       lda = LinearDiscriminantAnalysis(epsilon=epsilon)
       lda.fit( X_train, y_train )
       
+      #sk_lda = sk_LinearDiscriminantAnalysis()
+      #sk_lda.fit( X_train, y_train )
+      #sk_test_proj = sk_lda.transform( X_test )
+      
       w = lda.w_prop_to
       
       test_proj = lda.transform( X_test )
+      
+      #pdb.set_trace()
       ranked = np.argsort(test_proj).astype(float) / len(test_proj)
-      test_proj = ranked
+      #test_proj = ranked
       test_prob = lda.prob( X_test )
       I=pp.find( np.isinf(test_prob) )
       test_prob[I] = 1

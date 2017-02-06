@@ -64,9 +64,12 @@ def main(yaml_file):
       #ax2 = f.add_subplot(212)
       #ax2.plot( mn_w, 'o-')
   
+      half = int(len(I)/2.0)
+      I0 = I[:half]
+      I1 = I[half:]
       #I = np.argsort( mn_prob )
-      I1 = pp.find( mn_prob > np.median(mn_prob) )
-      I0 = pp.find( mn_prob <= np.median(mn_prob) )
+      #I1 = pp.find( mn_prob > np.median(mn_prob) )
+      #sI0 = pp.find( mn_prob <= np.median(mn_prob) )
       #I1 = pp.find( avg_prob > np.median(avg_prob) )
       #I0 = pp.find( avg_prob <= np.median(avg_prob) )
   
@@ -86,7 +89,7 @@ def main(yaml_file):
   
       pp.savefig(save_location, dpi=300, format='png')
       print "ROC mn_prob ", roc_auc_score(y,mn_prob)
-      print "ROC avg_prob ", roc_auc_score(y,avg_prob)
+      print "ROC mn_proj ", roc_auc_score(y,mn_proj)
     
     
     elif name == "kmeans":

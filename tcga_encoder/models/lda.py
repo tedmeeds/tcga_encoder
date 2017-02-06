@@ -12,7 +12,13 @@ class LinearDiscriminantAnalysis( object ):
     
   def fit( self, X, y ):
     self.classes = np.unique( y )
-    assert len(self.classes) == 2, "only works for 2 classes"
+    self.use_random_proj = False
+    if len(self.classes) < 2:
+      print "LDA fit only received one class!!"
+      print "Using random projection"
+      
+      self.use_random_proj = True
+      
     
     self.n, self.d = X.shape
     assert len(y) == self.n, "X and y should have same length"
@@ -36,12 +42,20 @@ class LinearDiscriminantAnalysis( object ):
       self.class_pi[k]       = float(self.class_n[k])/self.n
       self.Sw               += self.class_S[k]
       
-    self.mean_dif = self.class_mean[self.classes[1]]-self.class_mean[self.classes[0]]
+    if self.use_random_proj is False:
+      self.mean_dif = self.class_mean[self.classes[1]]-self.class_mean[self.classes[0]]
     
-    self.iSw = np.linalg.pinv( self.Sw + self.epsilon*np.eye(self.d) )
-    self.w_prop_to = np.dot( self.iSw, self.mean_dif  )
-    self.w_prop_to = self.w_prop_to / np.linalg.norm(self.w_prop_to)
-    self.fitted = True
+      self.iSw = np.linalg.pinv( self.Sw + self.epsilon*np.eye(self.d) )
+      self.w_prop_to = np.dot( self.iSw, self.mean_dif  )
+      self.w_prop_to = self.w_prop_to / np.linalg.norm(self.w_prop_to)
+      self.fitted = True
+    else:
+      self.mean_dif = self.class_mean[self.classes[0]]
+      self.iSw = np.linalg.pinv( self.Sw + self.epsilon*np.eye(self.d) )
+      self.w_prop_to = np.dot( self.iSw, self.mean_dif  )
+      self.w_prop_to = self.w_prop_to / np.linalg.norm(self.w_prop_to)
+      self.fitted = True
+      
     self.fit_density()
     
     #self.decision_boundary = self.transform( self.mean_dif )
@@ -55,21 +69,38 @@ class LinearDiscriminantAnalysis( object ):
     
 
   def fit_density( self ):
-    self.x_proj1 = self.transform( self.class_X[1] )
-    self.x_proj0 = self.transform( self.class_X[0] )
-    self.h1 = max(1e-12,np.std(self.x_proj1)*(4.0/3.0/self.class_n[1])**(1.0/5.0))
-    self.h0 = max(1e-12,np.std(self.x_proj0)*(4.0/3.0/self.class_n[0])**(1.0/5.0))
+    if self.use_random_proj is False:
+      self.x_proj1 = self.transform( self.class_X[1] )
+      self.x_proj0 = self.transform( self.class_X[0] )
+      self.h1 = max(1e-12,np.std(self.x_proj1)*(4.0/3.0/self.class_n[1])**(1.0/5.0))
+      self.h0 = max(1e-12,np.std(self.x_proj0)*(4.0/3.0/self.class_n[0])**(1.0/5.0))
     
     
     
-    self.kde1 = KernelDensity(kernel='gaussian', bandwidth=self.h1).fit(self.x_proj1[:,np.newaxis])
-    self.kde0 = KernelDensity(kernel='gaussian', bandwidth=self.h0).fit(self.x_proj0[:,np.newaxis])
+      self.kde1 = KernelDensity(kernel='gaussian', bandwidth=self.h1).fit(self.x_proj1[:,np.newaxis])
+      self.kde0 = KernelDensity(kernel='gaussian', bandwidth=self.h0).fit(self.x_proj0[:,np.newaxis])
     
-    self.pi1 = self.class_pi[1]
-    self.pi0 = self.class_pi[0]
+      self.pi1 = self.class_pi[1]
+      self.pi0 = self.class_pi[0]
     
-    self.log_pi1 = np.log(self.pi1)
-    self.log_pi0 = np.log(self.pi0)
+      self.log_pi1 = np.log(self.pi1)
+      self.log_pi0 = np.log(self.pi0)
+    else:
+      self.x_proj1 = self.transform( self.class_X[0] )
+      self.x_proj0 = self.transform( self.class_X[0] )
+      self.h1 = max(1e-12,np.std(self.x_proj1)*(4.0/3.0/self.class_n[0])**(1.0/5.0))
+      self.h0 = max(1e-12,np.std(self.x_proj0)*(4.0/3.0/self.class_n[0])**(1.0/5.0))
+    
+    
+    
+      self.kde1 = KernelDensity(kernel='gaussian', bandwidth=self.h1).fit(self.x_proj1[:,np.newaxis])
+      self.kde0 = KernelDensity(kernel='gaussian', bandwidth=self.h0).fit(self.x_proj0[:,np.newaxis])
+    
+      self.pi1 = 0.00001 #self.class_pi[0]
+      self.pi0 = 1.0 #self.class_pi[0]
+    
+      self.log_pi1 = np.log(self.pi1)
+      self.log_pi0 = np.log(self.pi0)
 
   def predict( self, X, ignore_pi = False ):
     x_proj_predicted = self.transform( X ) 
@@ -85,7 +116,7 @@ class LinearDiscriminantAnalysis( object ):
     #I1 = pp.find( x_proj_predicted >= 0 )
     
     y_predict[I0] = self.classes[0]
-    y_predict[I1] = self.classes[1]
+    y_predict[I1] = 1 #self.classes[1]
     
     return y_predict
 
