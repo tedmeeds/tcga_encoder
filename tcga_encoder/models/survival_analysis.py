@@ -1,8 +1,10 @@
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.definitions.locations import *
 import sklearn
+from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.model_selection import KFold
 from tcga_encoder.models.lda import LinearDiscriminantAnalysis
+from tcga_encoder.models.survival import *
 import pdb
 from lifelines import KaplanMeierFitter
 
@@ -35,7 +37,53 @@ def xval_folds( n, K, randomize = False, seed = None ):
     test.append( test_ids )
   
   return train, test
+
+def kmeans_survival( X, y, K ):
   
+  kmeans = KMeans(n_clusters=K ).fit(X.astype(float))
+  predictions = kmeans.predict(X)
+  # f = pp.figure()
+  # kmf = KaplanMeierFitter()
+  # ax1 = f.add_subplot(311)
+  # ax2 = f.add_subplot(312)
+  # ax3 = f.add_subplot(313)
+  #
+  # test_labels = []
+  # if len(Z_test) > 0:
+  #   test_labels = kmeans.predict( Z_test.astype(float) )
+  #   #pdb.set_trace()
+  #
+  # colours = "brgkmcbrgkmcbrgkmcbrgkmcbrgkmcbrgkmcbrgkmc"
+  # for k in range(K):
+  #   I = pp.find( kmeans.labels_==k)
+  #   Ti=T_train[I]
+  #   Ei=E_train[I]
+  #
+  #   if len(Ti)>0:
+  #     kmf.fit(Ti, event_observed=Ei, label = "train_k=%d"%k)
+  #     ax1=kmf.plot(ax=ax1, color=colours[k])
+  #
+  #   if len(test_labels) > 0:
+  #     I_test = pp.find( test_labels==k)
+  #     Ti_test=T_test[I_test]
+  #     Ei_test=E_test[I_test]
+  #
+  #     if len(Ti_test)>0:
+  #       kmf.fit(Ti_test, event_observed=Ei_test, label = "test_k=%d"%k)
+  #       ax2=kmf.plot(ax=ax2, color=colours[k])
+  #
+  #     T = np.hstack( (Ti,Ti_test))
+  #     E = np.hstack( (Ei,Ei_test))
+  #     if len(T)>0:
+  #       kmf.fit(T, event_observed=E, label = "all_k=%d"%k)
+  #       ax3=kmf.plot(ax=ax3, color=colours[k])
+  #   #pdb.set_trace()
+  # pp.suptitle("%s"%(disease))
+  
+  return predictions
+  
+  return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
+    
 def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, epsilon = 1e-12 ):
   
   n,d = X.shape
@@ -95,7 +143,9 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
    
     avg_projection[ test_ids ] = lda.transform( X_test )
     avg_probability[ test_ids ] = lda.prob( X_test )
-   
+  I=pp.find( np.isinf(avg_probability) )
+  avg_probability[I] = 1 
+    
   w_mean /= n_bootstraps
   w_var   /= n_bootstraps 
   w_var   -= np.square( w_mean )
@@ -136,14 +186,100 @@ def run_survival_analysis( disease_list, fill_store, data_store, k_fold = 10, n_
   
   X_columns = val_survival.columns[2:]
   X = predict_survival_train[X_columns].values.astype(float)
-  y = predict_survival_train["E"].values.astype(int)
+  i_event = pp.find(predict_survival_train["E"].values)
+  #median_time = np.median( predict_survival_train["T"].values[i_event] )
+  median_time = np.mean( predict_survival_train["T"].values )
+  i_less = pp.find(predict_survival_train["T"].values<median_time)
+  
+  #y = predict_survival_train["E"].values.astype(int)
+  y = np.zeros( len(predict_survival_train["T"].values) )
+  y[i_less] = 1
   projections, probabilties, weights, averages = lda_with_xval_and_bootstrap( X, y, k_fold = k_fold, n_bootstraps = n_bootstraps )
   
   return projections, probabilties, weights, averages, X, y, Events_train, Times_train
 
+def run_survival_analysis_lda( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, epsilon = 1e-12 ):
+  fill_store.open()
+  data_store.open()
+  ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
+  tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
+  surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
+  NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
+  val_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
+  
+  fill_store.close()
+  data_store.close()
+  
+  #-------
+  predict_survival_train = val_survival #pd.concat( [test_survival, val_survival], axis=0, join = 'outer' )
+  predict_barcodes_train = predict_survival_train.index
+  splt = np.array( [ [s.split("_")[0], s.split("_")[1]] for s in predict_barcodes_train ] )
+  predict_survival_train = pd.DataFrame( predict_survival_train.values, index = splt[:,1], columns = predict_survival_train.columns )
+  predict_survival_train["disease"] = splt[:,0]
+
+  Times_train = predict_survival_train[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+predict_survival_train[ "patient.days_to_death" ].fillna(0).values.astype(int)
+  predict_survival_train["T"] = Times_train
+  Events_train = (1-np.isnan( predict_survival_train[ "patient.days_to_death" ].astype(float)) ).astype(int)
+  predict_survival_train["E"] = Events_train
+  
+  
+  X_columns = val_survival.columns[2:]
+  X = predict_survival_train[X_columns].values.astype(float)
+  i_event = pp.find(predict_survival_train["E"].values)
+  #median_time = np.median( predict_survival_train["T"].values[i_event] )
+  median_time = np.mean( predict_survival_train["T"].values )
+  i_less = pp.find(predict_survival_train["T"].values<median_time)
+  
+  y = predict_survival_train["E"].values.astype(int)
+  #y = np.zeros( len(predict_survival_train["T"].values) )
+  #y[i_less] = 1
+  projections, probabilties, weights, averages = lda_with_xval_and_bootstrap( X, y, k_fold = k_fold, n_bootstraps = n_bootstraps )
+  
+  return projections, probabilties, weights, averages, X, y, Events_train, Times_train
+
+def run_survival_analysis_kmeans( disease_list, fill_store, data_store, k_fold, K ):
+  fill_store.open()
+  data_store.open()
+  ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
+  tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
+  surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
+  NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
+  val_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
+  
+  fill_store.close()
+  data_store.close()
+  
+  #-------
+  predict_survival_train = val_survival #pd.concat( [test_survival, val_survival], axis=0, join = 'outer' )
+  predict_barcodes_train = predict_survival_train.index
+  splt = np.array( [ [s.split("_")[0], s.split("_")[1]] for s in predict_barcodes_train ] )
+  predict_survival_train = pd.DataFrame( predict_survival_train.values, index = splt[:,1], columns = predict_survival_train.columns )
+  predict_survival_train["disease"] = splt[:,0]
+
+  Times_train = predict_survival_train[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+predict_survival_train[ "patient.days_to_death" ].fillna(0).values.astype(int)
+  predict_survival_train["T"] = Times_train
+  Events_train = (1-np.isnan( predict_survival_train[ "patient.days_to_death" ].astype(float)) ).astype(int)
+  predict_survival_train["E"] = Events_train
+  
+  
+  X_columns = val_survival.columns[2:]
+  X = predict_survival_train[X_columns].values.astype(float)
+  i_event = pp.find(predict_survival_train["E"].values)
+  #median_time = np.median( predict_survival_train["T"].values[i_event] )
+  median_time = np.mean( predict_survival_train["T"].values )
+  i_less = pp.find(predict_survival_train["T"].values<median_time)
+  
+  y = predict_survival_train["E"].values.astype(int)
+  #y = np.zeros( len(predict_survival_train["T"].values) )
+  #y[i_less] = 1
+  #projections, probabilties, weights, averages = lda_with_xval_and_bootstrap( X, y, k_fold = k_fold, n_bootstraps = n_bootstraps )
+  predictions = kmeans_survival( X, y, K = K )
+  
+  return predictions, X, y, Events_train, Times_train
+    
 if __name__ == "__main__":
   
-  disease = "brca"
+  disease = "blca"
   data_file = "pan_tiny_multi_set"
   experiment_name = "tiny_leave_%s_out"%(disease)
   
@@ -166,7 +302,7 @@ if __name__ == "__main__":
   d=pd.HDFStore( data_location, "r" )
   f=pd.HDFStore( fill_location, "r" ) 
   
-  projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis( [disease], f, d, k_fold = 40, n_bootstraps = 10, epsilon= 0.1 )  
+  projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis( [disease], f, d, k_fold = 20, n_bootstraps = 10, epsilon= 0.1 )  
   
   avg_proj = averages[0]
   avg_prob = averages[1]
