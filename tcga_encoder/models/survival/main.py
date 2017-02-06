@@ -60,6 +60,17 @@ def main(yaml_file):
       std_w = np.sqrt(weights[1])
   
       ax1 = fig.add_subplot(111)
+      I = pp.find( np.isnan(mn_prob))
+      mn_prob[I] = 0
+      I = pp.find( np.isinf(mn_prob))
+      mn_prob[I] = 1
+      
+      I = pp.find( np.isnan(mn_proj))
+      mn_proj[I] = 0
+      I = pp.find( np.isinf(mn_proj))
+      mn_proj[I] = 1
+      
+      
       #I = np.argsort(-mn_proj)
       I = np.argsort(-mn_prob)
       half = int(len(I)/2.0)
@@ -96,6 +107,17 @@ def main(yaml_file):
       std_w = np.sqrt(weights[1])
   
       ax1 = fig.add_subplot(111)
+      I = pp.find( np.isnan(mn_prob))
+      mn_prob[I] = 0
+      I = pp.find( np.isinf(mn_prob))
+      mn_prob[I] = 1
+      
+      I = pp.find( np.isnan(mn_proj))
+      mn_proj[I] = 0
+      I = pp.find( np.isinf(mn_proj))
+      mn_proj[I] = 1
+      
+      
       #I = np.argsort(-mn_proj)
       I = np.argsort(-mn_prob)
       half = int(len(I)/2.0)
