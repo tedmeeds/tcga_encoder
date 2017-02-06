@@ -40,12 +40,13 @@ def main(yaml_file):
   
   for survival_spec in survival_dict:
     name = survival_spec["name"]
-    if name == "lda":
+    if name == "lda_xval":
       print "running LDA"
       folds = survival_spec["folds"]
       bootstraps = survival_spec["bootstraps"]
-      save_location = os.path.join( logging_dict[SAVEDIR], "survival_lda.png" )  
-      projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis_lda( data_dict['validation_tissues'], f, d, k_fold = folds, n_bootstraps = bootstraps, epsilon= 0.1 )  
+      epsilon =  survival_spec["epsilon"]
+      save_location = os.path.join( logging_dict[SAVEDIR], "survival_lda_xval.png" )  
+      projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis_lda( data_dict['validation_tissues'], f, d, k_fold = folds, n_bootstraps = bootstraps, epsilon= epsilon )  
     
       avg_proj = averages[0]
       avg_prob = averages[1]
@@ -59,23 +60,11 @@ def main(yaml_file):
       std_w = np.sqrt(weights[1])
   
       ax1 = fig.add_subplot(111)
-      I = np.argsort(-mn_proj)
-      #ax1.plot( mn_proj[I], mn_prob[I], 'o')
-      #ax2 = f.add_subplot(212)
-      #ax2.plot( mn_w, 'o-')
-  
+      #I = np.argsort(-mn_proj)
+      I = np.argsort(-mn_prob)
       half = int(len(I)/2.0)
       I0 = I[:half]
       I1 = I[half:]
-      #I = np.argsort( mn_prob )
-      #I1 = pp.find( mn_prob > np.median(mn_prob) )
-      #sI0 = pp.find( mn_prob <= np.median(mn_prob) )
-      #I1 = pp.find( avg_prob > np.median(avg_prob) )
-      #I0 = pp.find( avg_prob <= np.median(avg_prob) )
-  
-      #f = pp.figure()
-      #ax3 = f.add_subplot(111)
-  
       kmf = KaplanMeierFitter()
       if len(I1) > 0:
         kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
@@ -83,14 +72,45 @@ def main(yaml_file):
       if len(I0) > 0:
         kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
         ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
-    
-  
-  
-  
       pp.savefig(save_location, dpi=300, format='png')
       print "ROC mn_prob ", roc_auc_score(y,mn_prob)
       print "ROC mn_proj ", roc_auc_score(y,mn_proj)
+
+    elif name == "lda_train":
+      print "running LDA"
+      folds = survival_spec["folds"]
+      bootstraps = survival_spec["bootstraps"]
+      epsilon =  survival_spec["epsilon"]
+      save_location = os.path.join( logging_dict[SAVEDIR], "survival_lda_train.png" )  
+      projections, probabilties, weights, averages, X, y, E_train, T_train = run_survival_analysis_lda_train( data_dict['validation_tissues'], f, d, k_fold = folds, n_bootstraps = bootstraps, epsilon= epsilon )  
     
+      avg_proj = averages[0]
+      avg_prob = averages[1]
+  
+      fig = pp.figure()
+      mn_proj = projections[0]
+      std_proj = np.sqrt(projections[1])
+      mn_prob = probabilties[0]
+      std_prob = np.sqrt(probabilties[1])
+      mn_w = weights[0]
+      std_w = np.sqrt(weights[1])
+  
+      ax1 = fig.add_subplot(111)
+      #I = np.argsort(-mn_proj)
+      I = np.argsort(-mn_prob)
+      half = int(len(I)/2.0)
+      I0 = I[:half]
+      I1 = I[half:]
+      kmf = KaplanMeierFitter()
+      if len(I1) > 0:
+        kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
+      if len(I0) > 0:
+        kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
+      pp.savefig(save_location, dpi=300, format='png')
+      print "ROC mn_prob ", roc_auc_score(y,mn_prob)
+      print "ROC mn_proj ", roc_auc_score(y,mn_proj)    
     
     elif name == "kmeans":
       print "running kmeans"

@@ -84,9 +84,10 @@ def kmeans_survival( X, y, K ):
   return predictions
   
   return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
-    
+
 def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, epsilon = 1e-12 ):
   
+  print "epsilon", epsilon
   n,d = X.shape
   assert len(y) == n, "incorrect sizes"
   
@@ -118,26 +119,36 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
       lda = LinearDiscriminantAnalysis(epsilon=epsilon)
       lda.fit( X_train, y_train )
       
-      #sk_lda = sk_LinearDiscriminantAnalysis()
-      #sk_lda.fit( X_train, y_train )
-      #sk_test_proj = sk_lda.transform( X_test )
+      
       
       w = lda.w_prop_to
+
+      sk_lda = sk_LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto')
+      sk_lda.fit( X_train, y_train )
+      try:
+        sk_test_proj = np.squeeze(sk_lda.predict_log_proba( X_test ))[:,1]
       
-      test_proj = lda.transform( X_test )
+        test_proj = sk_test_proj #lda.transform( X_test )
+        test_prob = np.squeeze(sk_lda.predict_proba( X_test )[:,1]) # lda.predict( X_test )
+      except:
+        test_proj = lda.transform( X_test )
+        test_prob = lda.prob( X_test )
+        
       
       #pdb.set_trace()
-      ranked = np.argsort(test_proj).astype(float) / len(test_proj)
+      #ranked = np.argsort(test_proj).astype(float) / len(test_proj)
       #test_proj = ranked
-      test_prob = lda.prob( X_test )
-      I=pp.find( np.isinf(test_prob) )
-      test_prob[I] = 1
-      test_predict = lda.predict( X_test )
+      #test_prob = lda.prob( X_test )
+      #test_proj = sk_test_proj
+      #I=pp.find( np.isinf(test_prob) )
+      #test_prob[I] = 1
+      #test_prob = np.squeeze(sk_lda.predict_proba( X_test )[:,1]) # lda.predict( X_test )
+      #test_predic
       mean_projections[ test_ids ]   += test_proj
       mean_probabilities[ test_ids ] += test_prob
       
       var_projections[ test_ids ]   += np.square( test_proj )
-      var_probabilities[ test_ids ] += np.square( test_predict )
+      var_probabilities[ test_ids ] += np.square( test_prob )
       
       w_mean[k] += w
       w_var[k] += np.square(w)
@@ -157,6 +168,8 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
   w_var   /= n_bootstraps 
   w_var   -= np.square( w_mean )
     
+  print "xval w = ", w_mean.mean(0), w_var.mean(0)
+  
   mean_projections /= n_bootstraps
   var_projections   /= n_bootstraps
   mean_probabilities /= n_bootstraps
@@ -165,6 +178,61 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
   var_projections   -= np.square( mean_projections )
   var_probabilities -= np.square( mean_probabilities )
   
+  return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
+      
+def lda_on_train( X, y, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, epsilon = 1e-12 ):
+  
+  n,d = X.shape
+  assert len(y) == n, "incorrect sizes"
+  
+  train_folds, test_folds = xval_folds( n, k_fold, randomize = randomize, seed = seed )
+  
+  avg_projection = np.zeros( n, dtype=float )
+  avg_probability = np.zeros( n, dtype=float )
+  
+  mean_projections = np.zeros( n, dtype=float )
+  var_projections  = np.zeros( n, dtype=float )
+  
+  mean_probabilities = np.zeros( n, dtype=float )
+  var_probabilities  = np.zeros( n, dtype=float )
+  
+  # for each fold, compute mean and variances
+  w_mean = np.zeros( (k_fold,d), dtype = float )
+  w_var = np.zeros( (k_fold,d), dtype = float )
+  
+  lda = LinearDiscriminantAnalysis(epsilon=epsilon)
+  lda.fit( X, y )
+  w = lda.w_prop_to
+  
+  sk_lda = sk_LinearDiscriminantAnalysis(solver='lsqr', shrinkage='auto')
+  sk_lda.fit( X, y )
+  sk_test_proj = np.squeeze(sk_lda.predict_log_proba( X ))
+  
+  w = lda.w_prop_to
+      
+  
+  test_proj = lda.transform( X )
+      
+  #pdb.set_trace()
+  ranked = np.argsort(test_proj).astype(float) / len(test_proj)
+  #test_proj = ranked
+  test_prob = lda.prob( X )
+  I=pp.find( np.isinf(test_prob) )
+  test_prob[I] = 1
+  test_predict = lda.predict( X )
+  mean_projections = test_proj
+  mean_probabilities = test_prob
+  
+  var_projections = np.square( test_proj )
+  var_probabilities = np.square( test_predict )
+  
+  w_mean = w
+  w_var = np.square(w)
+      
+  print "train w = ",  w
+  I=pp.find( np.isinf(avg_probability) )
+  avg_probability[I] = 1 
+    
   return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
 
 def run_survival_analysis( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, epsilon = 1e-12 ):
@@ -240,10 +308,49 @@ def run_survival_analysis_lda( disease_list, fill_store, data_store, k_fold = 10
   y = predict_survival_train["E"].values.astype(int)
   #y = np.zeros( len(predict_survival_train["T"].values) )
   #y[i_less] = 1
-  projections, probabilties, weights, averages = lda_with_xval_and_bootstrap( X, y, k_fold = k_fold, n_bootstraps = n_bootstraps )
+  projections, probabilties, weights, averages = lda_with_xval_and_bootstrap( X, y, k_fold = k_fold, n_bootstraps = n_bootstraps, epsilon=epsilon )
   
   return projections, probabilties, weights, averages, X, y, Events_train, Times_train
 
+def run_survival_analysis_lda_train( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, epsilon = 1e-12 ):
+  fill_store.open()
+  data_store.open()
+  ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
+  tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
+  surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
+  NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
+  val_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
+  
+  fill_store.close()
+  data_store.close()
+  
+  #-------
+  predict_survival_train = val_survival #pd.concat( [test_survival, val_survival], axis=0, join = 'outer' )
+  predict_barcodes_train = predict_survival_train.index
+  splt = np.array( [ [s.split("_")[0], s.split("_")[1]] for s in predict_barcodes_train ] )
+  predict_survival_train = pd.DataFrame( predict_survival_train.values, index = splt[:,1], columns = predict_survival_train.columns )
+  predict_survival_train["disease"] = splt[:,0]
+
+  Times_train = predict_survival_train[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+predict_survival_train[ "patient.days_to_death" ].fillna(0).values.astype(int)
+  predict_survival_train["T"] = Times_train
+  Events_train = (1-np.isnan( predict_survival_train[ "patient.days_to_death" ].astype(float)) ).astype(int)
+  predict_survival_train["E"] = Events_train
+  
+  
+  X_columns = val_survival.columns[2:]
+  X = predict_survival_train[X_columns].values.astype(float)
+  i_event = pp.find(predict_survival_train["E"].values)
+  #median_time = np.median( predict_survival_train["T"].values[i_event] )
+  median_time = np.mean( predict_survival_train["T"].values )
+  i_less = pp.find(predict_survival_train["T"].values<median_time)
+  
+  y = predict_survival_train["E"].values.astype(int)
+  #y = np.zeros( len(predict_survival_train["T"].values) )
+  #y[i_less] = 1
+  projections, probabilties, weights, averages = lda_on_train( X, y, k_fold = k_fold, n_bootstraps = n_bootstraps, epsilon=epsilon )
+  
+  return projections, probabilties, weights, averages, X, y, Events_train, Times_train
+  
 def run_survival_analysis_kmeans( disease_list, fill_store, data_store, k_fold, K ):
   fill_store.open()
   data_store.open()

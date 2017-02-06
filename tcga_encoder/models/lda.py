@@ -46,10 +46,11 @@ class LinearDiscriminantAnalysis( object ):
       self.mean_dif = self.class_mean[self.classes[1]]-self.class_mean[self.classes[0]]
     
       self.iSw = np.linalg.pinv( self.Sw + self.epsilon*np.eye(self.d) )
-      print self.Sw, self.iSw
+      #print self.Sw, self.iSw
       self.w_prop_to = np.dot( self.iSw, self.mean_dif  )
       self.w_prop_to = self.w_prop_to / np.linalg.norm(self.w_prop_to)
       self.fitted = True
+      
     else:
       self.mean_dif = self.class_mean[self.classes[0]]
       self.iSw = np.linalg.pinv( self.Sw + self.epsilon*np.eye(self.d) )
@@ -77,7 +78,7 @@ class LinearDiscriminantAnalysis( object ):
       self.h0 = max(1e-12,np.std(self.x_proj0)*(4.0/3.0/self.class_n[0])**(1.0/5.0))
     
     
-      print self.h1, self.x_proj1
+      #print self.h1, self.x_proj1
       self.kde1 = KernelDensity(kernel='gaussian', bandwidth=self.h1).fit(self.x_proj1[:,np.newaxis])
       self.kde0 = KernelDensity(kernel='gaussian', bandwidth=self.h0).fit(self.x_proj0[:,np.newaxis])
     
