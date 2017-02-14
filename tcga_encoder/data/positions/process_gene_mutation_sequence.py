@@ -100,11 +100,11 @@ def load_assemblies( gene ):
 def load_mutation_data( gene, assembly2fasta, data_location, tissue = None ):
   mut_file = os.path.join( os.environ["HOME"], "%s/%s/dna.h5"%(data_location,gene) )
   #
-  try:
-    d = pd.read_hdf( mut_file )
-  except:
-    d = None
-    print "Could not load: %s"%(mut_file)
+  #try:
+  d = pd.read_hdf( mut_file )
+  #except:
+  #  d = None
+  #  print "Could not load: %s"%(mut_file)
   
   tissues = None
   barcodes = None
