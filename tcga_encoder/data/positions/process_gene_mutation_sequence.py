@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, pdb
 
 
 from gene_fasta import *
@@ -57,7 +57,8 @@ def process_mutations( gene, d, assembly2fasta, filter_tissue = None ):
     tissue = vi[0]
     barcode = vi[1]
     if filter_tissue is not None:
-      if filter_tissue == tissue:
+      #pdb.set_trace()
+      if filter_tissue.upper() == tissue.upper():
         sequence, mut_sq = f.ExtractSequence( gene, vi )
     else:
       sequence, mut_sq = f.ExtractSequence( gene, vi )
@@ -169,8 +170,56 @@ def plot_positions_at_group( ax, group, seq, ms, x_ticks, s, colors ):
   ax.xaxis.grid(True, which='major')
   pp.legend(legs)
   pp.xlim(0,len(s[0]))
+
+def plot_positions( f, ms, x_ticks, gene, seq, s, plot_all = False, colors=None, tissue = None, groups = None, figsize=(14,10), save_location = None ):
+  if groups is None:
+    groups = [['Silent'],['Missense_Mutation'],['Nonsense_Mutation','Nonstop_Mutation'],['In_Frame_Del','In_Frame_Ins'],['Frame_Shift_Del','Frame_Shift_Ins'],['Splice_Site','RNA']]
   
-def main( gene, assembly = 37, tissue = None, save_location = None, data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small" ) : 
+  if colors is None:
+    colors = ["b","r","g","k"]
+  
+  fig = pp.figure( figsize=figsize )
+  n_groups = len(groups)
+  
+  
+  if plot_all:
+    ax0=fig.add_subplot(n_groups+1,1,1)
+    #plot_exons( exons )
+    plot_stem( ms.sum(1).sum(0), linefmt='b-', markerfmt='bo' )
+    ax0.set_xticks(x_ticks, minor=False)
+    ax0.set_yticks(ax0.get_yticks(), minor=False)
+    ax0.set_xticklabels( x_ticks, fontsize=8, rotation='vertical' )
+    ax0.xaxis.grid(True, which='major')
+    ax0.xlim(0,len(s[0]))
+    ax0.legend(['ALL'])
+  
+  for group_idx in range(n_groups):
+    if plot_all:
+      ax_g=fig.add_subplot(n_groups+1,1,group_idx+2)
+    else:
+      ax_g=fig.add_subplot(n_groups,1,group_idx+1)
+    plot_positions_at_group( ax_g, groups[group_idx], seq, ms, x_ticks, s, colors )
+
+  if tissue is not None:
+    pp.suptitle( "%s filtered by %s, n=%d"%(gene, tissue,ms.sum()))
+  else:
+    pp.suptitle("%s, n=%d"%(gene,ms.sum()))
+   
+  if save_location is not None: 
+    if tissue is None:
+      pp.savefig( save_location + "/%s_mutations.png"%gene, fmt="png" )
+    else:
+      pp.savefig( save_location + "/%s_%s_mutations.png"%(gene,tissue), fmt="png" )
+  pp.show()
+  return fig
+        
+def main( gene, assembly = 37, \
+                tissue = None, \
+                save_location = None, \
+                data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small",\
+                colors = None, \
+                groups = None, \
+                plot_all=False ) : 
   fasta_dir = os.path.join( os.environ["HOME"], "data/human_genome/assembly_%d_fasta_process"%assembly )
   qtf_dir   = os.path.join( os.environ["HOME"], "data/human_genome/assembly_%d_gtf_process"%assembly )
   
@@ -184,63 +233,23 @@ def main( gene, assembly = 37, tissue = None, save_location = None, data_locatio
   #data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small"
   a,b,d,s,ms = load_mutation_data( gene, assembly2fasta, data_location, tissue )
 
-  groups = [['Silent'],['Missense_Mutation'],['Nonsense_Mutation','Nonstop_Mutation'],['In_Frame_Del','In_Frame_Ins'],['Frame_Shift_Del','Frame_Shift_Ins'],['Splice_Site','RNA']]
-  colors = ["b","r","g","k"]
   if d is not None:
     a,b,s,ms = process_mutations( gene, d, assembly2fasta, tissue )
-    try:
-      f = assembly2fasta['37']
-      seq = f.hugo_transcript2fasta[gene+"-001"]
-      exons = f.hugo_transcript2fasta[gene+"-001"].genome_exon_idx
-      x_ticks = get_exon_ticks( exons )
-    except:
-      f = assembly2fasta['36']
-      seq = f.hugo_transcript2fasta[gene+"-001"]
-      exons = f.hugo_transcript2fasta[gene+"-001"].genome_exon_idx
-      x_ticks = get_exon_ticks( exons )
-    pp.figure( figsize=(14,10))
-    n_groups = len(groups)
-    
-    
-    ax=pp.subplot(n_groups+1,1,1)
-    #plot_exons( exons )
-    plot_stem( ms.sum(1).sum(0), linefmt='b-', markerfmt='bo' )
-    ax.set_xticks(x_ticks, minor=False)
-    ax.set_yticks(ax.get_yticks(), minor=False)
-    ax.set_xticklabels( x_ticks, fontsize=8, rotation='vertical' )
-    ax.xaxis.grid(True, which='major')
-    pp.xlim(0,len(s[0]))
-    pp.legend(['ALL'])
-    
-    for group_idx in range(n_groups):
-      ax=pp.subplot(n_groups+1,1,group_idx+2)
-      plot_positions_at_group( ax, groups[group_idx], seq, ms, x_ticks, s, colors )
-      #
-      # variant_dx = 0
-      # legs=[]
-      # for variant in groups[group_idx]:
-      #   if ms[:,seq.variant2idx[variant],:].sum() > 0:
-      #     plot_stem( ms[:,seq.variant2idx[variant],:].sum(0), linefmt=colors[variant_dx]+'-', markerfmt=colors[variant_dx]+'o' )
-      #     legs.append(groups[group_idx][variant_dx])
-      #   variant_dx+=1
-      # ax.set_xticks(x_ticks, minor=False)
-      # ax.set_yticks(ax.get_yticks(), minor=False)
-      # ax.set_xticklabels( x_ticks, fontsize=8, rotation='vertical' )
-      # ax.xaxis.grid(True, which='major')
-      # pp.legend(legs)
-      # pp.xlim(0,len(s[0]))
+    # try:
+    f = assembly2fasta['37']
+    seq = f.hugo_transcript2fasta[gene+"-001"]
+    exons = f.hugo_transcript2fasta[gene+"-001"].genome_exon_idx
+    x_ticks = get_exon_ticks( exons )
+    # except:
+    #   f = assembly2fasta['36']
+    #   seq = f.hugo_transcript2fasta[gene+"-001"]
+    #   exons = f.hugo_transcript2fasta[gene+"-001"].genome_exon_idx
+    #   x_ticks = get_exon_ticks( exons )
       
-
-    if tissue is not None:
-      pp.suptitle( "%s filtered by %s, n=%d"%(gene, tissue,ms.sum()))
-    else:
-      pp.suptitle("%s, n=%d"%(gene,ms.sum()))
-     
-    if save_location is not None: 
-      pp.savefig( save_location + "/%s_mutations.png"%gene, fmt="png" )
-    pp.show()
+  #plot_positions()
+  fig = plot_positions( f, ms, x_ticks, gene, seq, s, plot_all = plot_all, colors=colors, tissue = tissue, groups = groups, save_location = save_location ) 
     
-  return a,b,d,s,ms
+  return a,b,d,s,ms,f,seq,exons,x_ticks, fig
     
   
 if __name__ == "__main__":
@@ -253,6 +262,7 @@ if __name__ == "__main__":
     tissue = None  
   print "*** Analyzing GENE = %s using assembly %d"%(gene,assembly)
   
+  assert False, "do not call this way, call main() directly (needs to be completed)"
   
 
   fasta_dir = os.path.join( os.environ["HOME"], "data/human_genome/assembly_%d_fasta_process"%assembly )

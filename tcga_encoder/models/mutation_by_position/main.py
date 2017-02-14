@@ -2,7 +2,7 @@ import sys, os
 #print sys.path 
 
 sys.path.insert(0, os.getcwd())
-print sys.path 
+#print sys.path 
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
 from tcga_encoder.definitions.tcga import *
@@ -35,6 +35,9 @@ if __name__ == "__main__":
   save_location = os.path.join( HOME_DIR,  "results/tcga_position_mutations"  )
   check_and_mkdir(save_location)
   
-  a,b,d,s,ms = position_view( gene, assembly, tissue, save_location = save_location, data_location = data_location)
+  groups = [['Silent'],['Missense_Mutation'],['Nonsense_Mutation','Nonstop_Mutation'],['In_Frame_Del','In_Frame_Ins'],['Frame_Shift_Del','Frame_Shift_Ins'],['Splice_Site','RNA']]
+  
+  
+  a,b,d,s,ms,f,seq,exons,x_ticks, fig = position_view( gene, assembly, tissue, save_location = save_location, data_location = data_location, groups=groups )
   
   
