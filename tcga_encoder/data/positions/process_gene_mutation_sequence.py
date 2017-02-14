@@ -30,27 +30,35 @@ def plot_stem( x, linefmt = "b-", markerfmt='bo' ):
     s = pp.vlines( 0, 0, len(x), color='k')
   return s
   
-def process_mutations( gene, d, assembly2fasta, filter_tissue = None ):
+def process_mutations( gene, d, assembly2fasta, filter_tissue = None, R = None ):
   if d is None:
     print "** nothing to process"
     return
+    
+  if R is not None:
+    assert len(R)  == len(d)
     
   n,n_columns = d.shape
   
   cols = d.columns
   v = d.values
   
+  r_values = []
+  if R is not None:
+    r_values = np.log(1+R.values)
+    
   mut_seqs = []
   sequences = []
   tissues = []
   barcodes = []
+  rs=[]
   for i in range(n):
     vi = v[i]
     
     assembly = vi[-1]
     
-    # if assembly == '36':
-    #   continue
+    if assembly == '36':
+      continue
     f = assembly2fasta[assembly]
     
     #start_idx = vi[1]
@@ -59,6 +67,9 @@ def process_mutations( gene, d, assembly2fasta, filter_tissue = None ):
     sequence = None
     tissue = vi[0]
     barcode = vi[1]
+    r_value = 0
+    if R is not None:
+      r_value = r_values[i]
     #print tissue, barcode
     # if filter_tissue.upper() == tissue.upper():
     #   print vi
@@ -75,9 +86,11 @@ def process_mutations( gene, d, assembly2fasta, filter_tissue = None ):
       sequences.append(sequence)
       tissues.append(tissue)
       barcodes.append(barcode)
+      rs.append(r_value)
   #pdb.set_trace()
-  d2 = d.loc[ barcodes ]   
-  return d2, tissues, barcodes,sequences, np.array( mut_seqs )
+  d2 = d.loc[ barcodes ]  
+  #d2["R"] = np.array(rs)
+  return d2, tissues, barcodes,sequences, np.array( mut_seqs ), np.array(rs)
 
 def load_assemblies( gene ):
   
@@ -107,7 +120,7 @@ def load_assemblies( gene ):
   assembly2fasta['hg19'] = assembly2fasta['37']
   return assembly2fasta
 
-def load_mutation_data( gene, assembly2fasta, data_location, tissue = None ):
+def load_mutation_data( gene, assembly2fasta, data_location, tissue = None, R = None ):
   mut_file = os.path.join( os.environ["HOME"], "%s/%s/dna.h5"%(data_location,gene) )
   #
   #try:
@@ -123,10 +136,10 @@ def load_mutation_data( gene, assembly2fasta, data_location, tissue = None ):
   barcodes = None
   
   if d is not None:  
-    d2,tissues,barcodes,s,ms = process_mutations( gene, d, assembly2fasta, tissue )
+    d2,tissues,barcodes,s,ms,rs = process_mutations( gene, d, assembly2fasta, tissue )
   else:
-    s = None; ms = None
-  return d2,tissues,barcodes,d, s, ms
+    s = None; ms = None; rs=None
+  return d2,tissues,barcodes,d, s, ms,rs
   
   
 def load_genes(gene_list, data_location ):
@@ -183,7 +196,7 @@ def plot_positions_at_group( ax, group, seq, ms, x_ticks, s, colors ):
   pp.legend(legs)
   pp.xlim(0,len(s[0]))
 
-def plot_positions( f, ms, x_ticks, gene, seq, s, plot_all = False, colors=None, tissue = None, groups = None, figsize=(14,10), save_location = None ):
+def plot_positions( f, ms, x_ticks, gene, seq, s, plot_all = False, colors=None, tissue = None, groups = None, figsize=(14,10), save_location = None, R = None ):
   if groups is None:
     groups = [['Silent'],['Missense_Mutation'],['Nonsense_Mutation','Nonstop_Mutation'],['In_Frame_Del','In_Frame_Ins'],['Frame_Shift_Del','Frame_Shift_Ins'],['Splice_Site','RNA']]
   
@@ -231,7 +244,8 @@ def main( gene, assembly = 37, \
                 data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small",\
                 colors = None, \
                 groups = None, \
-                plot_all=False ) : 
+                plot_all=False, \
+                R = None) : 
   fasta_dir = os.path.join( os.environ["HOME"], "data/human_genome/assembly_%d_fasta_process"%assembly )
   qtf_dir   = os.path.join( os.environ["HOME"], "data/human_genome/assembly_%d_gtf_process"%assembly )
   
@@ -243,10 +257,10 @@ def main( gene, assembly = 37, \
   assembly2fasta = load_assemblies(gene)
 
   #data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small"
-  d2,a,b,d,s,ms = load_mutation_data( gene, assembly2fasta, data_location, tissue )
+  d2,a,b,d,s,ms,rs = load_mutation_data( gene, assembly2fasta, data_location, tissue, R=R )
 
   if d is not None:
-    d2,a,b,s,ms = process_mutations( gene, d, assembly2fasta, tissue )
+    #d2,a,b,s,ms = process_mutations( gene, d, assembly2fasta, tissue, R=R )
     # try:
     f = assembly2fasta['37']
     seq = f.hugo_transcript2fasta[gene+"-001"]
@@ -267,17 +281,16 @@ def main( gene, assembly = 37, \
         seq = f.hugo_transcript2fasta[gene+"-001"]
         exons = f.hugo_transcript2fasta[gene+"-001"].genome_exon_idx
         x_ticks = get_exon_ticks( exons )
-        #pdb.set_trace()
-    # except:
-    #   f = assembly2fasta['36']
-    #   seq = f.hugo_transcript2fasta[gene+"-001"]
-    #   exons = f.hugo_transcript2fasta[gene+"-001"].genome_exon_idx
-    #   x_ticks = get_exon_ticks( exons )
+
       
   #plot_positions()
-  fig = plot_positions( f, ms, x_ticks, gene, seq, s, plot_all = plot_all, colors=colors, tissue = tissue, groups = groups, save_location = save_location ) 
+  if R is None:
+    fig = plot_positions( f, ms, x_ticks, gene, seq, s, plot_all = plot_all, colors=colors, tissue = tissue, groups = groups, save_location = save_location ) 
+  else:
+    fig = plot_positions( f, ms, x_ticks, gene, seq, s, plot_all = plot_all, colors=colors, tissue = tissue, groups = groups, save_location = save_location, rs=rs ) 
     
-  return a,b,d,s,ms,f,seq,exons,x_ticks, fig
+    
+  return a,b,d2,s,ms,f,seq,exons,x_ticks, fig
     
   
 if __name__ == "__main__":

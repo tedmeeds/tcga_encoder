@@ -157,7 +157,10 @@ class FastaSequence(object):
       sequence[ relative_start_idx ] = variant_allele
       mut_sequence[relative_start_idx] += 1
       
-      mut_by_channels[self.variant2idx[variant], relative_start_idx] += 1
+      if self.variant2idx.has_key( variant ):
+        mut_by_channels[self.variant2idx[variant], relative_start_idx] += 1
+      else:
+        print "skipping ", mutation_line
     elif mut_type == "DNP":
       fasta_seq = self.sequence[ relative_start_idx:relative_start_idx+2 ]
       if fasta_seq != normal_allele:
@@ -177,7 +180,10 @@ class FastaSequence(object):
       #   print mutation_line
     elif mut_type == "DEL":
       #mut_by_channels[frame_shift_ins_idx, relative_start_idx] += 1
-      mut_by_channels[self.variant2idx[variant], relative_start_idx] += 1
+      if self.variant2idx.has_key( variant ):
+        mut_by_channels[self.variant2idx[variant], relative_start_idx] += 1
+      else:
+        print "skipping ", mutation_line
     elif mut_type == "INS":
       #mut_by_channels[frame_shift_del_idx, relative_start_idx] += 1
       mut_by_channels[self.variant2idx[variant], relative_start_idx] += 1
