@@ -1,3 +1,8 @@
+import sys,os
+#print sys.path 
+
+sys.path.insert(0, os.getcwd())
+print sys.path 
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
 from tcga_encoder.definitions.tcga import *
@@ -16,6 +21,7 @@ pd.set_option('display.width', 1000)
 
 if __name__ == "__main__":
   
+  print sys.path
   gene = sys.argv[1]
   assembly = int(sys.argv[2])
   if len(sys.argv)>3:
