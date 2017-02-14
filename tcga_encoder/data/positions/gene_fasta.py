@@ -17,6 +17,10 @@ class FastaSequence(object):
     self.mapped             = False
     self.use_splice_location = True
     self.length_with_splice = self.length + 2*len(self.exons)
+
+    self.genome_indices    = []
+    self.genome_exon_idx   = []
+    self.splice_site_idx   = []
     
     assert length == len(sequence), "should be same length"
   

@@ -4,6 +4,9 @@ import sys, os, pdb
 from gene_fasta import *
 
 def get_exon_ticks( exons ):
+  if len(exons) == 0:
+    return []
+    
   u_exons = np.unique(exons)
   #ax = pp.axes()
   x_ticks = []
@@ -46,8 +49,8 @@ def process_mutations( gene, d, assembly2fasta, filter_tissue = None ):
     
     assembly = vi[-1]
     
-    if assembly == '36':
-      continue
+    # if assembly == '36':
+    #   continue
     f = assembly2fasta[assembly]
     
     #start_idx = vi[1]
@@ -56,19 +59,25 @@ def process_mutations( gene, d, assembly2fasta, filter_tissue = None ):
     sequence = None
     tissue = vi[0]
     barcode = vi[1]
+    #print tissue, barcode
+    # if filter_tissue.upper() == tissue.upper():
+    #   print vi
+    #   pdb.set_trace()
     if filter_tissue is not None:
       #pdb.set_trace()
       if filter_tissue.upper() == tissue.upper():
         sequence, mut_sq = f.ExtractSequence( gene, vi )
     else:
       sequence, mut_sq = f.ExtractSequence( gene, vi )
+      
     if sequence is not None:
       mut_seqs.append(mut_sq)
       sequences.append(sequence)
       tissues.append(tissue)
       barcodes.append(barcode)
-      
-  return tissues, barcodes,sequences, np.array( mut_seqs )
+  #pdb.set_trace()
+  d2 = d.loc[ barcodes ]   
+  return d2, tissues, barcodes,sequences, np.array( mut_seqs )
 
 def load_assemblies( gene ):
   
@@ -103,6 +112,9 @@ def load_mutation_data( gene, assembly2fasta, data_location, tissue = None ):
   #
   #try:
   d = pd.read_hdf( mut_file )
+  
+  d=d.set_index(d["patient.bcr_patient_barcode"].values )
+  
   #except:
   #  d = None
   #  print "Could not load: %s"%(mut_file)
@@ -111,10 +123,10 @@ def load_mutation_data( gene, assembly2fasta, data_location, tissue = None ):
   barcodes = None
   
   if d is not None:  
-    tissues,barcodes,s,ms = process_mutations( gene, d, assembly2fasta, tissue )
+    d2,tissues,barcodes,s,ms = process_mutations( gene, d, assembly2fasta, tissue )
   else:
     s = None; ms = None
-  return tissues,barcodes,d, s, ms
+  return d2,tissues,barcodes,d, s, ms
   
   
 def load_genes(gene_list, data_location ):
@@ -231,15 +243,31 @@ def main( gene, assembly = 37, \
   assembly2fasta = load_assemblies(gene)
 
   #data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small"
-  a,b,d,s,ms = load_mutation_data( gene, assembly2fasta, data_location, tissue )
+  d2,a,b,d,s,ms = load_mutation_data( gene, assembly2fasta, data_location, tissue )
 
   if d is not None:
-    a,b,s,ms = process_mutations( gene, d, assembly2fasta, tissue )
+    d2,a,b,s,ms = process_mutations( gene, d, assembly2fasta, tissue )
     # try:
     f = assembly2fasta['37']
     seq = f.hugo_transcript2fasta[gene+"-001"]
     exons = f.hugo_transcript2fasta[gene+"-001"].genome_exon_idx
     x_ticks = get_exon_ticks( exons )
+    
+    #pdb.set_trace()
+    if len(x_ticks) == 0:
+      f = GeneSequences( fasta_file, qtf_file, 36 )
+  
+      assembly2fasta = load_assemblies(gene)
+      
+      #data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small"
+      d2,a,b,d,s,ms = load_mutation_data( gene, assembly2fasta, data_location, tissue )
+      if d is not None: 
+        d2,a,b,s,ms = process_mutations( gene, d, assembly2fasta, tissue )
+        f = assembly2fasta['36']
+        seq = f.hugo_transcript2fasta[gene+"-001"]
+        exons = f.hugo_transcript2fasta[gene+"-001"].genome_exon_idx
+        x_ticks = get_exon_ticks( exons )
+        #pdb.set_trace()
     # except:
     #   f = assembly2fasta['36']
     #   seq = f.hugo_transcript2fasta[gene+"-001"]
