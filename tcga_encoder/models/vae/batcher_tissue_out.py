@@ -600,7 +600,7 @@ class TCGABatcher( object ):
 
 
   def RunFillZ( self, epoch, sess, feed_dict, impute_dict, mode ):
-    print "FILL Z"
+    #print "FILL Z"
           
     barcodes = impute_dict[BARCODES]
     #batch = self.FillBatch( impute_dict[BARCODES], mode )
@@ -713,7 +713,7 @@ class TCGABatcher( object ):
     #like_observed = batch[ INPUT_OBSERVATIONS ] 
     
 
-    nbr_splits = 10
+    nbr_splits = 50
     tensor2fill = []
     drop_factor = float(nbr_splits)/float(nbr_splits-1)
     for drop_idx in range(nbr_splits):

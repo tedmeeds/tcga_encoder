@@ -128,9 +128,9 @@ def EstimateWeightShape( input_shape, output_shape ):
   
   return weight_shape
                                                             
-def MakeWeights( input_sources, output_shape, name = "", has_biases=True ):
+def MakeWeights( input_sources, output_shape, name = "", has_biases=True, constant=None ):
     weights   = []
-    
+    default_constant = 0.1
     input_idx = 0
     for input_source in input_sources:
       
@@ -138,7 +138,11 @@ def MakeWeights( input_sources, output_shape, name = "", has_biases=True ):
       
       print "MAKE WEIGHTS for %s"%(name)
       print "                 shape: ", weight_shape
-      w = tf.Variable( weight_init( weight_shape ), name = "w_"+input_source.name+"2"+name )
+      # if constants is None:
+      #   const = default_constant
+      # else:
+      #   const = constants[input_idx]
+      w = tf.Variable( weight_init( weight_shape, constant=default_constant ), name = "w_"+input_source.name+"2"+name )
       weights.append(w)
     
     biases = None
