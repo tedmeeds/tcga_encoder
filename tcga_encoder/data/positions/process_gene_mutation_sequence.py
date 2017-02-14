@@ -154,7 +154,7 @@ def load_genes(gene_list, data_location ):
     gene2mutations[gene] = {"tissues":np.array(used_tissues,dtype=str), "barcodes":np.array(used_barcodes,dtype=str), "mutations":np.array(used_muts,dtype=int)}
   return  gene2mutations
 
-def main( gene, assembly = 37, tissue = None, save_location = None ) : 
+def main( gene, assembly = 37, tissue = None, save_location = None, data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small" ) : 
   fasta_dir = os.path.join( os.environ["HOME"], "data/human_genome/assembly_%d_fasta_process"%assembly )
   qtf_dir   = os.path.join( os.environ["HOME"], "data/human_genome/assembly_%d_gtf_process"%assembly )
   
@@ -165,7 +165,7 @@ def main( gene, assembly = 37, tissue = None, save_location = None ) :
   
   assembly2fasta = load_assemblies(gene)
 
-  data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small"
+  #data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small"
   a,b,d,s,ms = load_mutation_data( gene, assembly2fasta, data_location, tissue )
 
   groups = [['Silent'],['Missense_Mutation'],['Nonsense_Mutation','Nonstop_Mutation'],['In_Frame_Del','In_Frame_Ins'],['Frame_Shift_Del','Frame_Shift_Ins'],['Splice_Site','RNA']]

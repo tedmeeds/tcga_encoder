@@ -23,11 +23,12 @@ if __name__ == "__main__":
     #print "*** Filtering tissue %s"%(tissue)
   else:
     tissue = None  
-  #print "*** Analyzing GENE = %s using assembly %d"%(gene,assembly)
   
+  data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small"
+  #data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene"
   save_location = os.path.join( HOME_DIR,  "results/tcga_position_mutations"  )
   check_and_mkdir(save_location)
   
-  position_view( gene, assembly, tissue, save_location=save_location)
+  position_view( gene, assembly, tissue, save_location = save_location, data_location = data_location)
   
   
