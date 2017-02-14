@@ -154,6 +154,22 @@ def load_genes(gene_list, data_location ):
     gene2mutations[gene] = {"tissues":np.array(used_tissues,dtype=str), "barcodes":np.array(used_barcodes,dtype=str), "mutations":np.array(used_muts,dtype=int)}
   return  gene2mutations
 
+def plot_positions_at_group( ax, group, seq, ms, x_ticks, s, colors ):
+  #ax=pp.subplot(n_groups+1,1,group_idx+2)
+  variant_dx = 0
+  legs=[]
+  for variant in group:
+    if ms[:,seq.variant2idx[variant],:].sum() > 0:
+      plot_stem( ms[:,seq.variant2idx[variant],:].sum(0), linefmt=colors[variant_dx]+'-', markerfmt=colors[variant_dx]+'o' )
+      legs.append(group[variant_dx])
+    variant_dx+=1
+  ax.set_xticks(x_ticks, minor=False)
+  ax.set_yticks(ax.get_yticks(), minor=False)
+  ax.set_xticklabels( x_ticks, fontsize=8, rotation='vertical' )
+  ax.xaxis.grid(True, which='major')
+  pp.legend(legs)
+  pp.xlim(0,len(s[0]))
+  
 def main( gene, assembly = 37, tissue = None, save_location = None, data_location = "data/broad_firehose/stddata__2016_01_28_processed_new/20160128/DNA_by_gene_small" ) : 
   fasta_dir = os.path.join( os.environ["HOME"], "data/human_genome/assembly_%d_fasta_process"%assembly )
   qtf_dir   = os.path.join( os.environ["HOME"], "data/human_genome/assembly_%d_gtf_process"%assembly )
@@ -198,19 +214,21 @@ def main( gene, assembly = 37, tissue = None, save_location = None, data_locatio
     
     for group_idx in range(n_groups):
       ax=pp.subplot(n_groups+1,1,group_idx+2)
-      variant_dx = 0
-      legs=[]
-      for variant in groups[group_idx]:
-        if ms[:,seq.variant2idx[variant],:].sum() > 0:
-          plot_stem( ms[:,seq.variant2idx[variant],:].sum(0), linefmt=colors[variant_dx]+'-', markerfmt=colors[variant_dx]+'o' )
-          legs.append(groups[group_idx][variant_dx])
-        variant_dx+=1
-      ax.set_xticks(x_ticks, minor=False)
-      ax.set_yticks(ax.get_yticks(), minor=False)
-      ax.set_xticklabels( x_ticks, fontsize=8, rotation='vertical' )
-      ax.xaxis.grid(True, which='major')
-      pp.legend(legs)
-      pp.xlim(0,len(s[0]))
+      plot_positions_at_group( ax, groups[group_idx], seq, ms, x_ticks, s, colors )
+      #
+      # variant_dx = 0
+      # legs=[]
+      # for variant in groups[group_idx]:
+      #   if ms[:,seq.variant2idx[variant],:].sum() > 0:
+      #     plot_stem( ms[:,seq.variant2idx[variant],:].sum(0), linefmt=colors[variant_dx]+'-', markerfmt=colors[variant_dx]+'o' )
+      #     legs.append(groups[group_idx][variant_dx])
+      #   variant_dx+=1
+      # ax.set_xticks(x_ticks, minor=False)
+      # ax.set_yticks(ax.get_yticks(), minor=False)
+      # ax.set_xticklabels( x_ticks, fontsize=8, rotation='vertical' )
+      # ax.xaxis.grid(True, which='major')
+      # pp.legend(legs)
+      # pp.xlim(0,len(s[0]))
       
 
     if tissue is not None:
@@ -221,6 +239,8 @@ def main( gene, assembly = 37, tissue = None, save_location = None, data_locatio
     if save_location is not None: 
       pp.savefig( save_location + "/%s_mutations.png"%gene, fmt="png" )
     pp.show()
+    
+  return a,b,d,s,ms
     
   
 if __name__ == "__main__":
