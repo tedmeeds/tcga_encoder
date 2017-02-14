@@ -8,7 +8,7 @@ from tcga_encoder.data.data import *
 from tcga_encoder.definitions.tcga import *
 from tcga_encoder.definitions.nn import *
 from tcga_encoder.definitions.locations import *
-from tcga_encoder.algorithms import *
+#from tcga_encoder.algorithms import *
 
 from tcga_encoder.data.positions.process_gene_mutation_sequence import main as position_view
 import seaborn as sns
