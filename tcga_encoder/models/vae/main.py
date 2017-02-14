@@ -13,7 +13,7 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 
-import tensorflow as tf
+#import tensorflow as tf
 
 #load_data_from_dict
 
