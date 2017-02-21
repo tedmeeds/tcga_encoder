@@ -180,6 +180,75 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
   
   return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
 
+def predict_groups_with_loo( X, y, C ):
+  
+  #print "epsilon", epsilon
+  n,d = X.shape
+  assert len(y) == n, "incorrect sizes"
+  
+  #train_folds, test_folds = xval_folds( n, k_fold, randomize = randomize, seed = seed )
+  
+  avg_projection = np.zeros( n, dtype=float )
+  avg_probability = np.zeros( n, dtype=float )
+  
+  mean_projections = np.zeros( n, dtype=float )
+  var_projections  = np.zeros( n, dtype=float )
+  
+  mean_probabilities = np.zeros( n, dtype=float )
+  var_probabilities  = np.zeros( n, dtype=float )
+  
+  # for each fold, compute mean and variances
+  w_mean = np.zeros( (n,d), dtype = float )
+  w_var = np.zeros( (n,d), dtype = float )
+  
+  all_I = np.arange(n,dtype=int)
+  
+  for i in xrange(n):
+    train_ids = np.setdiff1d( all_I, i )
+    test_ids = [i]
+    
+    X_test = X[test_ids,:]
+    #bootstrap_ids = bootstraps( train_ids, n_bootstraps )
+    
+    X_train = X[train_ids,:]
+    y_train = y[train_ids]
+    
+    #sklearn.linear_model.LogisticRegression()
+    penalty="l2"
+    if penalty == "l1":
+      sk_lda = sklearn.linear_model.LogisticRegression(C=C, penalty='l1',solver='liblinear')
+    else:
+      sk_lda = sklearn.linear_model.LogisticRegression(solver='liblinear', C=C, penalty='l2')
+    sk_lda.fit( X_train, y_train )
+    #pdb.set_trace()
+    sk_test_proj = np.squeeze(sk_lda.predict_log_proba( X_test ))[1]
+    test_proj = sk_test_proj #lda.transform( X_test )
+    test_prob = np.squeeze(sk_lda.predict_proba( X_test ))[1] # lda.predict( X_test )
+
+
+    mean_projections[ i ]   += test_proj
+    mean_probabilities[ i ] += test_prob
+    
+    var_projections[ i ]   += np.square( test_proj )
+    var_probabilities[ i ] += np.square( test_prob )
+    
+    w = np.squeeze( sk_lda.coef_ )
+    w_mean[i] += w
+    w_var[i] += np.square(w)
+  
+  w_mn = w_mean.mean(0)
+ 
+  w_var   = w_mean.var(0)
+    
+  print "loo     w = ", w_mn
+  print "loo w_var = ", w_var
+  
+  var_projections   -= np.square( mean_projections )
+  var_probabilities -= np.square( mean_probabilities )
+  avg_projection=mean_projections
+  avg_probability=mean_probabilities
+  return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mn,w_var),(avg_projection,avg_probability)
+  
 def lda_with_loo( X, y, epsilon = 1e-12 ):
   
   print "epsilon", epsilon
@@ -414,7 +483,39 @@ def run_survival_analysis_lda_loo( disease_list, fill_store, data_store, k_fold 
   projections, probabilties, weights, averages = lda_with_loo( X, y, epsilon=epsilon )
   
   return projections, probabilties, weights, averages, X, y, Events_train, Times_train
+
+def run_survival_prediction_loo( disease_list, fill_store, data_store, group0, group1, data_keys, data_names, C = 1 ):
+  fill_store.open()
+  data_store.open()
+  ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
+  tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
+  surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
+  NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
+  val_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
   
+  datas = []
+  for data_key, data_name in zip( data_keys, data_names):
+    datas.append( data_store[data_key].loc[val_survival.index].fillna(0) )
+    data_columns = {}
+    for b in data_store[data_key].columns:
+      data_columns[b] = "%s_%s"%(data_name,b)
+    
+    datas[-1].rename( columns = data_columns, inplace=True)
+  
+  data_train = pd.concat(datas, axis=1)  
+  fill_store.close()
+  data_store.close()
+  
+  #pdb.set_trace()
+  X_columns = data_train.columns
+  X = data_train[X_columns].values.astype(float)  
+  y = np.zeros(len(X),dtype=int)
+  y[group1] = 1
+  #pdb.set_trace()
+  predictions, probabilties, weights, averages = predict_groups_with_loo( X, y, C  )
+  
+  return predictions, probabilties, weights, averages, data_train, y
+    
 def run_survival_analysis_lda_train( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, epsilon = 1e-12 ):
   fill_store.open()
   data_store.open()
