@@ -239,7 +239,7 @@ def predict_groups_with_loo_with_regression( X, y, C ):
     #sk_lda = sklearn.linear_model.ARDRegression(alpha=0.5, fit_intercept=True, verbose=True)
     #sk_lda = sklearn.linear_model.ElasticNet(alpha=0.5, fit_intercept=True)
     #sk_lda = sklearn.linear_model.Ridge(alpha=1.5, fit_intercept=True)
-    sk_lda = sklearn.linear_model.Lasso(alpha=C, fit_intercept=False)
+    sk_lda = sklearn.linear_model.Lasso(alpha=C, fit_intercept=True)
     #sklearn.linear_model.BayesianRidge
     #sk_lda = sklearn.linear_model.BayesianRidge(fit_intercept=False, verbose=True)
     sk_lda.fit( X_train, y_train )

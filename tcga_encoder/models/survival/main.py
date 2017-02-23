@@ -15,7 +15,26 @@ sns.set_context("talk")
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
-
+def plot_data_with_importance( w, importance, i_importance, name, save_location, n = 20 ):
+  ff=pp.figure(figsize=(16,6)); ax1 = ff.add_subplot(111); sns.heatmap( w.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title(name)
+  ax2 = ff.add_subplot(1,10,10); ax2.plot( importance[i_importance[:n]]/max(importance), n-0.5-np.arange(n), 'k-o',lw=2,alpha=0.5 ); 
+  
+  pp.savefig( save_location + "%s.png"%name, fmt='png', dpi=300)
+  
+def importance_calc( w, X, E ):
+  ww = w*w
+  XX = X*X
+  total_E = np.sum( np.square(E) )
+  importance = []
+  n,nw = w.shape
+  for j in range(nw):
+    f = 0
+    for ii in range(n):
+       f += ww[ii,j]*XX[ii,j] - 2*w[ii,j]*E[ii]*X[ii,j]
+    importance.append(f)
+  importance = np.array(importance)
+  return importance
+      
 def main(yaml_file, weights_matrix):
   y = load_yaml( yaml_file)
   load_data_from_dict( y[DATA] )
@@ -144,6 +163,8 @@ def main(yaml_file, weights_matrix):
       I_reg_rna_parameters = np.argsort( -np.abs( reg_rna_class_weights[0] ) )
       I_reg_rna_predictions = np.argsort( reg_rna_class_projections[0] )
       
+      sorted_reg_rna_class_X = pd.DataFrame( reg_rna_class_X.values[I_reg_rna_predictions,:][:,I_reg_rna_parameters[:20]], columns = [reg_rna_class_X.columns[i] for i in I_reg_rna_parameters[:20]] )
+      
       print "reg RNA ranked high, ", [reg_rna_class_X.columns[i] for i in I_reg_rna_parameters[:n2show]] 
       #print "reg RNA ranked low, ", [reg_rna_class_X.columns[i] for i in I_reg_rna_parameters[-n2show:]] 
       
@@ -157,6 +178,7 @@ def main(yaml_file, weights_matrix):
       reg_rna_expvar = explained_variance_score(y_true_rna, y_pred_rna)  
       reg_rna_corr = np.corrcoef( y_true_rna, y_pred_rna)[0][1]
 
+      
       #--------
       reg_meth_class_projections, \
       reg_meth_class_weights, \
@@ -172,8 +194,10 @@ def main(yaml_file, weights_matrix):
       print "reg METH ranked high, ", [reg_meth_class_X.columns[i] for i in I_reg_meth_parameters[:n2show]] 
       #print "reg METH ranked low, ", [reg_meth_class_X.columns[i] for i in I_reg_meth_parameters[-n2show:]] 
       
+      sub_w = reg_rna_class_weights[0][ I_reg_meth_parameters[:20] ]
+      sorted_reg_meth_class_X = pd.DataFrame( reg_meth_class_X.values[I_reg_meth_predictions,:][:,I_reg_meth_parameters[:20]], columns = [reg_meth_class_X.columns[i] for i in I_reg_meth_parameters[:20]] )
+      #sorted_reg_meth_class_X = pd.DataFrame( reg_meth_class_X.values[I_reg_meth_predictions,:][:,I_reg_meth_parameters[:20]], columns = [reg_meth_class_X.columns[i] for i in I_reg_meth_parameters[:20]] )
       
-      #pp.show()
       
       y_pred_meth = reg_meth_class_projections[0]; 
       y_true_meth = reg_meth_class_y ; #y_true -= y_true.mean() 
@@ -193,11 +217,14 @@ def main(yaml_file, weights_matrix):
       reg_dna_Ws = reg_dna_class_weights[2]
       reg_dna_bs = reg_dna_class_weights[3] 
       print 'biases: ', reg_dna_bs.mean()
+
+        
       I_reg_dna_parameters = np.argsort( -np.abs( reg_dna_class_weights[0] ) )
       I_reg_dna_predictions = np.argsort( reg_dna_class_projections[0] )
       print "reg DNA ranked high, ", [reg_dna_class_X.columns[i] for i in I_reg_dna_parameters[:n2show]] 
       #print "reg DNA ranked low, ", [reg_dna_class_X.columns[i] for i in I_reg_dna_parameters[-n2show:]] 
       
+      sorted_reg_dna_class_X = pd.DataFrame( reg_dna_class_X.values[I_reg_dna_predictions,:][:,I_reg_dna_parameters[:20]], columns = [reg_dna_class_X.columns[i] for i in I_reg_dna_parameters[:20]] )
       
       #pp.show()
       
@@ -222,6 +249,10 @@ def main(yaml_file, weights_matrix):
       I_reg_combo_parameters = np.argsort( -np.abs( reg_combo_class_weights[0] ) )
       I_reg_combo_predictions = np.argsort( reg_combo_class_projections[0] )
       print "reg COMBO ranked high, ", [reg_combo_class_X.columns[i] for i in I_reg_combo_parameters[:n2show]] 
+      
+      sorted_reg_combo_class_X = pd.DataFrame( reg_combo_class_X.values[I_reg_combo_predictions,:][:,I_reg_combo_parameters[:20]], columns = [reg_combo_class_X.columns[i] for i in I_reg_combo_parameters[:20]] )
+      
+      
       #print "reg COMBO ranked low, ", [reg_combo_class_X.columns[i] for i in I_reg_combo_parameters[-n2show:]] 
       pd.DataFrame( reg_combo_class_weights[0][I_reg_combo_parameters], columns=["%s_COMB_reg"%disease],index = [reg_combo_class_X.columns[i] for i in I_reg_combo_parameters] ).to_csv(save_weights_template+"combo_reg.csv")
       pd.DataFrame( reg_dna_class_weights[0][I_reg_dna_parameters], columns=["%s_DNA_reg"%disease],index = [reg_dna_class_X.columns[i] for i in I_reg_dna_parameters] ).to_csv(save_weights_template+"dna_reg.csv")
@@ -233,14 +264,81 @@ def main(yaml_file, weights_matrix):
       pd.DataFrame( reg_meth_class_weights[0][I_reg_meth_parameters], columns=["%s_METH_reg"%disease],index = [reg_meth_class_X.columns[i] for i in I_reg_meth_parameters] ).to_csv(save_weights_template+"meth_reg.txt", sep=" ")
       pd.DataFrame( reg_rna_class_weights[0][I_reg_rna_parameters], columns=["%s_RNA_reg"%disease],index = [reg_rna_class_X.columns[i] for i in I_reg_rna_parameters] ).to_csv(save_weights_template+"rna_reg.txt", sep=" ")
       
-      #pp.show()
-      
       y_pred_combo = reg_combo_class_projections[0]; 
       y_true_combo = reg_combo_class_y ; #y_true -= y_true.mean() 
       reg_combo_r2 = r2_score(y_true_combo, y_pred_combo)  
       reg_combo_mse = mean_squared_error(y_true_combo, y_pred_combo)  
       reg_combo_expvar = explained_variance_score(y_true_combo, y_pred_combo)  
       reg_combo_corr = np.corrcoef( y_true_combo, y_pred_combo)[0][1]
+
+      dna_importance = importance_calc( reg_dna_class_weights[2], reg_dna_class_X.values, y_true_dna - y_pred_dna )
+      I_w_reg_dna_parameters_importance = np.argsort( -dna_importance )
+      
+      meth_importance = importance_calc( reg_meth_class_weights[2], reg_meth_class_X.values, y_true_meth - y_pred_meth )
+      I_w_reg_meth_parameters_importance = np.argsort( -meth_importance )
+      
+      rna_importance = importance_calc( reg_rna_class_weights[2], reg_rna_class_X.values, y_true_rna - y_pred_rna )
+      I_w_reg_rna_parameters_importance = np.argsort( -rna_importance  )
+
+      combo_importance = importance_calc( reg_combo_class_weights[2], reg_combo_class_X.values, y_true_combo - y_pred_combo )
+      I_w_reg_combo_parameters_importance = np.argsort( -combo_importance )
+            
+      #pdb.set_trace()
+      #pp.show()
+      #w_sorted_reg_meth_class_X2 = pd.DataFrame( np.dot( reg_meth_class_X.values, np.diag(reg_meth_class_weights[0])), columns = reg_meth_class_X.columns )
+      #II = w_sorted_reg_meth_class_X2.mean(0)
+      #I_w_reg_meth_parameters = np.argsort( -np.abs( II.values ) )
+      #w_sorted_reg_meth_class_X2 = pd.DataFrame( np.dot( reg_meth_class_X.values[I_reg_meth_predictions,:][:,I_w_reg_meth_parameters[:20]], np.diag(reg_meth_class_weights[0][I_w_reg_meth_parameters[:20]])), columns = [reg_meth_class_X.columns[i] for i in I_w_reg_meth_parameters[:20]] )
+      w_sorted_reg_dna_class_X3 = pd.DataFrame( np.dot( reg_dna_class_X.values[I_reg_dna_predictions,:][:,I_w_reg_dna_parameters_importance[:20]], np.sign(np.diag(reg_dna_class_weights[0][I_w_reg_dna_parameters_importance[:20]]))), columns = [reg_dna_class_X.columns[i] for i in I_w_reg_dna_parameters_importance[:20]] )
+      w_sorted_reg_meth_class_X3 = pd.DataFrame( np.dot( reg_meth_class_X.values[I_reg_meth_predictions,:][:,I_w_reg_meth_parameters_importance[:20]],  np.sign(np.diag(reg_meth_class_weights[0][I_w_reg_meth_parameters_importance[:20]]))), columns = [reg_meth_class_X.columns[i] for i in I_w_reg_meth_parameters_importance[:20]] )
+      w_sorted_reg_rna_class_X3 = pd.DataFrame( np.dot( reg_rna_class_X.values[I_reg_rna_predictions,:][:,I_w_reg_rna_parameters_importance[:20]],  np.sign(np.diag(reg_rna_class_weights[0][I_w_reg_rna_parameters_importance[:20]]))), columns = [reg_rna_class_X.columns[i] for i in I_w_reg_rna_parameters_importance[:20]] )
+      w_sorted_reg_combo_class_X3 = pd.DataFrame( np.dot( reg_combo_class_X.values[I_reg_combo_predictions,:][:,I_w_reg_combo_parameters_importance[:20]],  np.sign(np.diag(reg_combo_class_weights[0][I_w_reg_combo_parameters_importance[:20]]))), columns = [reg_combo_class_X.columns[i] for i in I_w_reg_combo_parameters_importance[:20]] )
+
+      #w_sorted_reg_rna_class_X2 = pd.DataFrame( np.dot( reg_rna_class_X.values, np.diag(reg_rna_class_weights[0])), columns = reg_rna_class_X.columns )
+      #II = w_sorted_reg_rna_class_X2.mean(0)
+      #I_w_reg_rna_parameters = np.argsort( -np.abs( II.values ) )
+      #w_sorted_reg_rna_class_X2 = pd.DataFrame( np.dot( reg_rna_class_X.values[I_reg_rna_predictions,:][:,I_w_reg_rna_parameters[:20]], np.diag(reg_rna_class_weights[0][I_w_reg_rna_parameters[:20]])), columns = [reg_rna_class_X.columns[i] for i in I_w_reg_rna_parameters[:20]] )
+
+      
+      # w_sorted_reg_dna_class_X = pd.DataFrame( np.dot( reg_dna_class_X.values[I_reg_dna_predictions,:][:,I_reg_dna_parameters[:20]], np.diag(reg_dna_class_weights[0][I_reg_dna_parameters[:20]])), columns = [reg_dna_class_X.columns[i] for i in I_reg_dna_parameters[:20]] )
+      # w_sorted_reg_rna_class_X = pd.DataFrame( np.dot( reg_rna_class_X.values[I_reg_rna_predictions,:][:,I_reg_rna_parameters[:20]], np.diag(reg_rna_class_weights[0][I_reg_rna_parameters[:20]])), columns = [reg_rna_class_X.columns[i] for i in I_reg_rna_parameters[:20]] )
+      # w_sorted_reg_meth_class_X = pd.DataFrame( np.dot( reg_meth_class_X.values[I_reg_meth_predictions,:][:,I_reg_meth_parameters[:20]], np.diag(reg_meth_class_weights[0][I_reg_meth_parameters[:20]])), columns = [reg_meth_class_X.columns[i] for i in I_reg_meth_parameters[:20]] )
+      # w_sorted_reg_combo_class_X = pd.DataFrame( np.dot( reg_combo_class_X.values[I_reg_combo_predictions,:][:,I_reg_combo_parameters[:20]], np.diag(reg_combo_class_weights[0][I_reg_combo_parameters[:20]])), columns = [reg_combo_class_X.columns[i] for i in I_reg_combo_parameters[:20]] )
+      
+
+      #pp.show()
+
+      
+
+      
+      # pp.figure(figsize=(16,6)); sns.heatmap( sorted_reg_dna_class_X.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("DNA")
+      # pp.figure(figsize=(16,6)); sns.heatmap( sorted_reg_rna_class_X.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("RNA")
+      # pp.figure(figsize=(16,6)); sns.heatmap( sorted_reg_meth_class_X.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("METH")
+      # pp.figure(figsize=(16,6)); sns.heatmap( sorted_reg_combo_class_X.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("COMBO")
+      #
+      # pp.figure(figsize=(16,6)); sns.heatmap( w_sorted_reg_dna_class_X.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("W_DNA")
+      # pp.figure(figsize=(16,6)); sns.heatmap( w_sorted_reg_rna_class_X.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("W_RNA")
+      # pp.figure(figsize=(16,6)); sns.heatmap( w_sorted_reg_meth_class_X.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("W_METH")
+      # pp.figure(figsize=(16,6)); sns.heatmap( w_sorted_reg_combo_class_X.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("W_COMBO")
+      
+      #pp.figure(figsize=(16,6)); sns.heatmap( w_sorted_reg_meth_class_X2.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("W2_METH")
+      save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_" ) 
+      
+      plot_data_with_importance(w_sorted_reg_dna_class_X3, dna_importance, I_w_reg_dna_parameters_importance, "%s DNA"%(disease), save_location_data )
+      plot_data_with_importance(w_sorted_reg_rna_class_X3, rna_importance, I_w_reg_rna_parameters_importance, "%s RNA"%(disease), save_location_data )
+      plot_data_with_importance(w_sorted_reg_meth_class_X3, meth_importance, I_w_reg_meth_parameters_importance, "%s METH"%(disease), save_location_data )
+      plot_data_with_importance(w_sorted_reg_combo_class_X3, combo_importance, I_w_reg_combo_parameters_importance, "%s COMBO"%(disease), save_location_data )
+      
+      # pp.figure(figsize=(16,6)); sns.heatmap( w_sorted_reg_dna_class_X3.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("W3_DNA")
+      #
+      # pp.figure(figsize=(16,6)); sns.heatmap( w_sorted_reg_meth_class_X3.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("W3_METH")
+      #
+      #
+      # pp.figure(figsize=(16,6)); sns.heatmap( w_sorted_reg_rna_class_X3.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("W3_RNA")
+      # ff=pp.figure(figsize=(16,6)); ax1 = ff.add_subplot(111); sns.heatmap( w_sorted_reg_combo_class_X3.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title("W3_COMBO")
+      # ax2 = ff.add_subplot(1,10,10); ax2.plot( combo_importance[I_w_reg_combo_parameters_importance[:20]]/max(combo_importance), 19.5-np.arange(20), 'k-o',lw=2,alpha=0.5 );
+      #
+      # pdb.set_trace()
       # -----------
                 
       save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_reg_W.png" )  
@@ -273,41 +371,112 @@ def main(yaml_file, weights_matrix):
       save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_reg.png" )  
       f2 = pp.figure()
       ax1 = f2.add_subplot(311)
-      ax1.plot( reg_rna_class_projections[0], y_true_rna, 'b.' )
+      I_E_train = pp.find( E_train )
+      I_C_train = pp.find( 1-E_train )
+      T_E = T_train[ I_E_train ]
+      T_C = T_train[ I_C_train ]
+      
+      ax1.plot( reg_rna_class_projections[0][I_E_train], y_true_rna[I_E_train], 'r.' )
+      ax1.plot( reg_rna_class_projections[0][I_C_train], y_true_rna[I_C_train], 'b.' )
+      #ax1.plot( reg_rna_class_projections[0], y_true_rna, 'b.' )
+      
+      for t_e, x_i, y_i in zip( T_E, reg_rna_class_projections[0][I_E_train], y_true_rna[I_E_train] ):
+        ax1.text( x_i, y_i, str(t_e), fontsize=6, color="red")
+        
+      for t_e, x_i, y_i in zip( T_C, reg_rna_class_projections[0][I_C_train], y_true_rna[I_C_train] ):
+        ax1.text( x_i, y_i, str(t_e), fontsize=6, color="blue")
+        
       #ax1.plot( dna_class_probabilties[0][I_dna_predictions], 'r.', alpha=0.5, mec='k' )
       pp.xlabel( "RNA predict" )
       pp.ylabel( "RNA target" )
       ax1 = f2.add_subplot(312)
-      ax1.plot( reg_dna_class_projections[0], y_true_dna, 'b.' )
+      #ax1.plot( reg_dna_class_projections[0], y_true_dna, 'b.' )
+      
+      ax1.plot( reg_dna_class_projections[0][I_E_train], y_true_dna[I_E_train], 'r.' )
+      ax1.plot( reg_dna_class_projections[0][I_C_train], y_true_dna[I_C_train], 'b.' )
+      for t_e, x_i, y_i in zip( T_E, reg_dna_class_projections[0][I_E_train], y_true_dna[I_E_train] ):
+        ax1.text( x_i, y_i, str(t_e), fontsize=6, color="red")
+      for t_e, x_i, y_i in zip( T_C, reg_dna_class_projections[0][I_C_train], y_true_dna[I_C_train] ):
+        ax1.text( x_i, y_i, str(t_e), fontsize=6, color="blue")
       #ax1.plot( dna_class_probabilties[0][I_dna_predictions], 'r.', alpha=0.5, mec='k' )
       pp.xlabel( "DNA predict" )
       pp.ylabel( "DNA target" )
       ax1 = f2.add_subplot(313)
-      ax1.plot( reg_meth_class_projections[0], y_true_meth, 'b.' )
+      #ax1.plot( reg_meth_class_projections[0], y_true_meth, 'b.' )
+      ax1.plot( reg_meth_class_projections[0][I_E_train], y_true_meth[I_E_train], 'r.' )
+      ax1.plot( reg_meth_class_projections[0][I_C_train], y_true_meth[I_C_train], 'b.' )
+      for t_e, x_i, y_i in zip( T_E, reg_meth_class_projections[0][I_E_train], y_true_meth[I_E_train] ):
+        ax1.text( x_i, y_i, str(t_e), fontsize=6, color="red")
+      for t_e, x_i, y_i in zip( T_C, reg_meth_class_projections[0][I_C_train], y_true_meth[I_C_train] ):
+        ax1.text( x_i, y_i, str(t_e), fontsize=6, color="blue")
       #ax1.plot( dna_class_probabilties[0][I_dna_predictions], 'r.', alpha=0.5, mec='k' )
       pp.xlabel( "METH predict" )
       pp.ylabel( "METH target" )
       
-      
-      # ax2 = f2.add_subplot(1,4,2)
-      # #ax1.plot( rna_class_y[I_rna_predictions], 'b.', alpha=0.5, mec='k' )
-      # ax2.plot( rna_class_y[I_rna_predictions].cumsum()/float( rna_class_y.sum() ), 'b.', alpha=0.5, mec='k' )
-      # ax2.plot( rna_class_probabilties[0][I_rna_predictions], 'r.', alpha=0.5, mec='k' )
-      # pp.xlabel( "RNA roc=%0.2f acc=%0.2f"%(rna_auc, rna_acc) )
-      # ax3 = f2.add_subplot(1,4,3)
-      # #ax1.plot( meth_class_y[I_meth_predictions], 'b.', alpha=0.5, mec='k' )
-      # ax3.plot( meth_class_y[I_meth_predictions].cumsum()/float( meth_class_y.sum() ), 'b.', alpha=0.5, mec='k' )
-      # ax3.plot( meth_class_probabilties[0][I_meth_predictions], 'r.', alpha=0.5, mec='k' )
-      # pp.xlabel( "METH roc=%0.2f acc=%0.2f"%(meth_auc, meth_acc) )
-      # ax4 = f2.add_subplot(1,4,4)
-      # #ax1.plot( meth_class_y[I_meth_predictions], 'b.', alpha=0.5, mec='k' )
-      # ax4.plot( comb_class_y[I_comb_predictions].cumsum()/float( comb_class_y.sum() ), 'b.', alpha=0.5, mec='k' )
-      # ax4.plot( comb_class_probabilties[0][I_comb_predictions], 'r.', alpha=0.5, mec='k' )
-      # pp.xlabel( "COMB roc=%0.2f acc=%0.2f"%(comb_auc, comb_acc) )
-      
-      #tp,fn
+      pp.savefig(save_location_reg, dpi=300, format='png')
+      ##################################
       pp.savefig(save_location_reg, dpi=300, format='png')
       
+      
+      print "reg RNA r2     = ", reg_rna_r2
+      print "reg RNA mse    = ", reg_rna_mse
+      print "reg RNA expvar = ", reg_rna_expvar
+      print "reg RNA corr   = ", reg_rna_corr
+      
+      #r2_score, mean_squared_error, explained_variance_score
+      save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_reg_sticks.png" )  
+      f2 = pp.figure()
+      ax1 = f2.add_subplot(411)
+      I_E_train = pp.find( E_train )
+      I_C_train = pp.find( 1-E_train )
+      T_E = np.maximum( 1, T_train[ I_E_train ] )
+      T_C = np.maximum( 1, T_train[ I_C_train ] )
+      
+      #T_E = np.log(T_E)
+      #T_C = np.log(T_C)
+      #ax1.plot( reg_rna_class_projections[0], y_true_rna, 'b.' )
+      
+      for t_e, x_i, y_i in zip( T_E, reg_rna_class_projections[0][I_E_train], y_true_rna[I_E_train] ):
+        ax1.plot( [x_i,x_i], [0,t_e], color="red", lw=2)
+        
+      for t_e, x_i, y_i in zip( T_C, reg_rna_class_projections[0][I_C_train], y_true_rna[I_C_train] ):
+        ax1.plot( [x_i,x_i], [0,t_e], color="blue", lw=2)
+      #ax1.plot( dna_class_probabilties[0][I_dna_predictions], 'r.', alpha=0.5, mec='k' )
+      pp.xlabel( "RNA predict" )
+      pp.ylabel( "Time" )
+      ax1 = f2.add_subplot(412)
+      # ax1.plot( reg_dna_class_projections[0], y_true_dna, 'b.' )
+      for t_e, x_i, y_i in zip( T_E, reg_dna_class_projections[0][I_E_train], y_true_dna[I_E_train] ):
+        ax1.plot( [x_i,x_i], [0,t_e], color="red", lw=2)
+        
+      for t_e, x_i, y_i in zip( T_C, reg_dna_class_projections[0][I_C_train], y_true_dna[I_C_train] ):
+        ax1.plot( [x_i,x_i], [0,t_e], color="blue", lw=2)
+      pp.xlabel( "DNA predict" )
+      pp.ylabel( "Time" )
+      # #ax1.plot( dna_class_probabilties[0][I_dna_predictions], 'r.', alpha=0.5, mec='k' )
+      # pp.xlabel( "DNA predict" )
+      # pp.ylabel( "DNA target" )
+      ax1 = f2.add_subplot(413)
+      for t_e, x_i, y_i in zip( T_E, reg_meth_class_projections[0][I_E_train], y_true_meth[I_E_train] ):
+        ax1.plot( [x_i,x_i], [0,t_e], color="red", lw=2)
+        
+      for t_e, x_i, y_i in zip( T_C, reg_meth_class_projections[0][I_C_train], y_true_meth[I_C_train] ):
+        ax1.plot( [x_i,x_i], [0,t_e], color="blue", lw=2)
+      pp.xlabel( "METH predict" )
+      pp.ylabel( "Time" )
+      ax1 = f2.add_subplot(414)
+      for t_e, x_i, y_i in zip( T_E, reg_combo_class_projections[0][I_E_train], y_true_combo[I_E_train] ):
+        ax1.plot( [x_i,x_i], [0,t_e], color="red", lw=2)
+        
+      for t_e, x_i, y_i in zip( T_C, reg_combo_class_projections[0][I_C_train], y_true_combo[I_C_train] ):
+        ax1.plot( [x_i,x_i], [0,t_e], color="blue", lw=2)
+      pp.xlabel( "COMBO predict" )
+      pp.ylabel( "Time" )
+      # pp.xlabel( "METH predict" )
+      # pp.ylabel( "METH target" )
+      
+      pp.savefig(save_location_reg, dpi=300, format='png')
+      ##################################
       #pdb.set_trace()
       #print mn_prob
       I = np.argsort(-mn_prob)
