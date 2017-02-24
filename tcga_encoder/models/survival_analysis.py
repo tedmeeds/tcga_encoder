@@ -23,20 +23,20 @@ def linear_reg_gprior_ard( X, y, alpha, lr = 1e-4, iters = 10, verbose = False, 
   w = np.zeros(d,dtype=float)
   h = np.zeros(d,dtype=float)
   z = np.exp(h)
-  b = 0.0
+  b = np.mean(y)
   
   for i in range(iters):
     y_hat = np.dot( X, w ) + b
     if verbose:
       print "Error = ", np.sum( np.square( y - y_hat ) ), w[:5], b, z[:5]
-    #g_w = - np.dot( X.T, (y-y_hat) ) + (z+eps)*np.sign(w)
-    #g_b = np.sum(y-np.dot( X, w ))
-    ##g_h = np.abs(w)*z - alpha*np.dot( X.T, np.dot( X, (z+eps)**-2 ))*z
-    #g_h = np.abs(w)*z - np.dot( sX.T, alpha*z*(z+eps)**-2 )
-    g_w = - np.dot( X.T, (y-y_hat) ) + z*np.sign(w)
+    g_w = - np.dot( X.T, (y-y_hat) ) + (z+eps)*np.sign(w)
     g_b = np.sum(y-np.dot( X, w ))
+    ##g_h = np.abs(w)*z - alpha*np.dot( X.T, np.dot( X, (z+eps)**-2 ))*z
+    g_h = np.abs(w)*z - np.dot( sX.T, alpha*z*(z+eps)**-2 )
+    #g_w = - np.dot( X.T, (y-y_hat) ) + z*np.sign(w)
+    #g_b = np.sum(y-np.dot( X, w ))
     #g_h = np.abs(w)*z - alpha*np.dot( X.T, np.dot( X, z**-1 ))
-    g_h = np.abs(w)*z - np.dot( sX.T, alpha*z**-1 )
+    #g_h = np.abs(w)*z - np.dot( sX.T, alpha*z**-1 )
 
     if np.any(np.isnan(g_w)):
       pdb.set_trace()
