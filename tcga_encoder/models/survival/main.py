@@ -149,7 +149,7 @@ def main(yaml_file, weights_matrix):
       
       survival_target = -mn_proj
       C = 1.0
-      C_reg = 0.0001
+      C_reg = 0.00001
       n2show = 10
       reg_rna_class_projections, \
       reg_rna_class_weights, \
