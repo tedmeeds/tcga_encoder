@@ -33,6 +33,8 @@ def importance_calc( w, X, E ):
        f += ww[ii,j]*XX[ii,j] - 2*w[ii,j]*E[ii]*X[ii,j]
     importance.append(f)
   importance = np.array(importance)
+  
+  importance = np.mean( np.abs( w ), 0 )
   return importance
       
 def main(yaml_file, weights_matrix):
@@ -149,7 +151,7 @@ def main(yaml_file, weights_matrix):
       
       survival_target = -mn_proj
       C = 1.0
-      C_reg = 0.00001
+      C_reg = 0.0001
       n2show = 10
       reg_rna_class_projections, \
       reg_rna_class_weights, \

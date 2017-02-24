@@ -8,7 +8,60 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as sk_Linea
 from tcga_encoder.models.survival import *
 import pdb
 from lifelines import KaplanMeierFitter
+#import autograd.numpy as np
+#from autograd import grad
 
+#def cost_lineat_reg_ard( X, y, w, b, h );
+def linear_reg_gprior_ard( X, y, alpha, lr = 1e-4, iters = 10, verbose = False, eps = 1e-6 ):
+  n,d = X.shape
+  
+  XTX = np.dot( X.T, X )
+  XXT = np.dot( X, X.T )
+  
+  XX = X*X
+  sX = XX.sum(0)
+  w = np.zeros(d,dtype=float)
+  h = np.zeros(d,dtype=float)
+  z = np.exp(h)
+  b = 0.0
+  
+  for i in range(iters):
+    y_hat = np.dot( X, w ) + b
+    if verbose:
+      print "Error = ", np.sum( np.square( y - y_hat ) ), w[:5], b, z[:5]
+    #g_w = - np.dot( X.T, (y-y_hat) ) + (z+eps)*np.sign(w)
+    #g_b = np.sum(y-np.dot( X, w ))
+    ##g_h = np.abs(w)*z - alpha*np.dot( X.T, np.dot( X, (z+eps)**-2 ))*z
+    #g_h = np.abs(w)*z - np.dot( sX.T, alpha*z*(z+eps)**-2 )
+    g_w = - np.dot( X.T, (y-y_hat) ) + z*np.sign(w)
+    g_b = np.sum(y-np.dot( X, w ))
+    #g_h = np.abs(w)*z - alpha*np.dot( X.T, np.dot( X, z**-1 ))
+    g_h = np.abs(w)*z - np.dot( sX.T, alpha*z**-1 )
+
+    if np.any(np.isnan(g_w)):
+      pdb.set_trace()
+    if np.any(np.isinf(g_w)):
+      pdb.set_trace()
+    if np.any(np.isnan(g_h)):
+      pdb.set_trace()
+    if np.any(np.isinf(g_h)):
+      pdb.set_trace()
+
+    
+    h = np.maximum( h - lr*g_h, -20 )
+    w = w - lr*g_w
+    b = b - lr*g_b
+    z = np.exp(h)
+    
+    if np.any(np.isnan(w)):
+      pdb.set_trace()
+  
+  y_hat = np.dot( X, w ) + b
+  if verbose:
+   print "Final Error = ", np.sum( np.square( y - y_hat ) )
+  #pdb.set_trace()
+  return w, b
+    
 def bootstraps( x, m ):
   # samples from arange(n) with replacement, m times.
   #x = np.arange(n, dtype=int)
@@ -180,6 +233,84 @@ def lda_with_xval_and_bootstrap( X, y, k_fold = 10, n_bootstraps = 10, randomize
   
   return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
 
+def predict_groups_with_loo_with_regression_gprior( X, y, C ):
+  
+  #print "epsilon", epsilon
+  n,d = X.shape
+  assert len(y) == n, "incorrect sizes"
+  
+  #train_folds, test_folds = xval_folds( n, k_fold, randomize = randomize, seed = seed )
+  
+  avg_projection = np.zeros( n, dtype=float )
+  avg_probability = np.zeros( n, dtype=float )
+  
+  mean_projections = np.zeros( n, dtype=float )
+  var_projections  = np.zeros( n, dtype=float )
+  
+  mean_probabilities = np.zeros( n, dtype=float )
+  var_probabilities  = np.zeros( n, dtype=float )
+  
+  # for each fold, compute mean and variances
+  w_mean = np.zeros( (n,d), dtype = float )
+  w_var = np.zeros( (n,d), dtype = float )
+  
+  all_I = np.arange(n,dtype=int)
+  
+  Ws = []
+  bs = []
+  for i in xrange(n):
+    train_ids = np.setdiff1d( all_I, i )
+    test_ids = [i]
+    
+    X_test = X[test_ids,:]
+    #bootstrap_ids = bootstraps( train_ids, n_bootstraps )
+    
+    X_train = X[train_ids,:]
+    y_train = y[train_ids]
+    
+    #sklearn.linear_model.LogisticRegression()
+    penalty="l2"
+    #
+    #sk_lda = sklearn.linear_model.ARDRegression(alpha=0.5, fit_intercept=True, verbose=True)
+    #sk_lda = sklearn.linear_model.ElasticNet(alpha=0.5, fit_intercept=True)
+    #sk_lda = sklearn.linear_model.Ridge(alpha=1.5, fit_intercept=True)
+    sk_lda = sklearn.linear_model.Lasso(alpha=C, fit_intercept=True)
+    #sklearn.linear_model.BayesianRidge
+    #sk_lda = sklearn.linear_model.BayesianRidge(fit_intercept=False, verbose=True)
+    sk_lda.fit( X_train, y_train )
+    #pdb.set_trace()
+    sk_test_proj = np.squeeze(sk_lda.predict( X_test ))
+    test_proj = sk_test_proj #lda.transform( X_test )
+    #test_prob = np.squeeze(sk_lda.predict_proba( X_test ))[1] # lda.predict( X_test )
+
+
+    mean_projections[ i ]   += test_proj
+    #mean_probabilities[ i ] += test_prob
+    
+    var_projections[ i ]   += np.square( test_proj )
+    #var_probabilities[ i ] += np.square( test_prob )
+    
+    w = np.squeeze( sk_lda.coef_ )
+    Ws.append( w )
+    bs.append( sk_lda.intercept_ )
+    w_mean[i] += w
+    w_var[i] += np.square(w)
+  
+  Ws = np.array(Ws)
+  bs = np.array(bs)
+  w_mn = w_mean.mean(0)
+ 
+  w_var   = w_mean.var(0)
+    
+  #print "loo     w = ", w_mn
+  #print "loo w_var = ", w_var
+  
+  var_projections   -= np.square( mean_projections )
+  #var_probabilities -= np.square( mean_probabilities )
+  avg_projection=mean_projections
+  #avg_probability=mean_probabilities
+  return (mean_projections,var_projections),(w_mn,w_var,Ws,bs),(avg_projection,)
+  
 def predict_groups_with_loo_with_regression( X, y, C ):
   
   #print "epsilon", epsilon
@@ -243,8 +374,12 @@ def predict_groups_with_loo_with_regression( X, y, C ):
     #sklearn.linear_model.BayesianRidge
     #sk_lda = sklearn.linear_model.BayesianRidge(fit_intercept=False, verbose=True)
     sk_lda.fit( X_train, y_train )
-    #pdb.set_trace()
+    
+    w_ard, b_ard = linear_reg_gprior_ard( X_train, y_train, C, lr = 0.0001, iters=2000, verbose = False )
+    
+    
     sk_test_proj = np.squeeze(sk_lda.predict( X_test ))
+    sk_test_proj = np.dot( X_test, w_ard ) + b_ard
     test_proj = sk_test_proj #lda.transform( X_test )
     #test_prob = np.squeeze(sk_lda.predict_proba( X_test ))[1] # lda.predict( X_test )
 
@@ -255,7 +390,8 @@ def predict_groups_with_loo_with_regression( X, y, C ):
     var_projections[ i ]   += np.square( test_proj )
     #var_probabilities[ i ] += np.square( test_prob )
     
-    w = np.squeeze( sk_lda.coef_ )
+    w = w_ard #np.squeeze( sk_lda.coef_ )
+    #pdb.set_trace()
     Ws.append( w )
     bs.append( sk_lda.intercept_ )
     w_mean[i] += w
