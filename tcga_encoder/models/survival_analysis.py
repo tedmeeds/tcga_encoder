@@ -12,7 +12,7 @@ from lifelines import KaplanMeierFitter
 #from autograd import grad
 
 #def cost_lineat_reg_ard( X, y, w, b, h );
-def linear_reg_gprior_ard( X, y, alpha, lr = 1e-4, iters = 10, verbose = False, eps = 1e-6 ):
+def linear_reg_gprior_ard( X, y, alpha, lr = 1e-4, iters = 10, verbose = False, eps = 1e-6, w_init = None ):
   n,d = X.shape
   
   XTX = np.dot( X.T, X )
@@ -20,13 +20,22 @@ def linear_reg_gprior_ard( X, y, alpha, lr = 1e-4, iters = 10, verbose = False, 
   
   XX = X*X
   sX = XX.sum(0)
-  w = np.zeros(d,dtype=float)
+  if w_init is not None:
+    w = w_init
+  else:
+    w = np.zeros(d,dtype=float)
   h = np.zeros(d,dtype=float)
   z = np.exp(h)
   b = np.mean(y)
-  
+  old_cost = np.inf
   for i in range(iters):
     y_hat = np.dot( X, w ) + b
+    cost = np.sum( np.square( y - y_hat ) )
+    
+    # if np.abs(old_cost - cost) < 0.001:
+    #   print "stopping at ", i, old_cost, cost
+    #   break
+    old_cost = cost
     if verbose:
       print "Error = ", np.sum( np.square( y - y_hat ) ), w[:5], b, z[:5]
     g_w = - np.dot( X.T, (y-y_hat) )/n + (z+eps)*np.sign(w)/d
@@ -49,12 +58,19 @@ def linear_reg_gprior_ard( X, y, alpha, lr = 1e-4, iters = 10, verbose = False, 
 
     
     h = np.maximum( h - lr*g_h, -20 )
+    old_w = cost
     w = w - lr*g_w
     b = b - lr*g_b
     z = np.exp(h)
     
+    # dif_w = np.linalg.norm( w-old_w )
+    #
+    # if i > 10 and dif_w < 1e-3:
+    #   print "stopping at ", i, dif_w
+    #   break
     if np.any(np.isnan(w)):
       pdb.set_trace()
+      
   
   y_hat = np.dot( X, w ) + b
   if verbose:
@@ -375,7 +391,7 @@ def predict_groups_with_loo_with_regression( X, y, C ):
     #sk_lda = sklearn.linear_model.BayesianRidge(fit_intercept=False, verbose=True)
     sk_lda.fit( X_train, y_train )
     
-    w_ard, b_ard = linear_reg_gprior_ard( X_train, y_train, C, lr = 0.0001, iters=2000, verbose = False )
+    w_ard, b_ard = linear_reg_gprior_ard( X_train, y_train, C, lr = 0.001, iters=1500, verbose = False, w_init = np.squeeze( sk_lda.coef_ ) )
     
     
     sk_test_proj = np.squeeze(sk_lda.predict( X_test ))
