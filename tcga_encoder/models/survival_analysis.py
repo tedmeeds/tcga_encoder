@@ -369,10 +369,10 @@ def pytorch_survival_xval( E, T, Z, k_fold = 10, n_bootstraps = 10, randomize = 
     
     w = model.beta.data.numpy()
 
-    test_proj = model.LogFrailty( Z_test ).data.numpy()
+    test_proj = model.LogFrailty( Z_test, T_test ).data.numpy()
     train_proj = model.train_frailty.data.numpy()
-    test_proj -= train_proj.mean()
-    test_proj /= train_proj.std()
+    #test_proj -= train_proj.mean()
+    #test_proj /= train_proj.std()
     
     #pdb.set_trace()
     test_prob = model.LogLikelihood( E_test, T_test, Z_test ).data.numpy()
