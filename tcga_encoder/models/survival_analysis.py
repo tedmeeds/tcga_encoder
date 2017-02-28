@@ -353,6 +353,8 @@ def pytorch_survival_xval( E, T, Z, k_fold = 10, n_bootstraps = 10, randomize = 
   w_var = np.zeros( (k_fold,dim), dtype = float )
   
   for k, train_ids, test_ids in zip( range(k_fold), train_folds, test_folds ):
+    mn_z = Z[train_ids,:].mean(0)
+    #Z -= mn_z
     Z_test = Variable( torch.FloatTensor( Z[test_ids,:] ) )
     T_test = Variable( torch.FloatTensor( T[test_ids] ) )
     E_test = Variable( torch.FloatTensor( E[test_ids] ) )
