@@ -8,14 +8,7 @@ from torch.nn import Parameter
 import torch.optim as optim
 import pylab as pp
 
-from lifelines import datasets
-data=datasets.load_regression_dataset()
-#
-E = torch.FloatTensor( data["E"].values.astype(float) )
-T = torch.FloatTensor( data["T"].values.astype(float) )
-Z = torch.FloatTensor( data[["var1","var2","var3"]].values.astype(float) )
 
-var_E, var_T, var_Z = Variable(E), Variable(T), Variable(Z)
 
 
 class WeibullSurvivalModel(nn.Module):
@@ -53,6 +46,13 @@ class WeibullSurvivalModel(nn.Module):
 
       return log_shape + log_scale + (scale-1.0)*torch.log( T )
 
+    def LogFrailty( self, Z ):
+      log_shape = self.LogShape( Z )
+      log_scale = self.LogScale( Z )
+      
+      f = log_scale+log_shape #- torch.mv(Z,self.alpha)   torch.mv(Z,self.beta)
+      return f
+      
     def Hazard( self, T, Z ):
       return torch.exp( self.log_hazard( T, Z ) )
 
@@ -122,94 +122,71 @@ class WeibullSurvivalModel(nn.Module):
       
       return f
       
+    def fit( self, E, T, Z, n_epochs = 5000, lr = 2*1e-2, logging_frequency = 500, l1 = 0.0 ):
+      
+      #model = WeibullSurvivalModel( dim )
+      data  = [E, T, Z]
 
-n   = Z.size()[0]
-dim = Z.size()[1]
+      #def loss_function( log_hazard, log_survival):
+      #  return -torch.sum( log_hazard + log_survival )  
 
-print( data[:10] )
+      optimizer = optim.Adam(self.parameters(), lr=lr)
+      
+      for epoch in xrange(1, n_epochs):
+        self.train()
+        train_loss = 0
+        optimizer.zero_grad()
+        log_hazard, log_survival = self(data)
+        loss = -torch.sum( log_hazard + log_survival ) #loss_function(log_hazard, log_survival)
+        
+        if l1 > 0:
+          loss += l1*torch.sum( torch.abs( self.beta) )
+          loss += l1*torch.sum( torch.abs( self.alpha) )
+        loss.backward()
+        optimizer.step()
 
-model = WeibullSurvivalModel( dim )
-data  = [var_E, var_T, var_Z]
+        if epoch%logging_frequency == 0:
+          print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, loss.data[0] ))
+          print('                alpha0: {:.3f} alpha: {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format( self.alpha0.data[0], self.alpha.data[0], self.alpha.data[1], self.alpha.data[2], self.alpha.data[3], self.alpha.data[4], self.alpha.data[5]))
+          print('                beta0: {:.3f} beta: {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format( self.beta0.data[0], self.beta.data[0], self.beta.data[1], self.beta.data[2], self.beta.data[3], self.beta.data[4], self.beta.data[5]))
+      if n_epochs%logging_frequency == 0:
+        print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, loss.data[0] ))
+        print('                alpha0: {:.3f} alpha: {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format( self.alpha0.data[0], self.alpha.data[0], self.alpha.data[1], self.alpha.data[2], self.alpha.data[3], self.alpha.data[4], self.alpha.data[5]))
+        print('                beta0: {:.3f} beta: {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format( self.beta0.data[0], self.beta.data[0], self.beta.data[1], self.beta.data[2], self.beta.data[3], self.beta.data[4], self.beta.data[5]))
+    #
+    # for epoch in range(1, 15000):
+    #     train(epoch)
+      
 
-def loss_function( log_hazard, log_survival):
-  return -torch.sum( log_hazard + log_survival )  
+if __name__ == '__main__':
+  from lifelines import datasets
+  data=datasets.load_regression_dataset()
+  #
+  E = torch.FloatTensor( data["E"].values.astype(float) )
+  T = torch.FloatTensor( data["T"].values.astype(float) )
+  Z = torch.FloatTensor( data[["var1","var2","var3"]].values.astype(float) )
 
-optimizer = optim.Adam(model.parameters(), lr=0.01)
+  var_E, var_T, var_Z = Variable(E), Variable(T), Variable(Z)
+  n   = Z.size()[0]
+  dim = Z.size()[1]
 
-def train(epoch):
+  print( data[:10] )
 
-  model.train()
-  train_loss = 0
-  #for batch_idx in range(10):
-  #data = Variable(data)
-  # if args.cuda:
-  #     data = data.cuda()
-  optimizer.zero_grad()
-  log_hazard, log_survival = model(data)
-  loss = loss_function(log_hazard, log_survival)
-  loss.backward()
-  optimizer.step()
+  model = WeibullSurvivalModel( dim )
+  #data  = [var_E, var_T, var_Z]
 
-  if epoch%200 == 0:
-    print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, loss.data[0] ))
-    print('                alpha0: {:.3f} alpha: {:.3f}, {:.3f}, {:.3f}'.format( model.alpha0.data[0], model.alpha.data[0], model.alpha.data[1], model.alpha.data[2]))
-    print('                beta0: {:.3f} beta: {:.3f}, {:.3f}, {:.3f}'.format( model.beta0.data[0], model.beta.data[0], model.beta.data[1], model.beta.data[2]))
+  #def loss_function( log_hazard, log_survival):
+  #  return -torch.sum( log_hazard + log_survival )  
 
-for epoch in range(1, 15000):
-    train(epoch)
-    #test(epoch)
+  #optimizer = optim.Adam(model.parameters(), lr=0.01)
 
-# times = np.linspace( min(T), max(T), 100 )
-# var_times = Variable( torch.FloatTensor( times ) )
+  model.fit( var_E, var_T, var_Z )
 
-# s = model.Survival( var_T, var_Z )
-log_lambda = model.LogShape( var_Z )
-log_scale  = model.LogScale( var_Z )
+  log_lambda = model.LogShape( var_Z )
+  log_scale  = model.LogScale( var_Z )
 
-f = model.PlotSurvival( var_E, var_T, var_Z )
-# f = pp.figure()
-# ax = f.add_subplot(111)
-# for zi, si, ti in zip( var_Z, s, var_T ):
-#   s_series = model.Survival( var_times, zi.resize(1,3) )
-#
-#
-#   ax.plot( times, s_series.data.numpy(), 'k-', lw=1, alpha = 0.5 )
-#
-# base_s_series = model.Survival( var_times, 0*zi.resize(1,3) )
-# ax.plot( times, base_s_series.data.numpy(), 'm-', lw=4, alpha = 0.75 )
-#
-# events = pp.find( var_E.data.numpy() )
-# censors = pp.find(1-var_E.data.numpy())
-# ax.plot(var_T.data.numpy()[events], s.data.numpy()[events], 'ro')
-# ax.plot(var_T.data.numpy()[censors], s.data.numpy()[censors], 'cs')
+  f = model.PlotSurvival( var_E, var_T, var_Z )
 
-pp.show()       
-# if __name__ == "__main__":
-#   #var_E = torch.IntTensor( E )
-#   #var_T = torch.FloatTensor( T )
-#   #var_Z = torch.FloatTensor( Z )
-#   #print data, E, T, Z
-#
-#
-#
-#   print "log-likelihood", M.LogLikelihood( var_E, var_T, var_Z )
-#
-#   loss = M.Loss( var_E, var_T, var_Z )
-#
-#
-#
-#   for batch_idx in range(10):
-#     log_hazard, log_survival = model([var_E, var_T, var_Z])
-#     loss = loss_function(recon_batch, data, mu, logvar)
-#     loss.backward()
-#     train_loss += loss.data[0]
-#     optimizer.step()
-#     if batch_idx % args.log_interval == 0:
-#         print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-#             epoch, batch_idx * len(data), len(train_loader.dataset),
-#             100. * batch_idx / len(train_loader),
-#             loss.data[0] / len(data)))
-#
-#
-#     print "log-likelihood", M.LogLikelihood( var_E, var_T, var_Z )
+  pp.show()       
+
   

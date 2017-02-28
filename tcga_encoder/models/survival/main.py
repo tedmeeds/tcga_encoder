@@ -97,9 +97,13 @@ def main(yaml_file, weights_matrix):
       #I = np.argsort(-mn_proj)
       I = np.argsort(-mn_prob)
       third = int(len(I)/3.0)
-      I0 = I[:third]
-      I1 = I[third:2*third]
-      I2 = I[2*third:]
+      half = int(len(I)/2.0)
+      # I0 = I[:third]
+      # I1 = I[third:2*third]
+      # I2 = I[2*third:]
+      I0 = I[:half]
+      I1 = [] #I[third:2*third]
+      I2 = I[half:]
       kmf = KaplanMeierFitter()
       if len(I2) > 0:
         kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
