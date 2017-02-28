@@ -153,6 +153,7 @@ class WeibullSurvivalModel(nn.Module):
         print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, loss.data[0] ))
         print('                alpha0: {:.3f} alpha: {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format( self.alpha0.data[0], self.alpha.data[0], self.alpha.data[1], self.alpha.data[2], self.alpha.data[3], self.alpha.data[4], self.alpha.data[5]))
         print('                beta0: {:.3f} beta: {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format( self.beta0.data[0], self.beta.data[0], self.beta.data[1], self.beta.data[2], self.beta.data[3], self.beta.data[4], self.beta.data[5]))
+      self.train_frailty = self.LogFrailty( Z )
     #
     # for epoch in range(1, 15000):
     #     train(epoch)

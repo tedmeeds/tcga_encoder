@@ -77,6 +77,7 @@ def main(yaml_file, weights_matrix):
     projections, probabilties, weights, averages, X, y, E_train, T_train = run_pytorch_survival_folds( data_dict['validation_tissues'], f, d, k_fold = folds, n_bootstraps = bootstraps, l1= l1 )  
     disease = data_dict['validation_tissues'][0]
     
+    
     avg_proj = averages[0]
     avg_prob = averages[1]
 
@@ -123,7 +124,16 @@ def main(yaml_file, weights_matrix):
     print "ROC mn_prob ", roc_auc_score(y,mn_prob)
     print "ROC mn_proj ", roc_auc_score(y,mn_proj)
     
-    #I = np.argsort(-mn_proj)
+    #pdb.set_trace()
+    data = {"RNA":["/RNA/FAIR"], "DNA":["/DNA/channel/0"], "METH":["/METH/FAIR"]}
+    # results = {}
+    # for data_name, data_keys in data.iteritems():
+    #   reg_rna_class_projections, \
+    #   reg_rna_class_weights, \
+    #   reg_rna_class_averages, \
+    #   reg_rna_class_X, \
+    #   reg_rna_class_y = run_survival_prediction_loo_regression( data_dict['validation_tissues'], f, d, targets=survival_target, data_keys = ["/RNA/FAIR"], data_names = ["RNA"], C = C_reg )
+    ##I = np.argsort(-mn_proj)
     
     # survival_target = -mn_proj
     # C = 1.0
