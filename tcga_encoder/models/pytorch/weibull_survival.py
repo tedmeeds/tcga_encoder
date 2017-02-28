@@ -86,7 +86,7 @@ class WeibullSurvivalModel(nn.Module):
       log_hazard = self.LogHazard( T, Z )
       log_survival = self.LogSurvival( T, Z )
 
-      return torch.sum( E*log_hazard ) + torch.sum( log_survival )
+      return torch.mean( E*log_hazard ) + torch.mean( log_survival )
 
     def Loss( self, E, T, Z ):
       return - self.LogLikelihood( E, T, Z )
