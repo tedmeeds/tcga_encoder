@@ -97,7 +97,31 @@ class WeibullSurvivalModel(nn.Module):
       Z = x[2]
       return E*self.LogHazard( T, Z ), self.LogSurvival( T, Z )
       
-    
+    def PlotSurvival( self, E, T, Z ):
+      f = pp.figure()
+      times = np.linspace( min(T.data.numpy()), max(T.data.numpy()), 100 )
+      var_times = Variable( torch.FloatTensor( times ) )
+
+      s = self.Survival( T, Z )   
+      #log_lambda = model.LogShape( var_Z )
+      #log_scale  = model.LogScale( var_Z )
+
+      #f = pp.figure()
+      ax = f.add_subplot(111)     
+      for zi, si, ti in zip( Z, s, T ):
+        s_series = self.Survival( var_times, zi.resize(1,Z.size()[1]) )
+        ax.plot( times, s_series.data.numpy(), 'k-', lw=1, alpha = 0.5 )
+  
+      base_s_series = self.Survival( var_times, 0*zi.resize(1,Z.size()[1]) )
+      ax.plot( times, base_s_series.data.numpy(), 'm-', lw=4, alpha = 0.75 )
+
+      events = pp.find( E.data.numpy() )
+      censors = pp.find(1-E.data.numpy())  
+      ax.plot(var_T.data.numpy()[events], s.data.numpy()[events], 'ro')
+      ax.plot(var_T.data.numpy()[censors], s.data.numpy()[censors], 'cs')
+      
+      return f
+      
 
 n   = Z.size()[0]
 dim = Z.size()[1]
@@ -126,35 +150,38 @@ def train(epoch):
   loss.backward()
   optimizer.step()
 
-  if epoch%100 == 0:
+  if epoch%200 == 0:
     print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, loss.data[0] ))
     print('                alpha0: {:.3f} alpha: {:.3f}, {:.3f}, {:.3f}'.format( model.alpha0.data[0], model.alpha.data[0], model.alpha.data[1], model.alpha.data[2]))
     print('                beta0: {:.3f} beta: {:.3f}, {:.3f}, {:.3f}'.format( model.beta0.data[0], model.beta.data[0], model.beta.data[1], model.beta.data[2]))
 
-for epoch in range(1, 5000):
+for epoch in range(1, 15000):
     train(epoch)
     #test(epoch)
 
-times = np.linspace( min(T), max(T), 100 )
-var_times = Variable( torch.FloatTensor( times ) )
+# times = np.linspace( min(T), max(T), 100 )
+# var_times = Variable( torch.FloatTensor( times ) )
 
-s = model.Survival( var_T, var_Z )   
+# s = model.Survival( var_T, var_Z )
+log_lambda = model.LogShape( var_Z )
+log_scale  = model.LogScale( var_Z )
 
-f = pp.figure()
-ax = f.add_subplot(111)     
-for zi, si, ti in zip( var_Z, s, var_T ):
-  s_series = model.Survival( var_times, zi.resize(1,3) )
-  
-  
-  ax.plot( times, s_series.data.numpy(), 'k-', lw=1, alpha = 0.5 )
-  
-base_s_series = model.Survival( var_times, 0*zi.resize(1,3) )
-ax.plot( times, base_s_series.data.numpy(), 'm-', lw=4, alpha = 0.75 )
-
-events = pp.find( var_E.data.numpy() )
-censors = pp.find(1-var_E.data.numpy())  
-ax.plot(var_T.data.numpy()[events], s.data.numpy()[events], 'ro')
-ax.plot(var_T.data.numpy()[censors], s.data.numpy()[censors], 'cs')
+f = model.PlotSurvival( var_E, var_T, var_Z )
+# f = pp.figure()
+# ax = f.add_subplot(111)
+# for zi, si, ti in zip( var_Z, s, var_T ):
+#   s_series = model.Survival( var_times, zi.resize(1,3) )
+#
+#
+#   ax.plot( times, s_series.data.numpy(), 'k-', lw=1, alpha = 0.5 )
+#
+# base_s_series = model.Survival( var_times, 0*zi.resize(1,3) )
+# ax.plot( times, base_s_series.data.numpy(), 'm-', lw=4, alpha = 0.75 )
+#
+# events = pp.find( var_E.data.numpy() )
+# censors = pp.find(1-var_E.data.numpy())
+# ax.plot(var_T.data.numpy()[events], s.data.numpy()[events], 'ro')
+# ax.plot(var_T.data.numpy()[censors], s.data.numpy()[censors], 'cs')
 
 pp.show()       
 # if __name__ == "__main__":
