@@ -68,9 +68,13 @@ def main(yaml_file, weights_matrix):
     folds = survival_spec["folds"]
     bootstraps = survival_spec["bootstraps"]
     epsilon =  survival_spec["epsilon"]
+    if survival_spec.has_key("l1"):
+      l1 = survival_spec["l1"]
+    else:
+      l1 = 0.0
     save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval.png" )  
     save_weights_template = os.path.join( logging_dict[SAVEDIR], "survival_weights_" ) 
-    projections, probabilties, weights, averages, X, y, E_train, T_train = run_pytorch_survival_folds( data_dict['validation_tissues'], f, d, k_fold = folds, n_bootstraps = bootstraps, epsilon= epsilon )  
+    projections, probabilties, weights, averages, X, y, E_train, T_train = run_pytorch_survival_folds( data_dict['validation_tissues'], f, d, k_fold = folds, n_bootstraps = bootstraps, l1= l1 )  
     disease = data_dict['validation_tissues'][0]
     
     avg_proj = averages[0]

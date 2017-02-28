@@ -330,7 +330,7 @@ def predict_groups_with_loo_with_regression_gprior( X, y, C ):
   #avg_probability=mean_probabilities
   return (mean_projections,var_projections),(w_mn,w_var,Ws,bs),(avg_projection,)
 
-def pytorch_survival_xval( E, T, Z, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, epsilon = 1e-12 ):
+def pytorch_survival_xval( E, T, Z, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, l1 = 0.0 ):
   
   #print "epsilon", epsilon
   n,dim = Z.shape
@@ -363,7 +363,7 @@ def pytorch_survival_xval( E, T, Z, k_fold = 10, n_bootstraps = 10, randomize = 
     
     #pdb.set_trace()
     model =  WeibullSurvivalModel( dim )
-    model.fit( E_train, T_train, Z_train, lr = 2*1e-2, logging_frequency = 2500, l1 = 1.0 )
+    model.fit( E_train, T_train, Z_train, lr = 2*1e-2, logging_frequency = 2500, l1 = l1 )
     
     w = model.beta.data.numpy()
 
@@ -809,7 +809,7 @@ def run_survival_analysis_lda_loo( disease_list, fill_store, data_store, k_fold 
   
   return projections, probabilties, weights, averages, X, y, Events_train, Times_train
 
-def run_pytorch_survival_folds( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, epsilon = 1e-12 ):
+def run_pytorch_survival_folds( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, l1 = 0.0):
   fill_store.open()
   data_store.open()
   ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
@@ -849,7 +849,7 @@ def run_pytorch_survival_folds( disease_list, fill_store, data_store, k_fold = 1
   E = predict_survival_train["E"].values
   T = np.maximum( 1, predict_survival_train["T"].values )
   Z = X
-  projections, probabilties, weights, averages = pytorch_survival_xval( E, T, Z, k_fold )
+  projections, probabilties, weights, averages = pytorch_survival_xval( E, T, Z, k_fold, l1=l1 )
   
   return projections, probabilties, weights, averages, X, y, Events_train, Times_train
   
