@@ -891,9 +891,9 @@ if __name__ == "__main__":
     print "LOG RANK TEST: ", results.test_statistic
     #pdb.set_trace()
     
-    #data = {"RNA":[ "RNA", ["/RNA/FAIR"] ], "DNA":["DNA",["/DNA/channel/0"]], "METH":["METH",["/METH/FAIR"]]}
-    data = {"METH":["METH",["/METH/FAIR"]]}
-    data = {"RNA":["RNA",["/RNA/FAIR"]]}
+    data = {"RNA":[ "RNA", ["/RNA/FAIR"] ], "DNA":["DNA",["/DNA/channel/0"]], "METH":["METH",["/METH/FAIR"]]}
+    #data = {"METH":["METH",["/METH/FAIR"]]}
+    #data = {"RNA":["RNA",["/RNA/FAIR"]]}
     results = {}
     survival_target=mn_proj #- mn_proj.mean()
     n2show = 20
@@ -937,13 +937,26 @@ if __name__ == "__main__":
       #pdb.set_trace()
       importance = np.abs( reg_weights[0])
       importance = np.abs( reg_weights[0]/reg_X.values.mean(0) )
+      
       I_w_reg_parameters_importance = np.argsort( -importance )
       w_sorted_reg_X3 = pd.DataFrame( np.dot( reg_X.values[I_reg_predictions,:][:,I_w_reg_parameters_importance[:n2show]], np.sign(np.diag(reg_weights[0][I_w_reg_parameters_importance[:n2show]]))), columns = [reg_X.columns[i] for i in I_w_reg_parameters_importance[:n2show]] )
       
       
-      save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_pytorch_" )
+      save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_pytorch_w_mn_" )
 
       plot_data_with_importance(w_sorted_reg_X3, importance, I_w_reg_parameters_importance, "%s %s"%(disease, data_name), save_location_data )
+
+      importance = np.abs( reg_weights[0])
+      #importance = np.abs( reg_weights[0]/reg_X.values.mean(0) )
+      
+      I_w_reg_parameters_importance = np.argsort( -importance )
+      w_sorted_reg_X3 = pd.DataFrame( np.dot( reg_X.values[I_reg_predictions,:][:,I_w_reg_parameters_importance[:n2show]], np.sign(np.diag(reg_weights[0][I_w_reg_parameters_importance[:n2show]]))), columns = [reg_X.columns[i] for i in I_w_reg_parameters_importance[:n2show]] )
+      
+      
+      save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_pytorch_w_" )
+
+      plot_data_with_importance(w_sorted_reg_X3, importance, I_w_reg_parameters_importance, "%s %s"%(disease, data_name), save_location_data )
+
 
       save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_pytorch_W_%s.png"%data_name )
       f0=pp.figure()
