@@ -279,7 +279,8 @@ if __name__ == "__main__":
   print "Running: ",yaml_file  
   weights_matrix = []
   main( yaml_file, weights_matrix )
-  pp.show()
+  pp.close('all')
+  #pp.show()
 
   
   

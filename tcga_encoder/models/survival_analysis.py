@@ -374,7 +374,7 @@ def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomi
     
     #pdb.set_trace()
     model =  WeibullSurvivalModel( dim )
-    model.fit( E_train, T_train, Z_train, lr = 1e-2, logging_frequency = 2500, l1 = l1, n_epochs = n_epochs, normalize=False )
+    model.fit( E_train, T_train, Z_train, lr = 1e-3, logging_frequency = 2500, l1 = l1, n_epochs = n_epochs, normalize=False )
     
     w = model.beta.data.numpy()
 
