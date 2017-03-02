@@ -11,6 +11,9 @@ from lifelines import KaplanMeierFitter
 import torch
 from torch.autograd import Variable
 from tcga_encoder.models.pytorch.weibull_survival import WeibullSurvivalModel
+from tcga_encoder.models.pytorch.lasso_regression import PytorchLasso
+from tcga_encoder.models.pytorch.bootstrap_linear_regression import BootstrapLinearRegression, BootstrapLassoRegression
+#from tcga_encoder.models.pytorch.lasso_regression_gprior_ard import PytorchLasso
 #import autograd.numpy as np
 #from autograd import grad
 
@@ -330,10 +333,10 @@ def predict_groups_with_loo_with_regression_gprior( X, y, C ):
   #avg_probability=mean_probabilities
   return (mean_projections,var_projections),(w_mn,w_var,Ws,bs),(avg_projection,)
 
-def pytorch_survival_xval( E, T, Z, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, l1 = 0.0 ):
+def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, l1 = 0.0, n_epochs = 1000, normalize = False ):
   
   #print "epsilon", epsilon
-  n,dim = Z.shape
+  n,dim = Z_orig.shape
   assert len(T) == n, "incorrect sizes"
   assert len(E) == n, "incorrect sizes"
   
@@ -353,8 +356,14 @@ def pytorch_survival_xval( E, T, Z, k_fold = 10, n_bootstraps = 10, randomize = 
   w_var = np.zeros( (k_fold,dim), dtype = float )
   
   for k, train_ids, test_ids in zip( range(k_fold), train_folds, test_folds ):
+    Z = Z_orig.copy()
+    
     mn_z = Z[train_ids,:].mean(0)
-    #Z -= mn_z
+    std_z = Z[train_ids,:].std(0)
+    if normalize is True:
+      Z -= mn_z
+      Z /= std_z
+      
     Z_test = Variable( torch.FloatTensor( Z[test_ids,:] ) )
     T_test = Variable( torch.FloatTensor( T[test_ids] ) )
     E_test = Variable( torch.FloatTensor( E[test_ids] ) )
@@ -365,7 +374,7 @@ def pytorch_survival_xval( E, T, Z, k_fold = 10, n_bootstraps = 10, randomize = 
     
     #pdb.set_trace()
     model =  WeibullSurvivalModel( dim )
-    model.fit( E_train, T_train, Z_train, lr = 1e-2, logging_frequency = 2500, l1 = l1 )
+    model.fit( E_train, T_train, Z_train, lr = 1e-2, logging_frequency = 2500, l1 = l1, n_epochs = n_epochs, normalize=False )
     
     w = model.beta.data.numpy()
 
@@ -396,7 +405,93 @@ def pytorch_survival_xval( E, T, Z, k_fold = 10, n_bootstraps = 10, randomize = 
   var_probabilities -= np.square( mean_probabilities )
   
   return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
+
+def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, randomize = True, seed = 0 ):
+  
+  
+  #print "epsilon", epsilon
+  n,d = X_orig.shape
+  assert len(y_orig) == n, "incorrect sizes"
+  
+  train_folds, test_folds = xval_folds( n, k_fold, randomize = randomize, seed = seed )
+  
+  avg_projection = np.zeros( n, dtype=float )
+  avg_probability = np.zeros( n, dtype=float )
+  
+  mean_projections = np.zeros( n, dtype=float )
+  var_projections  = np.zeros( n, dtype=float )
+  
+  mean_probabilities = np.zeros( n, dtype=float )
+  var_probabilities  = np.zeros( n, dtype=float )
+  
+  # for each fold, compute mean and variances
+  w_mean = np.zeros( (n,d), dtype = float )
+  w_var = np.zeros( (n,d), dtype = float )
+  
+  all_I = np.arange(n,dtype=int)
+  
+  Ws = np.zeros( (n,d) )
+  bs = np.zeros( (n,) )
+  for k, train_ids, test_ids in zip( range(k_fold), train_folds, test_folds ):
+    X = X_orig.copy()
+    y = y_orig.copy()
+    #y -= y.mean()
+    #X -= X.mean(0)
+    #X /= X.std(0)
+    X_test = X[test_ids,:]
     
+    X_train = X[train_ids,:]
+    y_train = y[train_ids]
+    
+    
+    # X_train = Variable( torch.FloatTensor( X_train ) )
+    # X_test = Variable( torch.FloatTensor( X_test ) )
+    # y_train = Variable( torch.FloatTensor( y_train ) )
+    
+    
+    #penalty="l2"
+    #model = BootstrapLinearRegression( d, l1 )
+    model = BootstrapLassoRegression( d, l1 )
+    #pdb.set_trace()
+    model.fit( X_train, y_train, 100 ) #n_epochs=2000, lr = 0.01, logging_frequency = 500 )
+    #sk_lda = sklearn.linear_model.Lasso(alpha=l1, fit_intercept=True, normalize=True)
+    #sk_lda.fit( X_train, y_train )
+    
+    #w_ard, b_ard = linear_reg_gprior_ard( X_train, y_train, C, lr = 0.001, iters=1500, verbose = False )
+    
+    
+    sk_test_proj2 = model.predict( X_test ) #np.squeeze(model.predict( X_test ).data.numpy())
+    #sk_test_proj = np.dot( X_test, w_ard ) + b_ard
+    test_proj = sk_test_proj2
+    #pdb.set_trace()
+
+    mean_projections[ test_ids ]   += test_proj
+    var_projections[ test_ids ]   += np.square( test_proj )
+    
+    #w = w_ard #
+    w = np.squeeze( model.w ) #.data.numpy() )
+    #pdb.set_trace()
+    Ws[test_ids,:] = w
+    bs[test_ids] = model.b #sk_lda.intercept_
+    #bs[test_ids] = model.bias.data.numpy()
+    w_mean[test_ids] += w
+    w_var[test_ids] += np.square(w)
+  
+  #Ws = np.array(Ws)
+  #bs = np.array(bs)
+  w_mn = w_mean.mean(0)
+ 
+  w_var   = w_mean.var(0)
+    
+  #print "loo     w = ", w_mn
+  #print "loo w_var = ", w_var
+  
+  var_projections   -= np.square( mean_projections )
+  #var_probabilities -= np.square( mean_probabilities )
+  avg_projection=mean_projections
+  #avg_probability=mean_probabilities
+  return (mean_projections,var_projections),(w_mn,w_var,Ws,bs),(avg_projection,)
+      
 def predict_groups_with_loo_with_regression( X, y, C ):
   
   #print "epsilon", epsilon
@@ -816,7 +911,12 @@ def run_survival_analysis_lda_loo( disease_list, fill_store, data_store, k_fold 
   
   return projections, probabilties, weights, averages, X, y, Events_train, Times_train
 
-def run_pytorch_survival_folds( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, l1 = 0.0):
+def run_pytorch_survival_folds( disease_list, fill_store, data_store, \
+                                k_fold = 10, \
+                                n_bootstraps = 10, \
+                                l1 = 0.0, \
+                                n_epochs=1000, \
+                                normalize = False):
   fill_store.open()
   data_store.open()
   ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
@@ -856,7 +956,7 @@ def run_pytorch_survival_folds( disease_list, fill_store, data_store, k_fold = 1
   E = predict_survival_train["E"].values
   T = np.maximum( 1, predict_survival_train["T"].values )
   Z = X
-  projections, probabilties, weights, averages = pytorch_survival_xval( E, T, Z, k_fold, l1=l1 )
+  projections, probabilties, weights, averages = pytorch_survival_xval( E, T, Z, k_fold, l1=l1, n_epochs=n_epochs, normalize=normalize )
   
   return projections, probabilties, weights, averages, X, y, Events_train, Times_train
   
@@ -932,7 +1032,43 @@ def run_survival_prediction_loo_regression( disease_list, fill_store, data_store
   #(mean_projections,var_projections),(w_mn,w_var),(avg_projection,)
   return predictions, weights, averages, data_train, y
 
+def run_survival_prediction_xval_regression( disease_list, fill_store, data_store, targets, data_keys, data_names, l1 = 0.0, k_fold = 10 ):
+  fill_store.open()
+  data_store.open()
+  ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
+  tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
+  surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
+  NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
+  val_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
+  
+  datas = []
+  for data_key, data_name in zip( data_keys, data_names):
+    datas.append( data_store[data_key].loc[val_survival.index].fillna(0) )
+    data_columns = {}
+    for b in data_store[data_key].columns:
+      if len(data_keys)>1:
+        data_columns[b] = "%s_%s"%(data_name,b)
+      else:
+        data_columns[b] = "%s"%(b)
     
+    datas[-1].rename( columns = data_columns, inplace=True)
+  
+  data_train = pd.concat(datas, axis=1)  
+  fill_store.close()
+  data_store.close()
+  
+  #pdb.set_trace()
+  X_columns = data_train.columns
+  X = data_train[X_columns].values.astype(float)  
+  #y = np.zeros(len(X),dtype=int)
+  #y[group1] = 1
+  y=targets
+  #pdb.set_trace()
+  assert len(y) == len(X), "made different sizes"
+  predictions, weights, averages = predict_groups_with_xval_with_regression( X, y, l1, k_fold=k_fold  )
+  #(mean_projections,var_projections),(w_mn,w_var),(avg_projection,)
+  return predictions, weights, averages, data_train, y
+      
 def run_survival_analysis_lda_train( disease_list, fill_store, data_store, k_fold = 10, n_bootstraps = 10, epsilon = 1e-12 ):
   fill_store.open()
   data_store.open()

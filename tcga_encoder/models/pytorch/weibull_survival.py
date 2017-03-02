@@ -124,7 +124,7 @@ class WeibullSurvivalModel(nn.Module):
       
       return f
       
-    def fit( self, E, T, Z, n_epochs = 10000, lr = 2*1e-2, logging_frequency = 500, l1 = 0.0 ):
+    def fit( self, E, T, Z, n_epochs = 10000, lr = 2*1e-2, logging_frequency = 500, l1 = 0.0, normalize=False ):
       
       #model = WeibullSurvivalModel( dim )
       data  = [E, T, Z]
