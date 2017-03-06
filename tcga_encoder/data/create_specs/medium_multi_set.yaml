@@ -4,7 +4,7 @@ sources:
     data_store: "DNA/gdac.broadinstitute.org_PAN32.Mutation_Packager_Calls.Level_3.2016012800.0.0.h5"
     filter_file: "data/broad_firehose/analyses__2016_01_28_processed/20160128/PAN23_sig_genes.csv"
     filter_column: "pan-min_r"
-    filter_nbr: 100
+    filter_nbr: 500
     mutation_channels:
       - ["Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation","Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins"]
          
@@ -20,6 +20,20 @@ sources:
     data_store: "METH/gdac.broadinstitute.org_PAN33.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
     nbr: 2000
     method: "max_var_fair"
+    
+  miRNA:
+    #data_store: "METH/gdac.broadinstitute.org_UVM.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
+    #gdac.broadinstitute.org_PAN1.Merge_mirnaseq__illuminahiseq_mirnaseq__bcgsc_ca__Level_3__miR_isoform_expression__data.Level_3.2016012800.0.0.h5
+    data_store: "miRNA/gdac.broadinstitute.org_PAN32.Merge_mirnaseq__illuminahiseq_mirnaseq__bcgsc_ca__Level_3__miR_isoform_expression__data.Level_3.2016012800.0.0.h5"
+    nbr: 2000
+    method: "max_var_fair"
+  #
+  CLINICAL:
+    data_store: "CLINICAL/gdac.broadinstitute.org_PAN33.Merge_Clinical.Level_1.2016012800.0.0.h5"
+    #data_store: "CLINICAL/gdac.broadinstitute.org_PAN27.Merge_Clinical.Level_1.2016012800.0.0.h5"
+    #data_store: "CLINICAL/gdac.broadinstitute.org_PAN27.Merge_Clinical.Level_1.2016012800.0.0.h5"
+
+
 
   CLINICAL:
     data_store: "CLINICAL/gdac.broadinstitute.org_PAN33.Merge_Clinical.Level_1.2016012800.0.0.h5"
