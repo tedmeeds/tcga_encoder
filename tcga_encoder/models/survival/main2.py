@@ -186,7 +186,7 @@ def main(yaml_file, weights_matrix):
     print "LOG RANK TEST: ", results.test_statistic
     #pdb.set_trace()
     
-    data = {"RNA":[ "RNA", ["/RNA/FAIR"] ], "DNA":["DNA",["/DNA/channel/0"]], "METH":["METH",["/METH/FAIR"]]}
+    data = {"miRNA":[ "miRNA", ["/miRNA/FAIR"] ],"RNA":[ "RNA", ["/RNA/FAIR"] ], "DNA":["DNA",["/DNA/channel/0"]], "METH":["METH",["/METH/FAIR"]]}
     #data = {"METH":["METH",["/METH/FAIR"]]}
     #data = {"RNA":["RNA",["/RNA/FAIR"]]}
     results = {}
