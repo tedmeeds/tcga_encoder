@@ -374,18 +374,32 @@ def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomi
     
     #pdb.set_trace()
     model =  WeibullSurvivalModel( dim )
-    model.fit( E_train, T_train, Z_train, lr = 1e-3, logging_frequency = 2500, l1 = l1, n_epochs = n_epochs, normalize=False )
+    model.fit( E_train, T_train, Z_train, lr = 5*1e-3, logging_frequency = 5000, l1 = l1, n_epochs = n_epochs, normalize=False )
     
     w = model.beta.data.numpy()
 
-    test_proj = model.LogFrailty( Z_test, T_test ).data.numpy()
-    train_proj = model.train_frailty.data.numpy()
-    #test_proj -= train_proj.mean()
-    #test_proj /= train_proj.std()
-    
+    test_proj = np.exp( model.LogTime( Z_test ).data.numpy() )
+    test_proj /= 365.0
+    test_proj = np.log(test_proj)
+    test_proj -= np.median( test_proj )
+    # pp.figure()
+    #
+    # f = pp.figure()
+    # ax1 = f.add_subplot(111)
+    # kmf = KaplanMeierFitter()
+    # kmf.fit(T_train.data.numpy(), event_observed=E_train.data.numpy(), label =  "train" )
+    # ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
+    # kmf.fit(T_test.data.numpy(), event_observed=E_test.data.numpy(), label =  "test" )
+    # ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
+    # model.PlotSurvival( E_train, T_train, Z_train, ax=ax1, color = "b" )
+    # model.PlotSurvival( E_test, T_test, Z_test, ax=ax1, color = "r" )
+    # pp.title("TRAIN")
+    #
+    # pp.show()
     #pdb.set_trace()
+    #pp.close('all')
     test_prob = model.LogLikelihood( E_test, T_test, Z_test ).data.numpy()
-      
+    #pdb.set_trace()  
     mean_projections[ test_ids ]   += test_proj
     mean_probabilities[ test_ids ] += test_prob
     

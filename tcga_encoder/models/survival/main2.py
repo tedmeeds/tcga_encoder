@@ -124,7 +124,7 @@ def main(yaml_file, weights_matrix):
     folds_regression =  survival_spec["folds_regression"]
     
       
-    save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval.png" )  
+    
     save_weights_template = os.path.join( logging_dict[SAVEDIR], "survival_weights_" ) 
     projections, probabilties, weights, averages, X, y, E_train, T_train = run_pytorch_survival_folds( data_dict['validation_tissues'], \
                                                                                f, d, k_fold = folds_survival, \
@@ -175,11 +175,14 @@ def main(yaml_file, weights_matrix):
     if len(I0) > 0:
       kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
       ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
+    results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
+    pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
+    save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval.png" )  
     pp.savefig(save_location, dpi=300, format='png')
     print "ROC mn_prob ", roc_auc_score(y,mn_prob)
     print "ROC mn_proj ", roc_auc_score(y,mn_proj)
     
-    results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
+    
     print "LOG RANK TEST: ", results.test_statistic
     #pdb.set_trace()
     
@@ -267,6 +270,32 @@ def main(yaml_file, weights_matrix):
       #ax2 = f0.add_subplot(212)
       #ax2.plot( reg_Ws.T.mean(1), reg_X.values.mean(0), '.', alpha=0.5)
       pp.savefig(save_location_reg, dpi=300, format='png')
+      
+      f2=pp.figure()
+      ax1 = f2.add_subplot(111)
+      I = np.argsort( - y_pred )
+      I0 = I[:half]
+      I1 = [] #I[third:2*third]
+      I2 = I[half:]
+      kmf = KaplanMeierFitter()
+      if len(I2) > 0:
+        kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
+      if len(I1) > 0:
+        kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='green')
+      if len(I0) > 0:
+        kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
+      results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
+      print "LOG RANK TEST: ", results.test_statistic
+      save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval_regression_%s.png"%data_name )  
+      results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
+      pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
+      pp.savefig(save_location, dpi=300, format='png')
+      
+      
+      #pdb.set_trace()
     s.close()
     d.close()
     f.close()  

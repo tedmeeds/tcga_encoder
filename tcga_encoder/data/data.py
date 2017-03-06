@@ -509,8 +509,108 @@ class MultiSourceData(object):
     
     
     #self.meth_h5 = h5
+  def AddmiRNA( self, broad_location, filename, h5store, nbr_hsas, method = "max_var_fair", diseases = None ):
+    #genes2keep = None, diseases = None ):
+    print "*****************************************"
+    print "**                                     **"
+    print "**       mi RNA                        **"
+    print "**                                     **"
+    print "*****************************************"
+
+    self.InitSource( miRNA, broad_location, filename )
     
+    h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
+    if diseases is not None:
+      n=len(h5)
+      print "** miRNA filtering diseases"
+      index_array = np.array(h5.index.values)
+      query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
+      h5 = h5[query]
+      n_after = len(h5)
+      self.AddInfo( miRNA, "filtering_step", "disease number%d"%(len(diseases)) )
+      self.AddInfo( miRNA, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
+    
+    #gene_columns = np.sort( np.unique( h5["Hugo_Symbol"].values ) )
+    print "** miRNA filter for tumor samples only"
+    
+    patient_disease = h5["admin.disease_code"].values
+    patient_bcs = h5["patient.bcr_patient_barcode"].values
+    patient_rows = h5["miRNApatient.bcr_patient_barcode"].values
+    keep_bcs = []
+    keep_query = []
+    for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
+      assert bc[:12] == pbc, "these should be the same"
+      keep_bcs.append(disease+"_"+pbc)
+      keep_query.append(True)
+      
+    keep_bcs = np.array(keep_bcs)
+    keep_query = np.array(keep_query)    
+    
+    assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
+    h5 = h5[keep_query]
+    patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] #h5["patient.bcr_patient_barcode"].values
+    
+    #pdb.set_trace()
+    self.AddObservedPatients( miRNA, patient_rows )
+    
+      
+    #self.rna_h5 = h5
+    
+    print "** miRNA splitting HSA"
+    self.mirna_original_hsas = h5.columns
+    self.mirna_original2index = OrderedDict()
+    self.mirna_hsa2index = OrderedDict()
+    for k,v in zip( self.mirna_original_hsas, xrange(len(self.mirna_original_hsas))):
+      if k == "admin.disease_code" or k == "patient.bcr_patient_barcode" or k == "miRNApatient.bcr_patient_barcode":
+        continue
+      self.mirna_original2index[k] = v
+      #hugo,entrez = k.split("|")
+      self.mirna_hsa2index[k] = v
+    
+    hsas2keep = None
+    if hsas2keep is not None:
+      self.mirna_hsas2keep2idx = OrderedDict()
+      for g in hsas2keep:
+        if self.mirna_hsa2index.has_key(g):
+          self.mirna_hsas2keep2idx[g] = self.mirna_hsa2index[g]
+      
+      hsa_order = np.argsort( self.mirna_hsas2keep2idx.keys() )
+      hsa_columns = np.array(self.mirna_hsas2keep2idx.keys())[hsa_order]
+      hsa_ids = np.array(self.mirna_hsas2keep2idx.values())[hsa_order]
+    else:
+      hsa_order = np.argsort( self.mirna_hsa2index.keys() )
+      hsa_columns = np.array(self.mirna_hsa2index.keys())[hsa_order]
+      hsa_ids = np.array(self.mirna_hsa2index.values())[hsa_order]
+      
+    
+    R =   h5.values[:, hsa_ids ].astype(float)
+    
+    #pdb.set_trace()
+    I = pp.find( np.isnan(R.sum(0) )==False )
+    R = R[:,I]
+    hsa_columns = hsa_columns[I]
+    FAIR_R = fair_rank_order_normalization(R)
+    
+    if method == "max_var_fair":
+      v = np.var( FAIR_R, 0 )
+      hsa_ids = np.argsort( v )[-nbr_hsas:]
+      hsa_columns = hsa_columns[hsa_ids]
+      
+      I = np.argsort( hsa_columns )
+      hsa_ids = hsa_ids[I]
+      hsa_columns = hsa_columns[I]
+      
+      FAIR_R = FAIR_R[:,hsa_ids]
+      R = R[:,hsa_ids]
+      #pdb.set_trace()
+    elif method is None:
+      pass
+    else:
+      assert False, "unknown selection method for RNA = %s"%(method)
+    self.store[ miRNA + "/" + "READS" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = hsa_columns )
+    self.store[ miRNA + "/" + "FAIR" + "/" ] = pd.DataFrame( FAIR_R, index = patient_rows, columns = hsa_columns )    
+    pdb.set_trace()
     
     
     
