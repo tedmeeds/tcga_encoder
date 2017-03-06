@@ -79,6 +79,8 @@ class MultiSourceData(object):
       return len(self.store[CLINICAL + "/" + TISSUE].columns)
     elif source_name == RNA:
       return len(self.store[RNA + "/" + FAIR].columns)
+    elif source_name == miRNA:
+      return len(self.store[miRNA + "/" + FAIR].columns)
     elif source_name == DNA:
       return len(self.store[DNA + "/" + CHANNEL + "/0"].columns)
     elif source_name == METH:

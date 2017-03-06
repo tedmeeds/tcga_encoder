@@ -8,6 +8,7 @@ from tcga_encoder.models.regularizers import *
 from tcga_encoder.definitions.nn import *
 from tcga_encoder.definitions.locations import *
 from tcga_encoder.definitions.tcga import *
+import pdb
 
 def MakeBatchShape( shape ):
   batch_shape = [s for s in shape]
@@ -424,7 +425,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
       
     precisions = []
     mu_div_var = []
-    
+    #pdb.set_trace()
     product_prec = 0; product_mu_div_var=0
     for idx,source in zip( range(len(source_layers)),source_layers ):
        precisions.append( 1.0/source.GetVariance() )

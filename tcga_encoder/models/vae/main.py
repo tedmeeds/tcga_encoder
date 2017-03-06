@@ -37,6 +37,7 @@ def add_variables( var_dict, data_dict ):
   var_dict["dna_dim"]    = data_dict['dataset'].GetDimension("DNA")
   var_dict["meth_dim"]   = data_dict['dataset'].GetDimension("METH")
   var_dict["rna_dim"]    = data_dict['dataset'].GetDimension("RNA")
+  var_dict["mirna_dim"]    = data_dict['dataset'].GetDimension("miRNA")
   var_dict["tissue_dim"] = data_dict['dataset'].GetDimension("TISSUE")
   
 def load_architecture( arch_dict, data_dict ):
