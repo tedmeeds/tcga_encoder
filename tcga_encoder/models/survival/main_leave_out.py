@@ -54,15 +54,15 @@ if __name__ == "__main__":
     #weights.append( yaml_file["weights"] )
   
   #pdb.set_trace()
-  weights_matrix = np.array(weights_matrix)
-  columns = ["z%d"%z for z in range(weights_matrix.shape[1])]
-  df = pd.DataFrame( weights_matrix, columns = columns, index = diseases )
-  y = load_yaml( yaml_template_file )
-  logging_dict   = y[LOGGING]
-  logging_dict[SAVEDIR] = os.path.join( HOME_DIR, logging_dict[LOCATION]  )
-  w_location = os.path.join( logging_dict[SAVEDIR], "weights.csv" )
-  df.to_csv( w_location)
-  print df
+  # weights_matrix = np.array(weights_matrix)
+  # columns = ["z%d"%z for z in range(weights_matrix.shape[1])]
+  # df = pd.DataFrame( weights_matrix, columns = columns, index = diseases )
+  # y = load_yaml( yaml_template_file )
+  # logging_dict   = y[LOGGING]
+  # logging_dict[SAVEDIR] = os.path.join( HOME_DIR, logging_dict[LOCATION]  )
+  # w_location = os.path.join( logging_dict[SAVEDIR], "weights.csv" )
+  # df.to_csv( w_location)
+  # print df
     #break
 
   
