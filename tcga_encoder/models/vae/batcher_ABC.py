@@ -744,7 +744,7 @@ class TCGABatcherABC( object ):
         nans = np.isnan( batch_data.values )
         batch[ miRNA_INPUT ] = drop_factor*self.NormalizeRnaInput( batch_data.fillna( 0 ).values )
         batch[ miRNA_INPUT ][nans] = 0
-        batch[ miRNA_INPUT][:,drop_rna_ids] = 0
+        batch[ miRNA_INPUT][:,drop_mirna_ids] = 0
         tensor2fill.extend( [mirna_expectation_tensor, loglikes_data_as_matrix["gen_mirna_space"] ] )
         mirna_ids = [id_start,id_start+1]
         id_start+=2
