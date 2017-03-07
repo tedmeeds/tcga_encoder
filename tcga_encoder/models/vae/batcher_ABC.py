@@ -537,7 +537,7 @@ class TCGABatcherABC( object ):
      lda_then_survival_on_disease( self, sess, cb_info, self.validation_tissues )
   
   def TestFill2( self, sess, info_dict ):
-    # epoch       = info_dict[EPOCH]
+    epoch       = info_dict[EPOCH]
     # feed_dict   = info_dict[TEST_FEED_DICT]
     # impute_dict = info_dict[TEST_FEED_IMPUTATION]
     #
@@ -549,7 +549,7 @@ class TCGABatcherABC( object ):
     self.RunFill2( epoch, sess, feed_dict, impute_dict, mode="VAL" )
 
   def TestFillZ( self, sess, info_dict ):
-    # epoch       = info_dict[EPOCH]
+    epoch       = info_dict[EPOCH]
     # feed_dict   = info_dict[TEST_FEED_DICT]
     # impute_dict = info_dict[TEST_FEED_IMPUTATION]
     #
