@@ -205,6 +205,7 @@ def main(yaml_file, weights_matrix):
                                                       data_names = data_names, \
                                                       l1 = l1_regression, \
                                                       k_fold = folds_regression )
+      #pdb.set_trace()
       #reg_X-=reg_X.mean(0)
       reg_Ws = reg_weights[2]
       reg_bs = reg_weights[3]

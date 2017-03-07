@@ -1054,10 +1054,33 @@ def run_survival_prediction_xval_regression( disease_list, fill_store, data_stor
   surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
   NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
   val_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
-  
+  fill_type = "VAL"
+  na_datas = []
   datas = []
   for data_key, data_name in zip( data_keys, data_names):
+    na_datas.append( data_store[data_key].loc[val_survival.index])
     datas.append( data_store[data_key].loc[val_survival.index].fillna(0) )
+    
+    bad_ids = pp.find( pp.isnan(na_datas[-1].values.sum(1)))
+    
+    if len(bad_ids) > 0:
+      bad_bcs = data_store[data_key].index[bad_ids]
+    
+      data_type = data_key.split("/")[1]
+      key = "/Fill/%s/%s"%(fill_type,data_type)
+      #pdb.set_trace()
+      if key in fill_store:
+        x_fill = fill_store[key].loc[bad_bcs]
+        XX = na_datas[-1].values
+        XX[bad_ids,:] = x_fill.values
+        datas[-1] = pd.DataFrame( XX, columns = na_datas[-1].columns, index=na_datas[-1].index )
+        
+      else:
+        print "skipping filling in %s for ids "%(data_key), bad_bcs
+        #pdb.set_trace()
+    
+      
+      #pdb.set_trace()
     data_columns = {}
     for b in data_store[data_key].columns:
       if len(data_keys)>1:
