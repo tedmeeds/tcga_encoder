@@ -61,7 +61,7 @@ class TCGABatcherABC( object ):
     self.dna_dim    = self.data_dict[DATASET].GetDimension(DNA)
     self.meth_dim   = self.data_dict[DATASET].GetDimension(METH)
     self.rna_dim    = self.data_dict[DATASET].GetDimension(RNA)
-    self.mirna_dim    = self.data_dict[DATASET].GetDimension(RNA)
+    self.mirna_dim    = self.data_dict[DATASET].GetDimension(miRNA)
     self.tissue_dim = self.data_dict[DATASET].GetDimension(TISSUE)
     
     self.dims_dict = {miRNA:self.mirna_dim,RNA:self.rna_dim, DNA:self.dna_dim, TISSUE:self.tissue_dim, METH:self.meth_dim}
@@ -742,7 +742,7 @@ class TCGABatcherABC( object ):
         drop_mirna_ids = np.arange(drop_idx,self.dims_dict[miRNA],nbr_splits, dtype=int)
         batch_data = self.data_store[self.miRNA_key].loc[ barcodes ]
         nans = np.isnan( batch_data.values )
-        batch[ miRNA_INPUT ] = drop_factor*self.NormalizeRnaInput( batch_data.fillna( 0 ).values )
+        batch[ miRNA_INPUT ] = drop_factor*self.NormalizemiRnaInput( batch_data.fillna( 0 ).values )
         batch[ miRNA_INPUT ][nans] = 0
         batch[ miRNA_INPUT][:,drop_mirna_ids] = 0
         tensor2fill.extend( [mirna_expectation_tensor, loglikes_data_as_matrix["gen_mirna_space"] ] )
