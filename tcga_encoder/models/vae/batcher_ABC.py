@@ -426,7 +426,7 @@ class TCGABatcherABC( object ):
     self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
     self.viz_filename_dna_batch_predict      =  os.path.join( self.savedir, "dna_batch_predict" )
     self.viz_filename_dna_aucs               =  os.path.join( self.savedir, "dna_aucs.png" )
-    self.viz_filename_weights_rec_rna        =  os.path.join( self.savedir, "weights_rec_rna.png" )
+    self.viz_filename_weights        =  os.path.join( self.savedir, "weights_" )
     self.viz_filename_lower_bound            =  os.path.join( self.savedir, "lower_bound.png" )
     self.viz_filename_log_pdf_sources        = os.path.join( self.savedir, "log_pdf_sources_z.png" )
     self.viz_filename_log_pdf_sources_per_gene = os.path.join( self.savedir, "log_pdf_batch.png" )
@@ -1088,16 +1088,61 @@ class TCGABatcherABC( object ):
   def VizModel( self, sess, info_dict ): 
     print "** VIZ Model"
     self.model_store.open()
-  
-    try:
-      rec_rna_weights = self.model_store[ "/rec_hidden1/W/0" ].values.flatten()
-      f = pp.figure()
-      pp.hist(  rec_rna_weights, 50, normed=True, alpha=0.5 )      
-      pp.grid('on')
-      pp.savefig( self.viz_filename_weights_rec_rna, dpi = 300, fmt="png", bbox_inches = "tight")
-      pp.close(f)
-    except:
-      print "** could not viz any model"
+    #pdb.set_trace()
+    
+    keys = self.model_store.keys()
+    
+    #dum,layer_name, W_or_b, W_or_b_id = k.split("/")
+    old_layer = ""
+    needs_closing=False
+    for k in keys:
+      dum,layer_name, W_or_b, W_or_b_id = k.split("/")
+      if W_or_b == "b":
+        continue
+      #print "processing %s"%(k)
+      if old_layer != layer_name:
+        if needs_closing is True:
+          #print "  closing figure, ",old_layer
+          pp.legend()
+          pp.suptitle(old_layer)
+          pp.savefig( self.viz_filename_weights + "%s.png"%old_layer, fmt="png", bbox_inches = "tight")
+          pp.close(fig_)
+          needs_closing = False
+          
+        if W_or_b == "W":
+          #print "  new figure"
+          fig_ = pp.figure()
+          ax1_ = fig_.add_subplot(121)
+          ax2_ = fig_.add_subplot(122)
+          needs_closing = True
+
+      if W_or_b == "W":
+        #print "  adding weights, ",layer_name
+        W = np.squeeze( self.model_store[k].values ).flatten()
+        ax1_.hist( W, 20, normed=True, alpha=0.5, label = "%s/%s"%(layer_name,W_or_b_id) )
+        pp.grid('on')
+        ax2_.plot( np.sort(W), lw=2, alpha=0.85, label = "%s/%s"%(layer_name,W_or_b_id) )
+        pp.grid('on')
+        needs_closing = True
+        #pdb.set_trace()
+        
+      old_layer = layer_name
+    if needs_closing:
+      #print "  closing figure, ",old_layer
+      pp.legend()
+      pp.suptitle(old_layer)
+      pp.savefig( self.viz_filename_weights + "%s.png"%old_layer, fmt="png", bbox_inches = "tight")
+      pp.close(fig_)
+      needs_closing = False
+    # try:
+    #   rec_rna_weights = self.model_store[ "/rec_hidden1/W/0" ].values.flatten()
+    #   f = pp.figure()
+    #   pp.hist(  rec_rna_weights, 50, normed=True, alpha=0.5 )
+    #   pp.grid('on')
+    #   pp.savefig( self.viz_filename_weights_rec_rna, dpi = 300, fmt="png", bbox_inches = "tight")
+    #   pp.close(f)
+    # except:
+    #   print "** could not viz any model"
     self.model_store.close()
     pp.close('all')
       

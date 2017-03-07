@@ -219,7 +219,7 @@ class NeuralNetwork(object):
         if ok[idx]:
           penalties.append( regularizer.Apply( w ) )
         idx += 1
-        
+    #pdb.set_trace()    
     return penalties
     
   def BuildLoglikelihoods( self, loglik_layers, data_dict, var_dict, as_matrix = False ):
@@ -240,8 +240,8 @@ class NeuralNetwork(object):
         loglikes[layer.name] = tf.boolean_mask( layer.LogLikelihood( observations, as_matrix=as_matrix ), mask_layer )
       else:
         loglikes[layer.name] = layer.LogLikelihood( observations, as_matrix=as_matrix )
-      if layer.name == "gen_dna_space":
-        loglikes[layer.name] *=0
+      # if layer.name == "gen_dna_space":
+      #   loglikes[layer.name] *=0
     return loglikes
       
   def FillFeedDict( self, feed_dict, imputation_dict ):
