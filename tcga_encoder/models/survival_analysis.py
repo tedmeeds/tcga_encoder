@@ -10,7 +10,7 @@ import pdb
 from lifelines import KaplanMeierFitter
 import torch
 from torch.autograd import Variable
-from tcga_encoder.models.pytorch.weibull_survival import WeibullSurvivalModel
+from tcga_encoder.models.pytorch.weibull_survival import WeibullSurvivalModel,WeibullSurvivalModelNeuralNetwork
 from tcga_encoder.models.pytorch.lasso_regression import PytorchLasso
 from tcga_encoder.models.pytorch.bootstrap_linear_regression import BootstrapLinearRegression, BootstrapLassoRegression
 #from tcga_encoder.models.pytorch.lasso_regression_gprior_ard import PytorchLasso
@@ -84,7 +84,7 @@ def linear_reg_gprior_ard( X, y, alpha, lr = 1e-4, iters = 10, verbose = False, 
   #pdb.set_trace()
   return w, b
     
-def bootstraps( x, m ):
+def make_bootstraps( x, m ):
   # samples from arange(n) with replacement, m times.
   #x = np.arange(n, dtype=int)
   n = len(x)
@@ -95,12 +95,15 @@ def bootstraps( x, m ):
   return N
   
 def xval_folds( n, K, randomize = False, seed = None ):
-  if randomize:
+  if randomize is True:
+    print("XVAL RANDOMLY PERMUTING")
     if seed is not None:
+      print( "XVAL SETTING SEED = %d"%(seed) )
       np.random.seed(seed)
       
     x = np.random.permutation(n)
   else:
+    print( "XVAL JUST IN ARANGE ORDER")
     x = np.arange(n,dtype=int)
     
   kf = KFold( K )
@@ -109,9 +112,9 @@ def xval_folds( n, K, randomize = False, seed = None ):
   for train_ids, test_ids in kf.split( x ):
     #train_ids = np.setdiff1d( x, test_ids )
     
-    train.append( train_ids )
-    test.append( test_ids )
-  
+    train.append( x[train_ids] )
+    test.append( x[test_ids] )
+  #pdb.set_trace()
   return train, test
 
 def kmeans_survival( X, y, K ):
@@ -340,7 +343,7 @@ def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomi
   assert len(T) == n, "incorrect sizes"
   assert len(E) == n, "incorrect sizes"
   
-  train_folds, test_folds = xval_folds( n, k_fold, randomize = randomize, seed = seed )
+  train_folds, test_folds = xval_folds( n, k_fold, randomize = True, seed=0 )
   
   avg_projection = np.zeros( n, dtype=float )
   avg_probability = np.zeros( n, dtype=float )
@@ -350,7 +353,7 @@ def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomi
   
   mean_probabilities = np.zeros( n, dtype=float )
   var_probabilities  = np.zeros( n, dtype=float )
-  
+  K = 10
   # for each fold, compute mean and variances
   w_mean = np.zeros( (k_fold,dim), dtype = float )
   w_var = np.zeros( (k_fold,dim), dtype = float )
@@ -361,6 +364,7 @@ def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomi
     mn_z = Z[train_ids,:].mean(0)
     std_z = Z[train_ids,:].std(0)
     if normalize is True:
+      print( "normalizing" )
       Z -= mn_z
       Z /= std_z
       
@@ -373,29 +377,53 @@ def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomi
     T_train = Variable( torch.FloatTensor( T[train_ids] ) )
     
     #pdb.set_trace()
-    model =  WeibullSurvivalModel( dim )
-    model.fit( E_train, T_train, Z_train, lr = 5*1e-3, logging_frequency = 5000, l1 = l1, n_epochs = n_epochs, normalize=False )
     
-    w = model.beta.data.numpy()
+    Z_train_val = Z[train_ids,:]
+    T_train_val = T[train_ids]
+    E_train_val = E[train_ids]
+    
+    mean_E_train = E_train_val.sum()
+    mean_E_test  = E[test_ids].sum()
+    print("events train %d  events test %d"%(mean_E_train,mean_E_test))
+    
+    #pdb.set_trace()
+    model =  WeibullSurvivalModel( dim )
+    #model =  WeibullSurvivalModelNeuralNetwork( dim, K )
+    model.add_test(E_test,T_test,Z_test)
+    #model.fit( E_train, T_train, Z_train, lr = 1e-3, logging_frequency = 2000, l1 = l1, n_epochs = n_epochs, normalize=False )
+    model.fit( E_train_val, T_train_val, Z_train_val, lr = 1e-3, logging_frequency = 2000, l1 = l1, n_epochs = n_epochs, normalize=False )
+    
+    w = model.w.data.numpy().flatten() #beta.data.numpy()
 
-    test_proj = np.exp( model.LogTime( Z_test ).data.numpy() )
-    test_proj /= 365.0
-    test_proj = np.log(test_proj)
-    test_proj -= np.median( test_proj )
+    #pdb.set_trace()
+    test_proj = np.squeeze( model.LogTime( Z_test, at_time=0.5 ).data.numpy() )
+    
+    time_proj = np.exp( test_proj )
+    
+    T_test_proj = Variable( torch.FloatTensor( time_proj ) )
+
+    S_test_proj = np.squeeze(model.Survival( T_test_proj, Z_test ).data.numpy())
+    S_test      = np.squeeze(model.Survival( T_test, Z_test ).data.numpy())
+
+    #test_proj /= 365.0
+    #test_proj = np.log(test_proj)
+    #test_proj -= np.median( test_proj )
     # pp.figure()
     #
-    # f = pp.figure()
-    # ax1 = f.add_subplot(111)
-    # kmf = KaplanMeierFitter()
-    # kmf.fit(T_train.data.numpy(), event_observed=E_train.data.numpy(), label =  "train" )
-    # ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
-    # kmf.fit(T_test.data.numpy(), event_observed=E_test.data.numpy(), label =  "test" )
-    # ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
-    # model.PlotSurvival( E_train, T_train, Z_train, ax=ax1, color = "b" )
-    # model.PlotSurvival( E_test, T_test, Z_test, ax=ax1, color = "r" )
-    # pp.title("TRAIN")
-    #
-    # pp.show()
+    f = pp.figure()
+    ax1 = f.add_subplot(111)
+    kmf = KaplanMeierFitter()
+    kmf.fit(T_train.data.numpy(), event_observed=E_train.data.numpy(), label =  "train" )
+    ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
+    kmf.fit(T_test.data.numpy(), event_observed=E_test.data.numpy(), label =  "test" )
+    ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
+    model.PlotSurvival( E_train, T_train, Z_train, ax=ax1, color = "b" )
+    ax=model.PlotSurvival( E_test, T_test, Z_test, ax=ax1, color = "r" )
+    #ax.vlines(time_proj,0,1)
+    #ax.plot( np.vstack( (T_test.data.numpy(), time_proj) ), np.vstack( (S_test, S_test_proj) ), 'm-')
+    pp.title("TRAIN")
+
+    #pp.show()
     #pdb.set_trace()
     #pp.close('all')
     test_prob = model.LogLikelihood( E_test, T_test, Z_test ).data.numpy()
@@ -410,8 +438,8 @@ def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomi
     w_var[k] += np.square(w)
     w_mn = w_mean[k] / n_bootstraps
 
-  I=pp.find( np.isinf(avg_probability) )
-  avg_probability[I] = 1 
+  #I=pp.find( np.isinf(avg_probability) )
+  #avg_probability[I] = 1 
     
   w_var   -= np.square( w_mean )
   
@@ -930,7 +958,7 @@ def run_pytorch_survival_folds( disease_list, fill_store, data_store, \
                                 n_bootstraps = 10, \
                                 l1 = 0.0, \
                                 n_epochs=1000, \
-                                normalize = False):
+                                normalize = False, seed = 0):
   fill_store.open()
   data_store.open()
   ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
@@ -970,7 +998,7 @@ def run_pytorch_survival_folds( disease_list, fill_store, data_store, \
   E = predict_survival_train["E"].values
   T = np.maximum( 1, predict_survival_train["T"].values )
   Z = X
-  projections, probabilties, weights, averages = pytorch_survival_xval( E, T, Z, k_fold, l1=l1, n_epochs=n_epochs, normalize=normalize )
+  projections, probabilties, weights, averages = pytorch_survival_xval( E, T, Z, k_fold, l1=l1, n_epochs=n_epochs, normalize=normalize, seed=seed )
   
   return projections, probabilties, weights, averages, X, y, Events_train, Times_train
   
@@ -1046,7 +1074,7 @@ def run_survival_prediction_loo_regression( disease_list, fill_store, data_store
   #(mean_projections,var_projections),(w_mn,w_var),(avg_projection,)
   return predictions, weights, averages, data_train, y
 
-def run_survival_prediction_xval_regression( disease_list, fill_store, data_store, targets, data_keys, data_names, l1 = 0.0, k_fold = 10 ):
+def run_survival_prediction_xval_regression( disease_list, fill_store, data_store, targets, data_keys, data_names, l1 = 0.0, k_fold = 10, seed=0 ):
   fill_store.open()
   data_store.open()
   ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
@@ -1064,8 +1092,8 @@ def run_survival_prediction_xval_regression( disease_list, fill_store, data_stor
     bad_ids = pp.find( pp.isnan(na_datas[-1].values.sum(1)))
     
     if len(bad_ids) > 0:
-      bad_bcs = data_store[data_key].index[bad_ids]
-    
+      bad_bcs = na_datas[-1].index.values[bad_ids]
+      
       data_type = data_key.split("/")[1]
       key = "/Fill/%s/%s"%(fill_type,data_type)
       #pdb.set_trace()
@@ -1073,6 +1101,8 @@ def run_survival_prediction_xval_regression( disease_list, fill_store, data_stor
         x_fill = fill_store[key].loc[bad_bcs]
         XX = na_datas[-1].values
         XX[bad_ids,:] = x_fill.values
+        
+        
         datas[-1] = pd.DataFrame( XX, columns = na_datas[-1].columns, index=na_datas[-1].index )
         
       else:

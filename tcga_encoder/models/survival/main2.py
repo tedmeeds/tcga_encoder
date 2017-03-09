@@ -129,7 +129,7 @@ def main(yaml_file, weights_matrix):
     projections, probabilties, weights, averages, X, y, E_train, T_train = run_pytorch_survival_folds( data_dict['validation_tissues'], \
                                                                                f, d, k_fold = folds_survival, \
                                                                                n_bootstraps = bootstraps, \
-                                                                               l1= l1_survival, n_epochs = n_epochs, normalize=True )  
+                                                                               l1= l1_survival, n_epochs = n_epochs, normalize=True, seed=2 )  
     disease = data_dict['validation_tissues'][0]
     
     
@@ -204,7 +204,7 @@ def main(yaml_file, weights_matrix):
                                                       data_keys = data_keys, \
                                                       data_names = data_names, \
                                                       l1 = l1_regression, \
-                                                      k_fold = folds_regression )
+                                                      k_fold = folds_regression, seed = 2  )
       #pdb.set_trace()
       #reg_X-=reg_X.mean(0)
       reg_Ws = reg_weights[2]
@@ -294,6 +294,11 @@ def main(yaml_file, weights_matrix):
       results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
       pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
       pp.savefig(save_location, dpi=300, format='png')
+      
+      s.open()
+      s["survival_xval"] = pd.DataFrame( mn_proj, index = E_train.index, columns = ["log time"])
+      #pdb.set_trace()
+      s.close()
       
       
       #pdb.set_trace()

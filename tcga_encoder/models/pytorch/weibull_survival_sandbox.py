@@ -7,8 +7,10 @@ from torch.autograd import Variable
 from torch.nn import Parameter
 import torch.optim as optim
 import pylab as pp
-
+import sklearn
+from sklearn.model_selection import KFold
 import pdb
+from lifelines import KaplanMeierFitter
 
 def make_data( E_val, T_val, Z_val, bootstrap = False ):
   if bootstrap is True:
@@ -23,6 +25,41 @@ def make_data( E_val, T_val, Z_val, bootstrap = False ):
     E = Variable( torch.FloatTensor( E_val ) )
     T = Variable( torch.FloatTensor( T_val) )
   return E,T,Z
+  
+  #E,T,Z = make_data( E_val, T_val, Z_val, bootstrap = True )
+
+def make_bootstraps( x, m ):
+  # samples from arange(n) with replacement, m times.
+  #x = np.arange(n, dtype=int)
+  n = len(x)
+  N = np.zeros( (m,n), dtype=int)
+  for i in range(m):
+    N[i,:] = sklearn.utils.resample( x, replace = True )
+    
+  return N
+  
+def xval_folds( n, K, randomize = False, seed = None ):
+  if randomize is True:
+    print("XVAL RANDOMLY PERMUTING")
+    if seed is not None:
+      print( "XVAL SETTING SEED = %d"%(seed) )
+      np.random.seed(seed)
+      
+    x = np.random.permutation(n)
+  else:
+    print( "XVAL JUST IN ARANGE ORDER")
+    x = np.arange(n,dtype=int)
+    
+  kf = KFold( K )
+  train = []
+  test = []
+  for train_ids, test_ids in kf.split( x ):
+    #train_ids = np.setdiff1d( x, test_ids )
+    
+    train.append( x[train_ids] )
+    test.append( x[test_ids] )
+  #pdb.set_trace()
+  return train, test
   
 class Net(nn.Module):
     def __init__(self):
@@ -469,7 +506,7 @@ class WeibullSurvivalModel(nn.Module):
           b_str += "%0.3f "%(b)
         print('                beta0: {:.3f} beta: {:s}'.format( self.beta0.data[0], b_str ) ) 
         self.test(epoch,logging_frequency)
-      
+
 
 # if __name__ == '__main__':
 #   from lifelines import datasets
@@ -502,13 +539,174 @@ class WeibullSurvivalModel(nn.Module):
 #
 #   pp.show()
 
+def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, l1 = 0.0, n_epochs = 1000, normalize = False ):
+  
+  #print "epsilon", epsilon
+  n,dim = Z_orig.shape
+  assert len(T) == n, "incorrect sizes"
+  assert len(E) == n, "incorrect sizes"
+  
+  train_folds, test_folds = xval_folds( n, k_fold, randomize = True, seed=0 )
+  
+  avg_projection = np.zeros( n, dtype=float )
+  avg_probability = np.zeros( n, dtype=float )
+  
+  mean_projections = np.zeros( n, dtype=float )
+  var_projections  = np.zeros( n, dtype=float )
+  
+  mean_probabilities = np.zeros( n, dtype=float )
+  var_probabilities  = np.zeros( n, dtype=float )
+  K = 10
+  # for each fold, compute mean and variances
+  w_mean = np.zeros( (k_fold,dim), dtype = float )
+  w_var = np.zeros( (k_fold,dim), dtype = float )
+  
+  for k, train_ids, test_ids in zip( range(k_fold), train_folds, test_folds ):
+    Z = Z_orig.copy()
+    
+    mn_z = Z[train_ids,:].mean(0)
+    std_z = Z[train_ids,:].std(0)
+    if normalize is True:
+      print( "normalizing" )
+      Z -= mn_z
+      Z /= std_z
+      
+    Z_test = Variable( torch.FloatTensor( Z[test_ids,:] ) )
+    T_test = Variable( torch.FloatTensor( T[test_ids] ) )
+    E_test = Variable( torch.FloatTensor( E[test_ids] ) )
+    
+    Z_train = Variable( torch.FloatTensor( Z[train_ids,:] ) )
+    E_train = Variable( torch.FloatTensor( E[train_ids] ) )
+    T_train = Variable( torch.FloatTensor( T[train_ids] ) )
+    
+    #pdb.set_trace()
+    
+    Z_train_val = Z[train_ids,:]
+    T_train_val = T[train_ids]
+    E_train_val = E[train_ids]
+    
+    mean_E_train = E_train_val.sum()
+    mean_E_test  = E[test_ids].sum()
+    print("events train %d  events test %d"%(mean_E_train,mean_E_test))
+    
+    #pdb.set_trace()
+    model =  WeibullSurvivalModel( dim )
+    #model =  WeibullSurvivalModelNeuralNetwork( dim, K )
+    model.add_test(E_test,T_test,Z_test)
+    #model.fit( E_train, T_train, Z_train, lr = 1e-3, logging_frequency = 2000, l1 = l1, n_epochs = n_epochs, normalize=False )
+    model.fit( E_train_val, T_train_val, Z_train_val, lr = 1e-3, logging_frequency = 2000, l1 = l1, n_epochs = n_epochs, normalize=False )
+    
+    w = model.w.data.numpy().flatten() #beta.data.numpy()
+
+    #pdb.set_trace()
+    test_proj = np.squeeze( model.LogTime( Z_test, at_time=0.5 ).data.numpy() )
+    
+    time_proj = np.exp( test_proj )
+    
+    T_test_proj = Variable( torch.FloatTensor( time_proj ) )
+
+    S_test_proj = np.squeeze(model.Survival( T_test_proj, Z_test ).data.numpy())
+    S_test      = np.squeeze(model.Survival( T_test, Z_test ).data.numpy())
+
+    #test_proj /= 365.0
+    #test_proj = np.log(test_proj)
+    #test_proj -= np.median( test_proj )
+    # pp.figure()
+    #
+    f = pp.figure()
+    ax1 = f.add_subplot(111)
+    kmf = KaplanMeierFitter()
+    kmf.fit(T_train.data.numpy(), event_observed=E_train.data.numpy(), label =  "train" )
+    ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
+    kmf.fit(T_test.data.numpy(), event_observed=E_test.data.numpy(), label =  "test" )
+    ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
+    model.PlotSurvival( E_train, T_train, Z_train, ax=ax1, color = "b" )
+    ax=model.PlotSurvival( E_test, T_test, Z_test, ax=ax1, color = "r" )
+    #ax.vlines(time_proj,0,1)
+    #ax.plot( np.vstack( (T_test.data.numpy(), time_proj) ), np.vstack( (S_test, S_test_proj) ), 'm-')
+    pp.title("TRAIN")
+
+    #pp.show()
+    #pdb.set_trace()
+    #pp.close('all')
+    test_prob = model.LogLikelihood( E_test, T_test, Z_test ).data.numpy()
+    #pdb.set_trace()  
+    mean_projections[ test_ids ]   += test_proj
+    mean_probabilities[ test_ids ] += test_prob
+    
+    var_projections[ test_ids ]   += np.square( test_proj )
+    var_probabilities[ test_ids ] += np.square( test_prob )
+    
+    w_mean[k] += w
+    w_var[k] += np.square(w)
+    w_mn = w_mean[k] / n_bootstraps
+
+  #I=pp.find( np.isinf(avg_probability) )
+  #avg_probability[I] = 1 
+    
+  w_var   -= np.square( w_mean )
+  
+  var_projections   -= np.square( mean_projections )
+  var_probabilities -= np.square( mean_probabilities )
+  
+  return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
+
+def run_pytorch_survival_folds( disease_list, fill_store, data_store, \
+                                k_fold = 10, \
+                                n_bootstraps = 10, \
+                                l1 = 0.0, \
+                                n_epochs=1000, \
+                                normalize = False, seed = 0):
+  fill_store.open()
+  data_store.open()
+  ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
+  tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
+  surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
+  NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
+  val_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
+  
+  fill_store.close()
+  data_store.close()
+  
+  #-------
+  predict_survival_train = val_survival #pd.concat( [test_survival, val_survival], axis=0, join = 'outer' )
+  predict_barcodes_train = predict_survival_train.index
+  splt = np.array( [ [s.split("_")[0], s.split("_")[1]] for s in predict_barcodes_train ] )
+  predict_survival_train = pd.DataFrame( predict_survival_train.values, index = splt[:,1], columns = predict_survival_train.columns )
+  predict_survival_train["disease"] = splt[:,0]
+
+  Times_train = predict_survival_train[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+predict_survival_train[ "patient.days_to_death" ].fillna(0).values.astype(int)
+  predict_survival_train["T"] = Times_train
+  Events_train = (1-np.isnan( predict_survival_train[ "patient.days_to_death" ].astype(float)) ).astype(int)
+  predict_survival_train["E"] = Events_train
+  
+  
+  X_columns = val_survival.columns[2:]
+  X = predict_survival_train[X_columns].values.astype(float)
+  i_event = pp.find(predict_survival_train["E"].values)
+  #median_time = np.median( predict_survival_train["T"].values[i_event] )
+  median_time = np.mean( predict_survival_train["T"].values )
+  i_less = pp.find(predict_survival_train["T"].values<median_time)
+  
+  y = predict_survival_train["E"].values.astype(int)
+  #y = np.zeros( len(predict_survival_train["T"].values) )
+  #y[i_less] = 1
+  
+  
+  E = predict_survival_train["E"].values
+  T = np.maximum( 1, predict_survival_train["T"].values )
+  Z = X
+  projections, probabilties, weights, averages = pytorch_survival_xval( E, T, Z, k_fold, l1=l1, n_epochs=n_epochs, normalize=normalize, seed=seed )
+  
+  return projections, probabilties, weights, averages, X, y, Events_train, Times_train
+
 if __name__ == "__main__":
   from tcga_encoder.utils.helpers import *
   from tcga_encoder.data.data import *
   from tcga_encoder.definitions.tcga import *
   from tcga_encoder.definitions.nn import *
   from tcga_encoder.definitions.locations import *
-  from tcga_encoder.models.survival_analysis import *
+  #from tcga_encoder.models.survival_analysis import *
   #from tcga_encoder.algorithms import *
   import seaborn as sns
   import pdb
@@ -553,9 +751,9 @@ if __name__ == "__main__":
     bootstraps = survival_spec["bootstraps"]
     epsilon =  survival_spec["epsilon"]
     if survival_spec.has_key("l1_survival"):
-      l1_survival = survival_spec["l1_survival"]
+      l1_survival_list = survival_spec["l1_survival"]
     else:
-      l1_survival = 0.0
+      l1_survival_list = [0.0]
     if survival_spec.has_key("n_epochs"):
       n_epochs = survival_spec["n_epochs"]
     else:
@@ -570,67 +768,98 @@ if __name__ == "__main__":
     folds_survival =  survival_spec["folds_survival"]
     folds_regression =  survival_spec["folds_regression"]
     
-      
-    
+    best_rank_test = -np.inf  
+    best_log_like = -np.inf
+    log_liks = []
+    rnk_tests = []
     save_weights_template = os.path.join( logging_dict[SAVEDIR], "survival_weights_" ) 
-    projections, probabilties, weights, averages, X, y, E_train, T_train = run_pytorch_survival_folds( data_dict['validation_tissues'], \
-                                                                               f, d, k_fold = folds_survival, \
-                                                                               n_bootstraps = bootstraps, \
-                                                                               l1= l1_survival, n_epochs = n_epochs, normalize=True )  
-    disease = data_dict['validation_tissues'][0]
+    for l1_survival in l1_survival_list:
+      projections, probabilties, weights, averages, X, y, E_train, T_train = run_pytorch_survival_folds( data_dict['validation_tissues'], \
+                                                                                 f, d, k_fold = folds_survival, \
+                                                                                 n_bootstraps = bootstraps, \
+                                                                                 l1= l1_survival, n_epochs = n_epochs, 
+                                                                                 normalize=True, seed = 2 )  
+      disease = data_dict['validation_tissues'][0]
     
     
-    avg_proj = averages[0]
-    avg_prob = averages[1]
+      avg_proj = averages[0]
+      avg_prob = averages[1]
 
-    fig = pp.figure()
-    mn_proj = projections[0]
-    std_proj = np.sqrt(projections[1])
-    mn_prob = probabilties[0]
-    std_prob = np.sqrt(probabilties[1])
-    mn_w = weights[0]
-    std_w = np.sqrt(weights[1])
+      fig = pp.figure()
+      mn_proj = projections[0]
+      std_proj = np.sqrt(projections[1])
+      mn_prob = probabilties[0]
+      std_prob = np.sqrt(probabilties[1])
+      mn_w = weights[0]
+      std_w = np.sqrt(weights[1])
 
-    ax1 = fig.add_subplot(111)
-    I = pp.find( np.isnan(mn_prob))
-    mn_prob[I] = 0
-    I = pp.find( np.isinf(mn_prob))
-    mn_prob[I] = 1
+      ax1 = fig.add_subplot(111)
+      I = pp.find( np.isnan(mn_prob))
+      mn_prob[I] = 0
+      I = pp.find( np.isinf(mn_prob))
+      mn_prob[I] = 1
     
-    I = pp.find( np.isnan(mn_proj))
-    mn_proj[I] = 0
-    I = pp.find( np.isinf(mn_proj))
-    mn_proj[I] = 1
+      I = pp.find( np.isnan(mn_proj))
+      mn_proj[I] = 0
+      I = pp.find( np.isinf(mn_proj))
+      mn_proj[I] = 1
     
-    I = np.argsort(-mn_proj)
-    #I = np.argsort(-mn_prob)
-    third = int(len(I)/3.0)
-    half = int(len(I)/2.0)
-    # I0 = I[:third]
-    # I1 = I[third:2*third]
-    # I2 = I[2*third:]
-    I0 = I[:half]
-    I1 = [] #I[third:2*third]
-    I2 = I[half:]
-    kmf = KaplanMeierFitter()
-    if len(I2) > 0:
-      kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
-      ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
-    if len(I1) > 0:
-      kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
-      ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='green')
-    if len(I0) > 0:
-      kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
-      ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
-    results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
-    pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
-    save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval.png" )  
-    pp.savefig(save_location, dpi=300, format='png')
-    print( "ROC mn_prob " + str(roc_auc_score(y,mn_prob) ) )
-    print( "ROC mn_proj " + str(roc_auc_score(y,mn_proj) ) )
+      I = np.argsort(-mn_proj)
+      #I = np.argsort(-mn_prob)
+      third = int(len(I)/3.0)
+      half = int(len(I)/2.0)
+      # I0 = I[:third]
+      # I1 = I[third:2*third]
+      # I2 = I[2*third:]
+      I0 = I[:half]
+      I1 = [] #I[third:2*third]
+      I2 = I[half:]
+      kmf = KaplanMeierFitter()
+      if len(I2) > 0:
+        kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
+      if len(I1) > 0:
+        kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='green')
+      if len(I0) > 0:
+        kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
+        ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
+      results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
+      pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
+      save_location_rank = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval_rank.png" )  
+      save_location_like = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval_loglik.png" )  
+      
+      if probabilties[0].mean() > best_log_like:
+        best_log_like = probabilties[0].mean()
+        fig.savefig(save_location_like, dpi=300, format='png')
+        s.open()
+        s["survival_log_like"] = pd.DataFrame( mn_proj, index = E_train.index, columns = ["log time"])
+        #pdb.set_trace()
+        s.close()
+        
+      if results.test_statistic > best_rank_test:
+        best_rank_test = results.test_statistic
+        fig.savefig(save_location_rank, dpi=300, format='png')
+        s.open()
+        s["survival_rank"] = pd.DataFrame( mn_proj, index = E_train.index, columns = ["log time"])
+        #pdb.set_trace()
+        s.close()
+        
+      log_liks.append(probabilties[0].mean())
+      rnk_tests.append(results.test_statistic)
+      print( "ROC mn_prob " + str(roc_auc_score(y,mn_prob) ) )
+      print( "ROC mn_proj " + str(roc_auc_score(y,mn_proj) ) )
     
     
-    print( "LOG RANK TEST: " +  str(results.test_statistic) )
+      print( "LOG RANK TEST: " +  str(results.test_statistic) )
+      print( "LOG PROB TEST: " + str(probabilties[0].mean() ))
+      
+      print ("LOG LIKS so far: " + str(log_liks))
+      print ("RNK TEST so far: " + str(rnk_tests))
+    
+  s.close()
+  d.close()
+  f.close()
   
   
   
