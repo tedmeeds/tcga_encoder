@@ -5,7 +5,7 @@ from tcga_encoder.utils.helpers import *
 from tcga_encoder.definitions.locations import *
 import pdb
 import sys
-import tcga_encoder.models.survival.main_model_selection as runner
+import tcga_encoder.models.survival.main_xval_x_to_z_model_selection as runner
 
 def replace_template(template, disease_group ):
   
