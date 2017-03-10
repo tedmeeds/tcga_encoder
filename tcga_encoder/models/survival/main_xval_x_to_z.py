@@ -20,7 +20,7 @@ pd.set_option('display.width', 1000)
 def plot_data_with_importance( w, importance, i_importance, name, save_location, n = 20 ):
   ff=pp.figure(figsize=(16,6)); ax1 = ff.add_subplot(111); 
   n=len(w.T)
-  sns.heatmap( w.T, linewidths=0.2, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title(name)
+  sns.heatmap( w.T, linewidths=0.01, xticklabels=False, cbar=False  ); pp.yticks( rotation=0, size=10); pp.title(name)
   ax2 = ff.add_subplot(1,10,10); ax2.plot( importance[i_importance[:n]], n-0.5-np.arange(n), 'k-o',lw=2,alpha=0.5 ); 
   #ax2 = ff.add_subplot(1,10,10); ax2.plot( importance[i_importance[], 'k-o',lw=2,alpha=0.5 ); 
   
