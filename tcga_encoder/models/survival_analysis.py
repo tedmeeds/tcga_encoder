@@ -13,6 +13,7 @@ from torch.autograd import Variable
 from tcga_encoder.models.pytorch.weibull_survival import WeibullSurvivalModel,WeibullSurvivalModelNeuralNetwork
 from tcga_encoder.models.pytorch.lasso_regression import PytorchLasso
 from tcga_encoder.models.pytorch.bootstrap_linear_regression import BootstrapLinearRegression, BootstrapLassoRegression
+from tcga_encoder.models.pytorch.dropout_linear_regression import DropoutLinearRegression
 #from tcga_encoder.models.pytorch.lasso_regression_gprior_ard import PytorchLasso
 #import autograd.numpy as np
 #from autograd import grad
@@ -480,41 +481,56 @@ def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, ran
     #y -= y.mean()
     #X -= X.mean(0)
     #X /= X.std(0)
-    X_test = X[test_ids,:]
+    X_test_val = X[test_ids,:]
+    y_test_val = y[test_ids]
     
     X_train = X[train_ids,:]
     y_train = y[train_ids]
     
-    
+    #y_train -= np.median(y[train_ids])
+    #y_test_val -= np.median(y[train_ids])
     # X_train = Variable( torch.FloatTensor( X_train ) )
-    # X_test = Variable( torch.FloatTensor( X_test ) )
-    # y_train = Variable( torch.FloatTensor( y_train ) )
+    X_test = Variable( torch.FloatTensor( X_test_val ) )
+    y_test = Variable( torch.FloatTensor( y_test_val ) )
     
     
     #penalty="l2"
     #model = BootstrapLinearRegression( d, l1 )
-    model = BootstrapLassoRegression( d, l1 )
+    #model = BootstrapLassoRegression( d, l1 )
+    model = DropoutLinearRegression( d, l1 )
     #pdb.set_trace()
-    model.fit( X_train, y_train, 100 ) #n_epochs=2000, lr = 0.01, logging_frequency = 500 )
+    model.add_test( X_test, y_test )
+    model.fit( X_train, y_train, n_epochs=6000, \
+               min_epochs = 1000, logging_frequency = 2000, \
+               lr=0.01, l1=l1 ,l2=0.00 ) #n_epochs=2000, lr = 0.01, logging_frequency = 500 )
     #sk_lda = sklearn.linear_model.Lasso(alpha=l1, fit_intercept=True, normalize=True)
     #sk_lda.fit( X_train, y_train )
     
     #w_ard, b_ard = linear_reg_gprior_ard( X_train, y_train, C, lr = 0.001, iters=1500, verbose = False )
     
     
-    sk_test_proj2 = model.predict( X_test ) #np.squeeze(model.predict( X_test ).data.numpy())
+    #sk_test_proj2 = model.predict( X_test ) #np.squeeze(model.predict( X_test ).data.numpy())
     #sk_test_proj = np.dot( X_test, w_ard ) + b_ard
-    test_proj = sk_test_proj2
+    #test_proj = sk_test_proj2
     #pdb.set_trace()
 
+   
+    
+    #w_est_linear = np.dot( np.linalg.inv( np.dot(X_train.T,X_train) ), np.dot( X_train.T, y_train ) )
+    
+    #pdb.set_trace()
+    #y_est_linear = np.dot( X_test_val, w_est_linear)
+    w = np.squeeze( model.get_w() ) #.data.numpy() )
+    y_est_model = np.dot( X_test_val, w)+model.get_b()
+    test_proj = y_est_model
     mean_projections[ test_ids ]   += test_proj
     var_projections[ test_ids ]   += np.square( test_proj )
     
     #w = w_ard #
-    w = np.squeeze( model.w ) #.data.numpy() )
+    
     #pdb.set_trace()
     Ws[test_ids,:] = w
-    bs[test_ids] = model.b #sk_lda.intercept_
+    bs[test_ids] = model.get_b() #sk_lda.intercept_
     #bs[test_ids] = model.bias.data.numpy()
     w_mean[test_ids] += w
     w_var[test_ids] += np.square(w)

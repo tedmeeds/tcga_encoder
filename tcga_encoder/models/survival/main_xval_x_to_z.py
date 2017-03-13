@@ -155,6 +155,7 @@ def main(yaml_file, weights_matrix):
     third = int(len(I)/3.0)
     half = int(len(I)/2.0)
     data = {"miRNA":[ "miRNA", ["/miRNA/FAIR"] ],"RNA":[ "RNA", ["/RNA/FAIR"] ], "DNA":["DNA",["/DNA/channel/0"]], "METH":["METH",["/METH/FAIR"]]}
+    #data = { "METH":["METH",["/METH/FAIR"]]}
     #data = {"METH":["METH",["/METH/FAIR"]]}
     #data = {"RNA":["RNA",["/RNA/FAIR"]]}
     results = {}
@@ -206,7 +207,7 @@ def main(yaml_file, weights_matrix):
       w_sorted_reg_X3 = pd.DataFrame( np.dot( reg_X.values[I_reg_predictions,:][:,I_w_reg_parameters_importance[:n2show]], np.sign(np.diag(reg_weights[0][I_w_reg_parameters_importance[:n2show]]))), columns = [reg_X.columns[i] for i in I_w_reg_parameters_importance[:n2show]] )
       
       
-      save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_pytorch_w_mn_%s_"%(survival_selection) )
+      save_location_data = os.path.join( logging_dict[SAVEDIR], "b_survival_data_pytorch_w_mn_%s_"%(survival_selection) )
 
       #plot_data_with_importance(w_sorted_reg_X3, importance, I_w_reg_parameters_importance, "%s %s"%(disease, data_name), save_location_data )
 
@@ -217,12 +218,12 @@ def main(yaml_file, weights_matrix):
       w_sorted_reg_X3 = pd.DataFrame( np.dot( reg_X.values[I_reg_predictions,:][:,I_w_reg_parameters_importance[:n2show]], np.sign(np.diag(reg_weights[0][I_w_reg_parameters_importance[:n2show]]))), columns = [reg_X.columns[i] for i in I_w_reg_parameters_importance[:n2show]] )
       
       
-      save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_pytorch_w_%s_"%(survival_selection) )
+      save_location_data = os.path.join( logging_dict[SAVEDIR], "b_survival_data_pytorch_w_%s_"%(survival_selection) )
 
       plot_data_with_importance(w_sorted_reg_X3, importance, I_w_reg_parameters_importance, "%s %s"%(disease, data_name), save_location_data )
 
 
-      save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_pytorch_W_%s_%s.png"%(survival_selection,data_name) )
+      save_location_reg = os.path.join( logging_dict[SAVEDIR], "b_survival_predictions_pytorch_W_%s_%s.png"%(survival_selection,data_name) )
       f0=pp.figure()
       ax1 = f0.add_subplot(111)
       ax1.plot(reg_Ws[:,I_w_reg_parameters_importance].T, 'k.', alpha=0.85)
@@ -231,7 +232,7 @@ def main(yaml_file, weights_matrix):
       #ax2.plot( reg_Ws.T.mean(1), reg_X.values.mean(0), '.', alpha=0.5)
       pp.savefig(save_location_reg, dpi=300, format='png')
 
-      save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_v_true_pytorch_%s_%s.png"%(survival_selection,data_name) )
+      save_location_reg = os.path.join( logging_dict[SAVEDIR], "b_survival_predictions_v_true_pytorch_%s_%s.png"%(survival_selection,data_name) )
       f0=pp.figure()
       ax1 = f0.add_subplot(111)
       ax1.plot(y_true, y_pred, 'k.', alpha=0.5)
@@ -258,11 +259,12 @@ def main(yaml_file, weights_matrix):
         ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
       results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
       print "LOG RANK TEST: ", results.test_statistic
-      save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval_regression_%s_%s.png"%(survival_selection,data_name) )  
+      save_location = os.path.join( logging_dict[SAVEDIR], "b_survival_pytorch_xval_regression_%s_%s.png"%(survival_selection,data_name) )  
       results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
       pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
       pp.savefig(save_location, dpi=300, format='png')
       
+      #pdb.set_trace()
       #s.open()
       #s["survival_xval"] = pd.DataFrame( mn_proj, index = E_train.index, columns = ["log time"])
       #pdb.set_trace()
