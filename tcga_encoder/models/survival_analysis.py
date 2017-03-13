@@ -500,8 +500,9 @@ def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, ran
     model = DropoutLinearRegression( d, l1 )
     #pdb.set_trace()
     model.add_test( X_test, y_test )
-    model.fit( X_train, y_train, n_epochs=n_epochs, \
-               min_epochs = min_epochs, \
+    model.fit( X_train, y_train, \
+               n_epochs=8000, \
+               min_epochs = 2000, \
                logging_frequency = 2000, \
                lr=0.01, l1=l1 ,l2=0.00 ) #n_epochs=2000, lr = 0.01, logging_frequency = 500 )
     #sk_lda = sklearn.linear_model.Lasso(alpha=l1, fit_intercept=True, normalize=True)
