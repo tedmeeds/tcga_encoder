@@ -1,3 +1,23 @@
+blca
+brca
+cesc
+chol
+coad read
+dlbc
+esca
+gbm
+hnsc
+kich
+kirc
+kirp
+lgg
+lihc
+luad
+lusc
+ov
+paad
+pcpg
+prad
 sarc
 skcm
 stad
