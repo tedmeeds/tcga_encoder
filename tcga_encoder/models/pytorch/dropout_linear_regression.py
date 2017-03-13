@@ -94,7 +94,7 @@ class DropoutLinearRegression(nn.Module):
         self.test_cost = data_loss
       else:
         if epoch>=self.min_epochs:
-          print('====> STOPPING ')
+          print('====> STOPPING @ ' + str(epoch) )
           self.stop = True
       self.training = True
       return data_loss
