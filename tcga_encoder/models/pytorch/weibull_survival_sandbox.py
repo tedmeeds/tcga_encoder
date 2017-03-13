@@ -558,7 +558,261 @@ class WeibullSurvivalModel(nn.Module):
         print('                beta0: {:.3f} beta: {:s}'.format( self.beta0.data[0], b_str ) ) 
         self.test(epoch,logging_frequency)
 
+class WeibullSurvivalModelNeuralNetworkDropout(nn.Module):
+    def __init__(self, dim, K  ):
+        # this is the place where you instantiate all your modules
+        # you can later access them using the same names you've given them in here
+        super(WeibullSurvivalModelNeuralNetworkDropout, self).__init__()
+        self.dim       = dim
+        self.K         = K
+        self.Drop      = torch.nn.Dropout(p=0.5)
+        self.H         = torch.nn.Linear(self.dim, self.K, bias=True)
+        self.beta      = torch.nn.Linear(self.K, 1, bias=True)
+        self.alpha     = torch.nn.Linear(self.K, 1, bias=True)
+        
+        self.P = []
+        for p in self.H.parameters():
+          self.P.append(p)
 
+        self.Pb = []
+        for p in self.beta.parameters():
+          self.Pb.append(p)
+
+        self.Pa = []
+        for p in self.alpha.parameters():
+          self.Pa.append(p)
+
+
+
+        self.w_b = self.Pb[0]  
+        self.w_a = self.Pa[0]  
+        self.w = self.P[0]
+        # linear parameters for scale
+        #self.alpha0 = Parameter( torch.zeros([1]), requires_grad = True )
+        #self.alpha  = Parameter( torch.zeros(self.dim), requires_grad = True )
+
+        # linear parameters for shape
+        #self.beta0 = Parameter( torch.zeros([1]), requires_grad = True )
+        #self.beta  = Parameter( torch.zeros(self.dim), requires_grad = True )
+        
+        self.E_test = None
+        self.T_test = None
+        self.Z_test = None
+
+    def add_test(self,E_test,T_test,Z_test):
+      self.E_test = E_test
+      self.T_test = T_test
+      self.Z_test = Z_test 
+      self.test_data = [self.E_test,self.T_test,self.Z_test]
+
+    def Hidden( self, Z ):
+      return F.tanh( self.H( self.Drop(Z) ) )
+      
+    def forward( self, x ):
+      E = x[0]
+      T = x[1]
+      Z = x[2]
+      
+      hidden = self.Hidden( Z ) 
+ 
+      return E*self.LogHazard_H( T, hidden ), self.LogSurvival_H( T, hidden )
+      
+    def LogScale_H( self, hidden ):
+      return - self.alpha(hidden)
+
+    def LogScale( self, Z ):
+      return self.LogScale_H( self.Hidden(Z) )
+
+
+    def Scale_H( self, hidden ):
+      return torch.exp( self.LogScale_H(hidden) )
+      
+    def Scale( self, Z ):
+      return self.Scale_H( self.Hidden(Z))
+
+
+    def LogShape_H( self, hidden ):
+      return -self.beta(hidden)
+
+    def LogShape( self, Z ):
+      return self.LogShape_H( self.Hidden(Z) )
+
+    
+    def Shape_H( self, hidden ):
+      return torch.exp( self.LogShape_H(hidden) )
+
+    def Shape( self, Z ):
+      return self.Shape_H( self.Hidden(Z) )
+
+      
+    def LogHazard_H( self, T, hidden ):
+      log_shape = self.LogShape_H( hidden )
+      log_scale = self.LogScale_H( hidden )
+
+      scale = torch.exp( log_scale )
+
+      return log_shape + log_scale + (scale-1.0)*torch.log( T )
+
+    def LogHazard( self, T, Z ):
+      return self.LogHazard_H( T, self.Hidden(Z))
+    
+    def LogTime( self, Z, at_time = 0.5 ):
+      at_time = torch.FloatTensor([at_time]); at_time = Variable(at_time)
+      log_at_time = torch.log(at_time)
+      
+      hidden = self.Hidden( Z ) 
+      #log_at_time = torch.log(at_time)
+      scale = self.Scale_H( hidden ) # alpha
+      shape = self.Shape_H( hidden ) # lambda
+      
+      #pdb.set_trace()
+      log_t = torch.log( -log_at_time.expand(shape.size()) / shape ) / scale
+      
+      #pdb.set_trace()
+      return log_t
+        
+    def Hazard( self, T, Z ):
+      return self.Hazard_H( T, self.Hidden(Z))
+
+    def Hazard_H( self, T, hidden ):
+      return torch.exp( self.log_hazard( T, hidden ) )
+
+    def LogSurvival( self, T, Z ):
+      return self.LogSurvival_H( T, self.Hidden( Z ) )
+
+    def LogSurvival_H( self, T, hidden ):
+      return -self.CumulativeHazard_H( T, hidden )
+
+    def Survival( self, T, Z ):
+      return self.Survival_H( T, self.Hidden( Z ) )
+      
+    def Survival_H( self, T, hidden ):
+      return torch.exp( - self.CumulativeHazard_H( T, hidden ) )
+
+    def LogCumulativeHazard_H( self, T, hidden ):
+      if hidden.size()[0] == 1 and T.size()[0]>1:
+        return self.LogShape_H(hidden).expand(T.size()) + self.Scale_H(hidden).expand(T.size())*torch.log(T)
+      else:
+        return self.LogShape_H(hidden) + self.Scale_H(hidden)*torch.log(T)
+
+    def LogCumulativeHazard( self, T, Z ):
+      return self.LogCumulativeHazard_H( T, self.Hidden( Z ) )
+
+    def CumulativeHazard_H( self, T, hidden ):
+      return torch.exp( self.LogCumulativeHazard_H(T,hidden) )
+      
+    def CumulativeHazard( self, T, Z ):
+      return self.CumulativeHazard_H( T, self.Hidden(Z) )
+
+    # ie log f(t|z) = log h(t|z) + log S(T|z)
+    def LogPdf( self, T, Z ):
+      return self.LogHazard(T,Z) + self.LogSurvival(Z,T)
+
+    def Pdf(self, T, Z ):
+      return self.LogPdf( T, Z )
+
+
+    def LogLikelihood( self, E, T, Z ):
+      # E: events, binary vector indicating "death" (n by 1)
+      # T: time of event or censor (n by 1)
+      # Z: matrix of covariates (n by dim)
+      hidden = self.H(Z)
+      log_hazard = self.LogHazard_H( T, hidden )
+      log_survival = self.LogSurvival_H( T, hidden )
+
+      return E*log_hazard + log_survival
+
+    def Loss( self, E, T, Z ):
+      return - self.LogLikelihood( E, T, Z )
+
+
+      
+    def PlotSurvival( self, E, T, Z, ax = None, color = "k" ):
+      if ax is None:
+        f = pp.figure()
+        ax = f.add_subplot(111)    
+      times = np.linspace( 1.0, max(T.data.numpy()), 100 )
+      var_times = Variable( torch.FloatTensor( times ) )
+
+      s = self.Survival( T, Z )   
+      #log_lambda = model.LogShape( var_Z )
+      #log_scale  = model.LogScale( var_Z )
+
+      #f = pp.figure()
+      #ax = f.add_subplot(111)     
+      for zi, si, ti in zip( Z, s, T ):
+        s_series = self.Survival( var_times.resize(var_times.size()[0],1), zi.resize(1,Z.size()[1]) )
+        #s_series = self.Survival( var_times, zi.resize(1,Z.size()[1]) )
+        ax.plot( times, s_series.data.numpy(), color+'-', lw=1, alpha = 0.5 )
+  
+      base_s_series = self.Survival( var_times.resize(var_times.size()[0],1), 0*zi.resize(1,Z.size()[1]) )
+      ax.plot( times, base_s_series.data.numpy(), 'm-', lw=4, alpha = 0.75 )
+
+      events = pp.find( E.data.numpy() )
+      censors = pp.find(1-E.data.numpy())  
+      ax.plot(T.data.numpy()[events], s.data.numpy()[events], 'ro')
+      ax.plot(T.data.numpy()[censors], s.data.numpy()[censors], 'cs')
+      
+      return ax
+    
+    def test(self,epoch,logging_frequency):
+      if self.test_data is None:
+        return
+      self.eval()
+      #test_loss = 0
+      log_hazard, log_survival = self(self.test_data)
+      data_loss = -torch.mean( log_hazard + log_survival ).data[0]
+
+      #test_loss /= len(test_loader.dataset)
+      if epoch%logging_frequency == 0:
+        print('====> Test set loss: {:.4f}'.format(data_loss))
+      
+      self.stop = False
+      if data_loss < self.test_cost:
+        self.test_cost = data_loss
+        #print('====> NEW Test set loss: {:.4f}'.format(self.test_cost))
+      else:
+        if epoch>=self.min_epochs:
+          print('====> STOPPING ')
+          self.stop = True
+        #pdb.set_trace()
+      self.train()
+        
+    def fit( self, E_val, T_val, Z_val, n_epochs = 10000, lr = 2*1e-2, logging_frequency = 2000, l1 = 0.0, normalize=False, testing_frequency = 100,min_epochs=4000):
+      self.min_epochs = min_epochs
+      self.stop = False
+      self.test_cost = np.inf
+      optimizer = optim.RMSprop(self.parameters(), lr=lr)
+      
+      for epoch in xrange(1, n_epochs):
+        self.train()
+        train_loss = 0
+        optimizer.zero_grad()
+        
+        E,T,Z = make_data( E_val, T_val, Z_val, bootstrap = False )
+        data  = [E, T, Z]
+        
+        log_hazard, log_survival = self(data)
+        data_loss = -torch.mean( log_hazard + log_survival ) #loss_function(log_hazard, log_survival)
+        weight_loss = 0.0
+        if l1 > 0:
+         weight_loss += l1*torch.sum( torch.pow( self.w, 2) )
+         weight_loss += l1*torch.sum( torch.pow( self.w_a,2) )
+         weight_loss += l1*torch.sum( torch.pow( self.w_b,2) )
+        #  #loss += l1*torch.sum( torch.abs( self.alpha) )
+        loss = data_loss + weight_loss
+        loss.backward()
+        optimizer.step()
+
+        if epoch%logging_frequency == 0:
+          print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, data_loss.data[0] ))
+        if epoch%testing_frequency == 0:
+          self.test(epoch, logging_frequency)
+          if self.stop is True:
+            print("!!!!!!!!! early stopping" )
+            return
+      if n_epochs%logging_frequency == 0:
+        print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, data_loss.data[0] ))
 # if __name__ == '__main__':
 #   from lifelines import datasets
 #   data=datasets.load_regression_dataset()
@@ -611,9 +865,12 @@ def pytorch_survival_xval( E, T, Z_orig, \
   
   mean_probabilities = np.zeros( n, dtype=float )
   var_probabilities  = np.zeros( n, dtype=float )
-  K = 3
+  K = 5
   # for each fold, compute mean and variances
   if model_type == "network":
+    w_mean = np.zeros( (k_fold,dim*K), dtype = float )
+    w_var = np.zeros( (k_fold,dim*K), dtype = float )
+  elif model_type == "dropout":
     w_mean = np.zeros( (k_fold,dim*K), dtype = float )
     w_var = np.zeros( (k_fold,dim*K), dtype = float )
   elif model_type == "regression":
@@ -651,6 +908,8 @@ def pytorch_survival_xval( E, T, Z_orig, \
     #pdb.set_trace()
     if model_type == "network":
       model = WeibullSurvivalModelNeuralNetwork( dim, K )
+    elif model_type == "dropout":
+      model = WeibullSurvivalModelNeuralNetworkDropout( dim, K )
     elif model_type == "regression":
       model =  WeibullSurvivalModel( dim )
     #model =  WeibullSurvivalModelNeuralNetwork( dim, K )
