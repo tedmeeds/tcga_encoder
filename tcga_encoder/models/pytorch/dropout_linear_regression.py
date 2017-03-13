@@ -105,7 +105,7 @@ class DropoutLinearRegression(nn.Module):
       self.min_epochs = min_epochs
       self.stop = False
       self.test_cost = np.inf
-      optimizer = optim.RMSprop(self.parameters(), lr=lr)
+      optimizer = optim.Adam(self.parameters(), lr=lr)
       self.training = True
       
       std_x = Variable( torch.FloatTensor( X_train_val.std(0) ) )+1e-4
