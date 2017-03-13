@@ -1106,13 +1106,23 @@ def run_survival_prediction_xval_regression( disease_list, fill_store, data_stor
   na_datas = []
   datas = []
   for data_key, data_name in zip( data_keys, data_names):
-    na_datas.append( data_store[data_key].loc[val_survival.index])
-    datas.append( data_store[data_key].loc[val_survival.index].fillna(0) )
+    all_bad = False
+    try:
+      na_datas.append( data_store[data_key].loc[val_survival.index])
+      datas.append( data_store[data_key].loc[val_survival.index].fillna(0) )
     
-    bad_ids = pp.find( pp.isnan(na_datas[-1].values.sum(1)))
+      bad_ids = pp.find( pp.isnan(na_datas[-1].values.sum(1)))
+      
+    except:
+      
+      all_bad = True
+
     
-    if len(bad_ids) > 0:
-      bad_bcs = na_datas[-1].index.values[bad_ids]
+    if len(bad_ids) > 0 or all_bad is True:
+      if all_bad is True:
+        bad_bcs = val_survival.index
+      else:
+        bad_bcs = na_datas[-1].index.values[bad_ids]
       
       data_type = data_key.split("/")[1]
       key = "/Fill/%s/%s"%(fill_type,data_type)
