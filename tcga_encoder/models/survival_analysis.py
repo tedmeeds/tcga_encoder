@@ -514,7 +514,7 @@ def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, ran
     
     #sk_test_proj2 = model.predict( X_test ) #np.squeeze(model.predict( X_test ).data.numpy())
     #sk_test_proj = np.dot( X_test, w_ard ) + b_ard
-    #test_proj = sk_test_proj2
+    test_proj = np.squeeze( model.predict( X_test ) )
     #pdb.set_trace()
 
    
@@ -524,8 +524,9 @@ def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, ran
     #pdb.set_trace()
     #y_est_linear = np.dot( X_test_val, w_est_linear)
     w = np.squeeze( model.get_w() ) #.data.numpy() )
-    y_est_model = np.dot( X_test_val, w)+model.get_b()
-    test_proj = y_est_model
+    #y_est_model = np.dot( X_test_val, w)+model.get_b()
+    #test_proj = y_est_model
+    #pdb.set_trace()
     mean_projections[ test_ids ]   += test_proj
     var_projections[ test_ids ]   += np.square( test_proj )
     
