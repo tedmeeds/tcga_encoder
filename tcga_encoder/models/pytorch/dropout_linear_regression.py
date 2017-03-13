@@ -145,3 +145,6 @@ class DropoutLinearRegression(nn.Module):
         #     return
       # if n_epochs%logging_frequency == 0:
       #   print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, data_loss.data[0] ))
+    data_loss_test = self.test(epoch, logging_frequency)
+    print('====> Epoch: {} Average loss: {:.4f}  TEST: {:.4f}'.format(epoch, data_loss.data[0], data_loss_test ))
+    
