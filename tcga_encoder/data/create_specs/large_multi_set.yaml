@@ -4,7 +4,7 @@ sources:
     data_store: "DNA/gdac.broadinstitute.org_PAN32.Mutation_Packager_Calls.Level_3.2016012800.0.0.h5"
     filter_file: "data/broad_firehose/analyses__2016_01_28_processed/20160128/PAN23_sig_genes.csv"
     filter_column: "pan-min_r"
-    filter_nbr: 1000
+    filter_nbr: 5000
     mutation_channels:
       - ["Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation","Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins"]
          
