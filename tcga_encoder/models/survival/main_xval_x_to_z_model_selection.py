@@ -155,7 +155,7 @@ def main(yaml_file, weights_matrix):
     third = int(len(I)/3.0)
     half = int(len(I)/2.0)
     #data = {"miRNA":[ "miRNA", ["/miRNA/FAIR"] ],"RNA":[ "RNA", ["/RNA/FAIR"] ], "DNA":["DNA",["/DNA/channel/0"]], "METH":["METH",["/METH/FAIR"]]}
-    data = {"METH":["METH",["/METH/FAIR"]],"RNA":[ "RNA", ["/RNA/FAIR"] ], "miRNA":[ "miRNA", ["/miRNA/FAIR"] ], "DNA":["DNA",["/DNA/channel/0"]]}
+    data = {"METH":["METH",["/METH/FAIR"]],"RNA":[ "RNA", ["/RNA/FAIR"] ], "miRNA":[ "miRNA", ["/miRNA/FAIR"] ]}
     #data = {"METH":["METH",["/METH/FAIR"]]}
     #data = {"RNA":["RNA",["/RNA/FAIR"]]}
     results = {}
