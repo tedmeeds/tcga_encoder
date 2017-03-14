@@ -157,7 +157,7 @@ class DropoutLinearRegression(nn.Module):
         optimizer.step()
 
         stop_time = time.time()
-        delta_time = end_time-start_time
+        delta_time = stop_time-start_time
         if epoch%testing_frequency == 0 and epoch%logging_frequency == 0:
           data_loss_test = self.test(epoch, logging_frequency)
 
