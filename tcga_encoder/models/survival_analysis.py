@@ -1142,7 +1142,7 @@ def run_survival_prediction_xval_regression( disease_list, \
           datas[-1] = pd.DataFrame( XX, columns = na_datas[-1].columns, index=na_datas[-1].index )
         else:
           XX = x_fill.values
-          datas[-1] = pd.DataFrame( XX, columns = x_fill.columns, index=x_fill.index )
+          datas.append( pd.DataFrame( XX, columns = x_fill.columns, index=x_fill.index ) )
         
         
         
