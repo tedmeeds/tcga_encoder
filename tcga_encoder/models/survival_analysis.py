@@ -490,8 +490,12 @@ def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, ran
     #y_train -= np.median(y[train_ids])
     #y_test_val -= np.median(y[train_ids])
     # X_train = Variable( torch.FloatTensor( X_train ) )
-    X_test = Variable( torch.FloatTensor( X_test_val ) )
-    y_test = Variable( torch.FloatTensor( y_test_val ) )
+    if use_cuda is True:
+      X_test = Variable( torch.FloatTensor( X_test_val ) ).cuda()
+      y_test = Variable( torch.FloatTensor( y_test_val ) ).cuda()
+    else:
+      X_test = Variable( torch.FloatTensor( X_test_val ) )
+      y_test = Variable( torch.FloatTensor( y_test_val ) )
     
     
     #penalty="l2"

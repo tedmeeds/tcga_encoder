@@ -9,7 +9,7 @@ import torch.optim as optim
 import pylab as pp
 import pdb
 
-def make_data( X_val, y_val, bootstrap = False ):
+def make_data( X_val, y_val, bootstrap = False, use_cuda=False ):
   if bootstrap is True:
     ids = np.squeeze( make_bootstraps( np.arange(len(X_val)),1) )
     
@@ -19,6 +19,10 @@ def make_data( X_val, y_val, bootstrap = False ):
   else:
     X = Variable( torch.FloatTensor( X_val ) )
     y = Variable( torch.FloatTensor( y_val ) )
+    
+  if use_cuda:
+    X = X.cuda()
+    y = y.cuda()
   return X,y
   
 # class Net(nn.Module):
@@ -51,6 +55,7 @@ class DropoutLinearRegression(nn.Module):
         if self.use_cuda is True:
           print("!!!! DropoutLinearRegression: USING CUDA !!!!!!")
           self.H = torch.nn.Linear(self.dim, 1, bias=True).cuda()
+          
         else:
           self.H = torch.nn.Linear(self.dim, 1, bias=True)
         
@@ -79,7 +84,10 @@ class DropoutLinearRegression(nn.Module):
       return x.data.numpy()
       
     def forward( self, x ):
-      x = F.dropout(x, training=self.training)
+      if self.use_cuda is True:
+        x = F.dropout(x, training=self.training).cuda()
+      else:
+        x = F.dropout(x, training=self.training)
       x = self.H(x)
       return x
 
@@ -122,7 +130,7 @@ class DropoutLinearRegression(nn.Module):
         train_loss = 0
         optimizer.zero_grad()
         
-        X, y = make_data( X_train_val, y_train_val, bootstrap = False )
+        X, y = make_data( X_train_val, y_train_val, bootstrap = False, use_cuda = self.use_cuda )
         y_est = self(X)
         
         #pdb.set_trace()
