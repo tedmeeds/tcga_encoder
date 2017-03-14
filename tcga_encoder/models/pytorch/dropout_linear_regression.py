@@ -8,7 +8,7 @@ from torch.nn import Parameter
 import torch.optim as optim
 import pylab as pp
 import pdb
-
+import time
 def make_data( X_val, y_val, bootstrap = False, use_cuda=False ):
   if bootstrap is True:
     ids = np.squeeze( make_bootstraps( np.arange(len(X_val)),1) )
@@ -67,10 +67,16 @@ class DropoutLinearRegression(nn.Module):
         self.b = self.P[1]
    
     def get_w(self):
-      return self.w.data.numpy()
+      if self.use_cuda is True:
+        return self.w.cpu().data.numpy()
+      else:
+        return self.w.data.numpy()
 
     def get_b(self):
-      return self.b.data.numpy()
+      if self.use_cuda is True:
+        return self.b.cpu().data.numpy()
+      else:
+        return self.b.data.numpy()
             
     def add_test(self, X_test, y_test ):
       self.X_test = X_test
@@ -81,7 +87,10 @@ class DropoutLinearRegression(nn.Module):
       
     def predict( self, x ):
       x = self.H(x)
-      return x.data.numpy()
+      if self.use_cuda is True:
+        return x.cpu().data.numpy()
+      else:
+        return x.data.numpy()
       
     def forward( self, x ):
       if self.use_cuda is True:
@@ -125,6 +134,7 @@ class DropoutLinearRegression(nn.Module):
       if self.use_cuda is True:        
         std_x = std_x.cuda()
 
+      start_time=time.time()
       for epoch in xrange(1, n_epochs):
           
         train_loss = 0
@@ -146,14 +156,19 @@ class DropoutLinearRegression(nn.Module):
         loss.backward()
         optimizer.step()
 
+        stop_time = time.time()
+        delta_time = start_time-stop_time
         if epoch%testing_frequency == 0 and epoch%logging_frequency == 0:
           data_loss_test = self.test(epoch, logging_frequency)
-          print('====> Epoch: {} Average loss: {:.4f}  TEST: {:.4f}'.format(epoch, data_loss.data[0], data_loss_test ))
+
+          print('====> Epoch: {} Average loss: {:.4f}  TEST: {:.4f} time: {:.1f}'.format(epoch, data_loss.data[0], data_loss_test, delta_time ))
+          start_time=stop_time
           if self.stop is True:
             print("!!!!!!!!! early stopping" )
             return
         elif epoch%logging_frequency == 0:
-          print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, data_loss.data[0] ))
+          print('====> Epoch: {} Average loss: {:.4f}                time: {:1f}'.format(epoch, data_loss.data[0], delta_time ))
+          start_time=stop_time
         # if epoch%testing_frequency == 0:
         #   data_loss = self.test(epoch, logging_frequency)
         #   if self.stop is True:
