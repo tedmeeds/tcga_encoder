@@ -49,6 +49,7 @@ class DropoutLinearRegression(nn.Module):
         self.use_cuda = use_cuda
         
         if self.use_cuda is True:
+          print("!!!! DropoutLinearRegression: USING CUDA !!!!!!")
           self.H = torch.nn.Linear(self.dim, 1, bias=True).cuda()
         else:
           self.H = torch.nn.Linear(self.dim, 1, bias=True)
