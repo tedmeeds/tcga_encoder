@@ -1116,6 +1116,7 @@ def run_survival_prediction_xval_regression( disease_list, fill_store, data_stor
     except:
       
       all_bad = True
+      bad_ids=[x,x,x,x]
 
     
     if len(bad_ids) > 0 or all_bad is True:
