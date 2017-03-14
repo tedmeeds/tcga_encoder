@@ -1130,11 +1130,16 @@ def run_survival_prediction_xval_regression( disease_list, fill_store, data_stor
       #pdb.set_trace()
       if key in fill_store:
         x_fill = fill_store[key].loc[bad_bcs]
-        XX = na_datas[-1].values
-        XX[bad_ids,:] = x_fill.values
+        if all_bad is False:
+          XX = na_datas[-1].values
+          XX[bad_ids,:] = x_fill.values
+          datas[-1] = pd.DataFrame( XX, columns = na_datas[-1].columns, index=na_datas[-1].index )
+        else:
+          XX = x_fill.values
+          datas[-1] = pd.DataFrame( XX, columns = x_fill.columns, index=x_fill.index )
         
         
-        datas[-1] = pd.DataFrame( XX, columns = na_datas[-1].columns, index=na_datas[-1].index )
+        
         
       else:
         print "skipping filling in %s for ids "%(data_key), bad_bcs
