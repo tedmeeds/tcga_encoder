@@ -505,10 +505,10 @@ def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, ran
     #pdb.set_trace()
     model.add_test( X_test, y_test )
     model.fit( X_train, y_train, \
-               n_epochs=100, \
+               n_epochs=10000, \
                min_epochs = 2000, \
                logging_frequency = 500, \
-               testing_frequency = 500, \
+               testing_frequency = 100, \
                lr=0.005, l1=l1 ,l2=0.00 ) #n_epochs=2000, lr = 0.01, logging_frequency = 500 )
     #sk_lda = sklearn.linear_model.Lasso(alpha=l1, fit_intercept=True, normalize=True)
     #sk_lda.fit( X_train, y_train )
