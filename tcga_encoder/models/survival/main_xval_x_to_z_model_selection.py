@@ -167,7 +167,7 @@ def main(yaml_file, weights_matrix):
     #survival_target=mn_proj #- mn_proj.mean()
     n2show = 20
     for data_name, data_info in data.iteritems():
-      
+      print("WORKING %s"%(data_name))
       best_mse = np.inf
       mses = []
       for l1_regression in l1_regression_list:
@@ -267,6 +267,7 @@ def main(yaml_file, weights_matrix):
           elif survival_selection == "loglike":
             survival["/survival_log_like/w/%s"%(data_name)] = w_sorted_reg_full
           survival.close()
+          pp.close('all')
             
     d.close()
     f.close()  
