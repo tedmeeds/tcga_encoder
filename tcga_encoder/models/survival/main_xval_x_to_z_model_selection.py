@@ -104,6 +104,7 @@ def main(yaml_file, weights_matrix):
       use_cuda = survival_spec["use_cuda"]
     else:
       use_cuda = False
+    print "usign cuda: ", use_cuda
     print "running xval x to z ,", data_dict['validation_tissues']
     
     if survival_spec.has_key("l1_survival"):
