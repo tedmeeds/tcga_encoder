@@ -100,6 +100,10 @@ def main(yaml_file, weights_matrix):
   
   for survival_spec in survival_dict:
     name = survival_spec["name"]
+    if survival_spec.has_key("use_cuda"):
+      use_cuda = survival_spec["use_cuda"]
+    else:
+      use_cuda = False
     print "running xval x to z ,", data_dict['validation_tissues']
     
     if survival_spec.has_key("l1_survival"):
@@ -177,7 +181,7 @@ def main(yaml_file, weights_matrix):
                                                         data_keys = data_keys, \
                                                         data_names = data_names, \
                                                         l1 = l1_regression, \
-                                                        k_fold = folds_regression, seed = 2  )
+                                                        k_fold = folds_regression, seed = 2, use_cuda=use_cuda  )
 
         reg_Ws = reg_weights[2]
         reg_bs = reg_weights[3]

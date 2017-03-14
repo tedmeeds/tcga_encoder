@@ -40,14 +40,18 @@ def make_data( X_val, y_val, bootstrap = False ):
 #         return F.log_softmax(x)
         
 class DropoutLinearRegression(nn.Module):
-    def __init__(self, dim, K = 1  ):
+    def __init__(self, dim, use_cuda = False  ):
         # this is the place where you instantiate all your modules
         # you can later access them using the same names you've given them in here
         super(DropoutLinearRegression, self).__init__()
         self.dim       = dim
-        self.K         = K
+        self.K         = 1
+        self.use_cuda = use_cuda
         
-        self.H = torch.nn.Linear(self.dim, 1, bias=True)
+        if self.use_cuda is True:
+          self.H = torch.nn.Linear(self.dim, 1, bias=True).cuda()
+        else:
+          self.H = torch.nn.Linear(self.dim, 1, bias=True)
         
         self.P = []
         for p in self.H.parameters():
@@ -109,6 +113,9 @@ class DropoutLinearRegression(nn.Module):
       self.training = True
       
       std_x = Variable( torch.FloatTensor( X_train_val.std(0) ) )+1e-4
+      if self.use_cuda is True:        
+        std_x = std_x.cuda()
+
       for epoch in xrange(1, n_epochs):
           
         train_loss = 0

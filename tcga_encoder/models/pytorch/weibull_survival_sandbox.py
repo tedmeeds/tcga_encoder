@@ -559,17 +559,26 @@ class WeibullSurvivalModel(nn.Module):
         self.test(epoch,logging_frequency)
 
 class WeibullSurvivalModelNeuralNetworkDropout(nn.Module):
-    def __init__(self, dim, K  ):
+    def __init__(self, dim, K, use_cuda = False  ):
         # this is the place where you instantiate all your modules
         # you can later access them using the same names you've given them in here
         super(WeibullSurvivalModelNeuralNetworkDropout, self).__init__()
+        print("!!! WeibullSurvivalModelNeuralNetworkDropout !!!")
         self.dim       = dim
         self.K         = K
-        self.Drop      = torch.nn.Dropout(p=0.5)
-        self.H         = torch.nn.Linear(self.dim, self.K, bias=True)
-        self.beta      = torch.nn.Linear(self.K, 1, bias=True)
-        self.alpha     = torch.nn.Linear(self.K, 1, bias=True)
+        self.use_cuda = use_cuda
         
+        if use_cuda:
+          self.Drop      = torch.nn.Dropout(p=0.5).cuda()
+          self.H         = torch.nn.Linear(self.dim, self.K, bias=True).cuda()
+          self.beta      = torch.nn.Linear(self.K, 1, bias=True).cuda()
+          self.alpha     = torch.nn.Linear(self.K, 1, bias=True).cuda()
+        else:
+          self.Drop      = torch.nn.Dropout(p=0.5)
+          self.H         = torch.nn.Linear(self.dim, self.K, bias=True)
+          self.beta      = torch.nn.Linear(self.K, 1, bias=True)
+          self.alpha     = torch.nn.Linear(self.K, 1, bias=True)
+          
         self.P = []
         for p in self.H.parameters():
           self.P.append(p)
@@ -909,7 +918,7 @@ def pytorch_survival_xval( E, T, Z_orig, \
     if model_type == "network":
       model = WeibullSurvivalModelNeuralNetwork( dim, K )
     elif model_type == "dropout":
-      model = WeibullSurvivalModelNeuralNetworkDropout( dim, K )
+      model = WeibullSurvivalModelNeuralNetworkDropout( dim, K, use_cuda=True )
     elif model_type == "regression":
       model =  WeibullSurvivalModel( dim )
     #model =  WeibullSurvivalModelNeuralNetwork( dim, K )
@@ -1154,8 +1163,8 @@ if __name__ == "__main__":
         ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
       results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
       pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
-      save_location_rank = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval_rank_%s.png"%(model_type) )  
-      save_location_like = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval_loglik_%s.png"%(model_type) )  
+      save_location_rank = os.path.join( logging_dict[SAVEDIR], "sandbox_survival_pytorch_xval_rank_%s.png"%(model_type) )  
+      save_location_like = os.path.join( logging_dict[SAVEDIR], "sandbox_survival_pytorch_xval_loglik_%s.png"%(model_type) )  
       
       if probabilties[0].mean() > best_log_like:
         best_log_like = probabilties[0].mean()

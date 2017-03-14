@@ -449,7 +449,7 @@ def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomi
   
   return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
 
-def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, randomize = True, seed = 0 ):
+def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, randomize = True, seed = 0, use_cuda=False ):
   
   
   #print "epsilon", epsilon
@@ -497,7 +497,7 @@ def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, ran
     #penalty="l2"
     #model = BootstrapLinearRegression( d, l1 )
     #model = BootstrapLassoRegression( d, l1 )
-    model = DropoutLinearRegression( d, l1 )
+    model = DropoutLinearRegression( d, l1, use_cuda )
     #pdb.set_trace()
     model.add_test( X_test, y_test )
     model.fit( X_train, y_train, \
@@ -1094,7 +1094,9 @@ def run_survival_prediction_loo_regression( disease_list, fill_store, data_store
   #(mean_projections,var_projections),(w_mn,w_var),(avg_projection,)
   return predictions, weights, averages, data_train, y
 
-def run_survival_prediction_xval_regression( disease_list, fill_store, data_store, targets, data_keys, data_names, l1 = 0.0, k_fold = 10, seed=0 ):
+def run_survival_prediction_xval_regression( disease_list, \
+               fill_store, data_store, targets, data_keys, \
+               data_names, l1 = 0.0, k_fold = 10, seed=0, use_cuda = False ):
   fill_store.open()
   data_store.open()
   ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
@@ -1168,7 +1170,7 @@ def run_survival_prediction_xval_regression( disease_list, fill_store, data_stor
   y=targets
   #pdb.set_trace()
   assert len(y) == len(X), "made different sizes"
-  predictions, weights, averages = predict_groups_with_xval_with_regression( X, y, l1, k_fold=k_fold  )
+  predictions, weights, averages = predict_groups_with_xval_with_regression( X, y, l1, k_fold=k_fold, use_cuda=use_cuda  )
   #(mean_projections,var_projections),(w_mn,w_var),(avg_projection,)
   return predictions, weights, averages, data_train, y
       
