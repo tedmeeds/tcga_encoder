@@ -497,7 +497,7 @@ def predict_groups_with_xval_with_regression( X_orig, y_orig, l1, k_fold=10, ran
     #penalty="l2"
     #model = BootstrapLinearRegression( d, l1 )
     #model = BootstrapLassoRegression( d, l1 )
-    model = DropoutLinearRegression( d, l1, use_cuda )
+    model = DropoutLinearRegression( d, use_cuda )
     #pdb.set_trace()
     model.add_test( X_test, y_test )
     model.fit( X_train, y_train, \
