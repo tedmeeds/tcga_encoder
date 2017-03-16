@@ -523,6 +523,35 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     
     layer = layer_class( shape, {MU:mu, VAR:var}, name=name )
     
+  elif layer_class == BetaModelLayer:
+    shape           = layer_specs[SHAPE]
+    prior           = layer_specs[PRIOR]
+    has_biases = True
+    if layer_specs.has_key("biases"):
+      has_biases = layer_specs["biases"]
+    
+    
+    weights_log_a, biases_log_a =  MakeWeights( input_layers, shape, name+"_log_a", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 0  )
+    
+    weights_log_b,  biases_log_b = MakeWeights( input_layers, shape, name+"_log_b", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 1  )
+
+    a, a_input          = ForwardPropagate( input_layers, weights_log_a, biases_log_a, \
+                                                     transfer_function=tf.exp, name=name+"_"+A )
+                                                     
+    b, b_input          = ForwardPropagate( input_layers, weights_log_b, biases_log_b, \
+                                                     transfer_function=tf.exp, name=name+"_"+B )
+
+    #pdb.set_trace()
+    a_clipped = tf.clip_by_value( a, 0.00001, 1000.0 )
+    b_clipped = tf.clip_by_value( b, 0.00001, 1000.0 )
+    
+    model     = { A: a_clipped,  \
+                  B: b_clipped,     \
+                  WEIGHTS:[weights_log_a,weights_log_b], \
+                  BIASES:[biases_log_a,biases_log_b], 
+                  PRIOR:prior }
+    
+    layer = layer_class( shape, model, name=name )
     
   elif layer_class == BetaGivenModelLayer:
     assert len(input_layers) == 2, "must only have 2 input layers"
