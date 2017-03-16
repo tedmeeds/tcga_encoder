@@ -505,7 +505,7 @@ if __name__ == "__main__":
     
     fig=pp.figure()
     
-    for z_idx in range(n_z):
+    for z_idx in range(min(10,n_z)):
       ax = fig.add_subplot( 2,5,z_idx+1)
       for d_idx in range(n_diseases):
         mu = train_means[d_idx, z_idx ]; std = train_stds[d_idx, z_idx ]
