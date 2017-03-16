@@ -93,7 +93,10 @@ class NeuralNetwork(object):
         
       elif key == INPUTS:
         pass
-          
+        
+      elif key == SHARED:
+        layer_specs[key] = value
+        
       else:
         print "WARNING: skipping layer specs for KEY=%s"%(key)
         
@@ -116,13 +119,22 @@ class NeuralNetwork(object):
     else:
       print "Building Connected Layer: ",layer_dict[NAME]
       layer_specs = self.BuildLayerSpecs( layer_dict, var_dict )
-      shared_layer = None
+      shared_layers = None
+      print layer_specs
       if layer_specs.has_key("shared"):
-        shared_layer = self.GetLayer(layer_specs["shared"] ) 
+        shared_layers_list = layer_specs["shared"]
+        shared_layers = []
+        for x in shared_layers_list:
+          layer_borrowed_from = x[1]
+          weights_for_input = x[0]
+          
+          shared_layers.append( [weights_for_input, self.GetLayer(layer_borrowed_from ) ] )
+        print "Found shared layers ", shared_layers
+        #pdb.set_trace()
       self.AddLayer( Connect( layer_dict[LAYER], \
                               self.GetInputLayers( layer_dict, data_dict, var_dict ), \
                               layer_specs = layer_specs, \
-                              shared_weights = shared_layer, \
+                              shared_layers = shared_layers, \
                               name        = layer_dict[NAME] ) )
                               
       if layer_dict[LAYER] == DropoutLayer:

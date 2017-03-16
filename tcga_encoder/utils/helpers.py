@@ -54,10 +54,11 @@ def CloseHdfStore(store):
 # a generator for batch ids
 class batch_ids_maker:
   def __init__(self, batchsize, n, randomize = True):
-    assert n >= batchsize, "Right now must have batchsize < n"
+    self.batchsize = min( batchsize, n )
+    #assert n >= batchsize, "Right now must have batchsize < n"
     
     self.randomize = randomize
-    self.batchsize = batchsize    
+    #self.batchsize = batchsize    
     self.n         = n
     self.indices   = self.new_indices() 
     self.start_idx = 0

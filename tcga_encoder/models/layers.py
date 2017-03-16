@@ -11,12 +11,42 @@ from tcga_encoder.definitions.tcga import *
 import pdb
 
 def MakeBatchShape( shape ):
+  if shape is None:
+    return None
   batch_shape = [s for s in shape]
   if len(shape)>0:
     if shape[0] is not None:
       batch_shape.insert(0,None)
   return batch_shape
+
+def MatDif( t1, t2 ):
+  dims1 = t1.get_shape().dims
+  ndims1 = len(dims1)
+  
+  dims2 = t2.get_shape().dims
+  ndims2 = len(dims2)
+  
+  if ndims1 == ndims2 == 2:
+    # eg t1=[None,20], t2 = [20,4] => t1*t2 => [None,4]
+    return t1 - t2
     
+  if ndims1 == 2 and ndims2 == 3:
+    # eg t1=[None,20], t2 = [20,4,10] => [None,20]*[20,40] => t1*t2 => [None,4,10]
+    t2_reshaped = tf.reshape(t2, [-1,dims2[1].value*dims2[2].value])
+    inter_result = t1 - t2_reshaped #tf.matmul( t1, t2_reshaped )
+    return tf.reshape(inter_result, [-1,dims2[1].value,dims2[2].value] )
+  
+  if ndims1 == 3 and ndims2 == 2:
+    # eg t1=[None,10,4], t2 = [10,4] => [None,40]*[40] => t1*t2 => [None,]
+    return tf.reshape(t1, [-1,dims1[1].value*dims1[2].value]) -  t2 
+    
+  if ndims1 == 3 and ndims2 == 3:
+    # eg t1=[None,4,10], t2 = [4,10,30] => [None,40]*[40,30] => t1*t2 => [None,30]
+    return tf.reshape(t1, [-1,dims1[1].value*dims1[2].value]) - tf.reshape(t2, [dims2[0].value*dims2[1].value,-1])
+  
+  assert False, "Cannot handle these sizes "
+  print dims1, dims2
+      
 def MatMul( t1, t2, name ):
   dims1 = t1.get_shape().dims
   ndims1 = len(dims1)
@@ -129,7 +159,7 @@ def EstimateWeightShape( input_shape, output_shape ):
   
   return weight_shape
                                                             
-def MakeWeights( input_sources, output_shape, name = "", has_biases=True, constant=None ):
+def MakeWeights( input_sources, output_shape, name = "", has_biases=True, constant=None, shared_layers = None, shared_idx = None ):
     weights   = []
     default_constant = 0.1
     input_idx = 0
@@ -143,7 +173,20 @@ def MakeWeights( input_sources, output_shape, name = "", has_biases=True, consta
       #   const = default_constant
       # else:
       #   const = constants[input_idx]
-      w = tf.Variable( weight_init( weight_shape, constant=default_constant ), name = "w_"+input_source.name+"2"+name )
+      is_shared = False
+      if shared_layers is not None:
+        assert shared_idx is not None, "should specify weight index for borrowed weight"
+        for shared in shared_layers:
+          borrowed_for = shared[0]
+          borrowed_layer = shared[1]
+          
+          if input_source.name == borrowed_for:
+            w = borrowed_layer.weights[shared_idx][0]
+            is_shared = True
+      if is_shared is False:
+        w = tf.Variable( weight_init( weight_shape, constant=default_constant ), name = "w_"+input_source.name+"2"+name )
+      else:
+        print "USING BORROWED WEIGHT"
       weights.append(w)
     
     biases = None
@@ -188,7 +231,7 @@ def GetPenaltiesFromLayers( list_of_layers ):
       penalties.append( layer.penalties )
   return tf.add_n( penalties )
     
-def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, name="" ):
+def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, name="" ):
   print "making ", layer_class
   if layer_class == HiddenLayer:
     #print "making HiddenLayer class"
@@ -198,13 +241,22 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
     has_biases = True
     if layer_specs.has_key("biases"):
       has_biases = layer_specs["biases"]
+    
+    weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases  )  
+    # if shared_layer is None:
+    #   weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
+    #   #total_penalty = tf.add_n( penalties )
+    # else:
+    if shared_layers is not None:
       
-    if shared_weights is None:
-      weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
-      #total_penalty = tf.add_n( penalties )
-    else:
-      weights = shared_weights.weights
-      biases  = shared_weights.biases
+      for idx, input_layer in zip( range(len(input_layers)), input_layers ):
+        for shared in shared_layers:
+          borrowed_for = shared[0]
+          borrowed_layer = shared[1]
+          
+          pdb.set_trace()
+          #weights = shared_weights.weights
+          #biases  = shared_weights.biases
       
     activation, activation_input  = ForwardPropagate( input_layers, weights, biases, transfer_function, name )
 
@@ -212,6 +264,32 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
     
     layer = layer_class( shape, model, name=name )
 
+  elif layer_class == WeightedMultiplyLayer:
+    assert len(input_layers) == 2, "must provide 2 inputs"
+    transfer = None
+    if layer_specs.has_key(TRANSFER):
+      transfer = layer_specs[TRANSFER]
+      
+    layer = layer_class( layer_specs[SHAPE], input_layers, name, transfer )
+    
+  elif layer_class == ScaledLayer:
+    shape = layer_specs[SHAPE]
+    input_layer = input_layers[0]
+    
+    weights_location = tf.Variable( weight_init( shape, constant=0.1 ), name = name+"_location" )
+    weights_scale    = tf.Variable( weight_init( shape, constant=0.1 ), name = name+"_location" )
+    
+    assert len(input_layers) == 1, "must provide 1 inputs"
+    transfer = None
+    if layer_specs.has_key(TRANSFER):
+      transfer = layer_specs[TRANSFER]
+      
+
+    layer = layer_class( shape, input_layer, weights_location, weights_scale, name, transfer )
+        
+  elif layer_class == SumLayer:
+    layer = layer_class( input_layers, name )
+    
   elif layer_class == DropoutLayer:
     assert len(input_layers) == 1, "only allow one layer"
     layer = layer_class( input_layers[0], name )
@@ -228,12 +306,12 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
     if layer_specs.has_key("biases"):
       has_biases = layer_specs["biases"]
     
-    if shared_weights is None:
+    if shared_layers is None:
       weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
       #total_penalty = tf.add_n( penalties )
     else:
-      weights = shared_weights.weights
-      biases  = shared_weights.biases
+      weights = shared_layers.weights
+      biases  = shared_layers.biases
       
     activation, activation_input  = ForwardPropagate( source_layers, weights, biases, transfer_function, name, observation_layer=observation_layer )
 
@@ -271,7 +349,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
       has_biases = layer_specs["biases"]
 
     
-    if shared_weights is None:
+    if shared_layers is None:
       weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases  )
       weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases  )
     else:
@@ -304,7 +382,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
       has_biases = layer_specs["biases"]
 
     
-    if shared_weights is None:
+    if shared_layers is None:
       weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases  )
       weights_logprec_mu, biases_logprec_mu = MakeWeights( input_layers, shape, name+"_"+LOG_PREC_MU, has_biases=has_biases  )
       weights_logprec_var, biases_logprec_var   = MakeWeights( input_layers, shape, name+"_"+LOG_PREC_VAR, has_biases=has_biases  )
@@ -340,7 +418,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
       has_biases = layer_specs["biases"]
 
     
-    if shared_weights is None:
+    if shared_layers is None:
       weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases  )
       weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases  )
       weights_nu, biases_nu   = MakeWeights( input_layers, shape, name+"_"+NU, has_biases=has_biases  )
@@ -375,7 +453,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
       has_biases = layer_specs["biases"]
 
     
-    if shared_weights is None:
+    if shared_layers is None:
       weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases  )
       weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases  )
       weights_v, biases_v   = MakeWeights( input_layers, shape, name+"_"+"V", has_biases=has_biases  )
@@ -446,31 +524,14 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
     layer = layer_class( shape, {MU:mu, VAR:var}, name=name )
     
     
-  elif layer_class == BetaModelLayer:
-    shape           = layer_specs[SHAPE]
+  elif layer_class == BetaGivenModelLayer:
+    assert len(input_layers) == 2, "must only have 2 input layers"
+    shape           = None #layer_specs[SHAPE]
     prior           = layer_specs[PRIOR]
-    has_biases = True
-    if layer_specs.has_key("biases"):
-      has_biases = layer_specs["biases"]
-    
-    weights_log_a, biases_log_a =  MakeWeights( input_layers, shape, name+"_log_a", has_biases=has_biases  )
-    
-    weights_log_b,  biases_log_b = MakeWeights( input_layers, shape, name+"_log_b", has_biases=has_biases  )
-    
-    a, a_input          = ForwardPropagate( input_layers, weights_log_a, biases_log_a, \
-                                                     transfer_function=tf.exp, name=name+"_"+A )
-                                                     
-    b, b_input          = ForwardPropagate( input_layers, weights_log_b, biases_log_b, \
-                                                     transfer_function=tf.exp, name=name+"_"+B )
 
-    #pdb.set_trace()
-    a_clipped = tf.clip_by_value( a, 0.00001, 1000.0 )
-    b_clipped = tf.clip_by_value( b, 0.00001, 1000.0 )
     
-    model     = { A: a_clipped,  \
-                  B: b_clipped,     \
-                  WEIGHTS:[weights_log_a,weights_log_b], \
-                  BIASES:[biases_log_a,biases_log_b], 
+    model     = { A: input_layers[0].tensor,  \
+                  B: input_layers[1].tensor,     \
                   PRIOR:prior }
     
     layer = layer_class( shape, model, name=name )
@@ -481,7 +542,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
     if layer_specs.has_key("biases"):
       has_biases = layer_specs["biases"]
     
-    if shared_weights is None:
+    if shared_layers is None:
       weights, biases  = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
     else:
       weights = shared_weights.weights
@@ -530,7 +591,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_weights = None, n
     if layer_specs.has_key("biases"):
       has_biases = layer_specs["biases"]
 
-    if shared_weights is None:
+    if shared_layers is None:
       weights, biases = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
     else:
       weights = shared_weights.weights
@@ -593,7 +654,89 @@ class MaskLayer(object):
   def EvalBiases(self):
     return []
 
+class WeightedMultiplyLayer(object):
+  def __init__( self, shape, input_layers, name = "", transfer = None ):
+    print "WARNING: WeightedMultiplyLayer assuming specific shapes"
+    t1 = input_layers[0].tensor
+    t2 = input_layers[1].tensor
+    
+    #t2 = tf.expand_dims( t2, 1 )
+    
+    
+    tensor = tf.reduce_sum( t1*tf.expand_dims( t2, 1 ), 2 )
+    
+    if transfer is None:
+      self.tensor = tensor
+    else:
+      self.tensor = transfer(tensor)
+      
+    self.shape       = shape
+    self.batch_shape = MakeBatchShape(shape)
+    self.name        = name
 
+  def EvalWeights(self):
+    return []
+    
+  def EvalBiases(self):
+    return []
+        
+class ScaledLayer(object):
+  #shape, input_layer, weights_location, weights_scale, name, transfer
+  def __init__( self, shape, input_layer, weights_location, weights_scale, name = "", transfer = None ):
+      
+    self.weights_location = weights_location
+    self.weights_scale = weights_scale
+    
+    #pdb.set_trace()
+    
+    if transfer is None:
+      tf.expand_dims( input_layer.tensor, -1 )
+      self.tensor = ( tf.expand_dims( input_layer.tensor, -1 ) - weights_location)*weights_scale
+    else:
+      self.tensor = ( tf.expand_dims( input_layer.tensor, -1 ) - weights_location)*transfer(weights_scale)
+      
+    self.shape       = shape
+    self.batch_shape = MakeBatchShape(shape)
+    self.name        = name
+    self.weights = [self.weights_location,self.weights_scale]
+
+  def EvalWeights(self):
+    if self.weights.__class__ == list:
+      return [w.eval() for w in self.weights]
+    else:
+      return self.weights.eval()
+    
+  def EvalBiases(self):
+    return []
+    
+class DifLayer(object):
+  def __init__( self, input_layers, name = "" ):
+      
+    self.tensor = input_layers[0].tensor - input_layers[1].tensor
+    
+    self.shape       = input_layers[0].shape
+    self.batch_shape = input_layers[0].batch_shape
+    self.name        = name
+    
+class SumLayer(object):
+  def __init__( self, input_layers, name = "" ):
+    
+    tensors = []
+    for input_layer in input_layers:
+      tensors.append( input_layer.tensor )
+      
+    self.tensor = tf.add_n( tensors )
+    
+    self.shape       = input_layers[0].shape
+    self.batch_shape = input_layers[0].batch_shape
+    self.name        = name
+    
+  def EvalWeights(self):
+    return []
+    
+  def EvalBiases(self):
+    return []
+    
 class DropoutLayer(object):
   def __init__( self, input_layer, name = "" ):
     self.shape       = input_layer.shape
@@ -1484,6 +1627,37 @@ class BetaModelLayer(HiddenLayer):
     # return generic data layer
     return GeneratedDataLayer( shape, tensor=z, name=name )
 
+class BetaGivenModelLayer(BetaModelLayer):
+  def __init__( self, shape, model, name = ""):
+    self.model             = model
+
+    self.a           = self.model[A]
+    self.b           = self.model[B]
+    self.prior_a     = self.model[PRIOR][0]
+    self.prior_b     = self.model[PRIOR][1]
+
+    self.shape             = shape
+    self.batch_shape       = MakeBatchShape(shape)
+    
+    #self.expectation = (self.a + self.prior_a -1.0)/(self.b + self.prior_b + self.a + self.prior_a - 2.0)
+    self.expectation = (self.a + self.prior_a)/(self.b + self.prior_b + self.a + self.prior_a)
+    self.name             = name
+    self.tensor           = [self.a, self.b]
+    
+    #pdb.set_trace()
+  
+  def EvalWeights(self):
+    return []
+    
+  def EvalBiases(self):
+    return []
+
+  def SetWeights( self, sess, weights ):
+    pass        
+      
+  def SetBiases( self, sess, biases ):
+    pass
+    
 # class KumaModelLayer(HiddenLayer):
 #   def __init__( self, shape, model, name = ""):
 #     self.shape             = shape

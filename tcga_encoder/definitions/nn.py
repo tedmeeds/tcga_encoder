@@ -12,6 +12,7 @@ INFO_NAME                 = "info.txt"
 FILL                      = "fill"
 
 
+SHARED       = "shared"
 DATASET      = "dataset"
 OBSERVED     = "observed"
 LATENT       = "latent"

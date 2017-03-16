@@ -64,19 +64,13 @@ class TCGABatcherABC( object ):
     self.mirna_dim    = self.data_dict[DATASET].GetDimension(miRNA)
     self.tissue_dim = self.data_dict[DATASET].GetDimension(TISSUE)
     
-    self.dims_dict = {miRNA:self.mirna_dim,RNA:self.rna_dim, DNA:self.dna_dim, TISSUE:self.tissue_dim, METH:self.meth_dim}
+    self.dims_dict = {miRNA:self.mirna_dim,RNA:self.rna_dim, DNA:self.dna_dim, TISSUE:self.tissue_dim, METH:self.meth_dim, METH+"_b":self.meth_dim,miRNA+"_b":self.mirna_dim,RNA+"_b":self.rna_dim}
+    print "DIMENSIONS: "
+    print self.dims_dict
     self.data_store     = self.data_dict[DATASET].store
     self.batch_size     = self.algo_dict[BATCH_SIZE]
-    #self.n_test         = self.algo_dict[N_TEST]
-    #self.n_full_train = self.algo_dict[N_TRAIN_FULL]
-    #self.n_non_full_train  = self.algo_dict[N_TRAIN_NON_FULL]
-    #self.train_mode = self.algo_dict[TRAIN_MODE]
     
-    # keep BRCA in train and test sets, if False, move them all to validation
-    #self.include_brca = bool(self.algo_dict["include_brca"])
-    #self.nbr_brca_train = int(self.algo_dict["nbr_brca_train"])
-    # keep non-full tissues in validation, otherwise move to train
-    #self.include_validation = bool(self.algo_dict["include_validation"])
+    np.random.seed( self.algo_dict['split_seed'] )
     
     self.batch_imputation_dict = {}
     self.batch_feed_dict       = {}
@@ -98,44 +92,10 @@ class TCGABatcherABC( object ):
     self.meth_genes = self.data_store[self.METH_key].columns
     
     self.tissue_names = self.data_store[self.TISSUE_key].columns
-    self.tissue2color = OrderedDict()
-    self.tissue2shape = OrderedDict()
-    cmap = pp.get_cmap('Set1')
-    colors = cmap(np.linspace(0, 1, len(self.tissue_names)))
-    for idx,t in zip( range(len(colors)),self.tissue_names):
-      self.tissue2color[t] = colors[idx]
-      self.tissue2shape[t] = 'o'
+
       
-    self.latent_store_name = self.network_name + "_" + LATENT
-    self.latent_store = OpenHdfStore(self.savedir, self.latent_store_name, mode=self.default_store_mode )
-    self.model_store_name = self.network_name + "_" + MODEL
-    self.survival_store_name = self.network_name + "_" + SURVIVAL
+    self.StoreNames()
     
-    # open in "a" mode
-    self.model_store = OpenHdfStore(self.savedir, self.model_store_name, mode="a" )
-    
-    self.epoch_store_name = self.network_name + "_" + EPOCH
-    self.epoch_store = OpenHdfStore(self.savedir, self.epoch_store_name, mode=self.default_store_mode )
-    
-    self.fill_store_name = self.network_name + "_" + FILL
-    self.fill_store = OpenHdfStore(self.savedir, self.fill_store_name, mode="a")
-    
-    self.survival_store = OpenHdfStore(self.savedir, self.survival_store_name, mode=self.default_store_mode )
-    
-    self.survival_store.close()
-    self.fill_store.close()
-    self.latent_store.close()
-    self.model_store.close()
-    self.epoch_store.close()
-    
-    self.source2darkcolor = {RNA:"darkblue", DNA:"darkgreen", METH:"darkred", miRNA:"darkorange"}
-    self.source2lightcolor = {RNA:"lightblue", DNA:"palegreen", METH:"lightsalmon", miRNA:"moccasin"}
-    self.source2mediumcolor = {RNA:"dodgerblue", DNA:"darksage", METH:"red", miRNA:"orange"}
-    
-    self.source2mediumcolor[RNA+"+"+DNA]="turquoise"
-    self.source2mediumcolor[RNA+"+"+METH] = "fuchsia"
-    self.source2mediumcolor[DNA+"+"+METH] = "sandybrown"
-    self.source2mediumcolor[RNA+"+"+DNA+"+"+METH]="grey"
     
     self.observed_order = self.data_store[self.OBSERVED_key].columns
     self.observed_source2idx = OrderedDict()
@@ -145,32 +105,7 @@ class TCGABatcherABC( object ):
     self.input_sources = self.arch_dict[INPUT_SOURCES]
     self.target_sources = self.arch_dict[TARGET_SOURCES]
     
-    self.input_combo2fillcolor  = {}
-    self.input_combo2shape      = {}
-    self.input_combo2markersize = {}
-    
-    for nbr in np.arange( 1, len(self.input_sources)+1 ):
-      for combo in itertools.combinations( self.input_sources, nbr ):
-        inputs2use = np.array(combo)
-        inputs = inputs2use[0]
-        for ss in inputs2use[1:]:
-          inputs += "+%s"%(ss)
-          
-        if nbr == 1:
-          self.input_combo2fillcolor[inputs] = self.source2lightcolor[inputs]
-          self.input_combo2shape[inputs] = 'D'
-          self.input_combo2markersize[inputs] = 5
-          #self.input_combo2linecolor[inputs] = self.source2lightcolor[inputs]
-          
-        # if nbr == 2:
-        #   self.input_combo2fillcolor[inputs] = self.source2mediumcolor[inputs]
-        #   self.input_combo2shape[inputs] = 's'
-        #   self.input_combo2markersize[inputs] = 8
-        #
-        # if nbr == 3:
-        #   self.input_combo2fillcolor[inputs] = self.source2mediumcolor[inputs]
-        #   self.input_combo2shape[inputs] = 'o'
-        #   self.input_combo2markersize[inputs] = 10
+    self.Colors()
           
 
         
@@ -184,14 +119,12 @@ class TCGABatcherABC( object ):
 
     self.observation_source_indices_target = []
     for source in self.arch_dict[TARGET_SOURCES]:
-      self.observation_source_indices_target.append( self.observed_source2idx[source] )                
+      try:
+        self.observation_source_indices_target.append( self.observed_source2idx[source] )   
+      except:
+        print "skipping ", source             
 
     self.observed_batch_order = OrderedDict()
-    #self.observed_batch_order[RNA] = 0
-    #self.observed_batch_order[METH] = 1
-    #self.observed_batch_order[miRNA] = 2
-
-    
     self.observed_product_sources = []
     source_idx = 0
     for source in self.arch_dict["product_sources"]:
@@ -200,7 +133,6 @@ class TCGABatcherABC( object ):
       source_idx+=1
        
     print "** getting validations"
-    #self.at_least_one_query = self.data_store[self.OBSERVED_key].values[:,self.observation_source_indices].sum(1)>0
     self.at_least_one_query = self.data_store[self.OBSERVED_key].values[:,self.observed_product_sources].sum(1)>0
     
     self.validation_tissue2barcodes = OrderedDict()
@@ -227,17 +159,10 @@ class TCGABatcherABC( object ):
         assert found is True, "could not find " + bc
       
       ids = self.observation_tissues==tissue
-      #self.validation_obs_query[i.values] = True
       for bc in self.validation_tissue2barcodes[ tissue ]:
         self.validation_obs_query[ self.obs_store_bc_2idx[bc] ] = True
-      #self.validation_obs_query[ids] = True
       print tissue, self.validation_obs_query.sum()
-      #if tissue=="coad":
-      #  pdb.set_trace()
       
-    #coad_bc = "coad_tcga-t9-a92h"
-    
-    #pdb.set_trace()
     self.validation_obs_query *= self.at_least_one_query 
     self.not_validation_query = (1-self.validation_obs_query).astype(bool)
     self.validation_barcodes = self.data_store[self.OBSERVED_key].loc[self.validation_obs_query].index
@@ -251,10 +176,7 @@ class TCGABatcherABC( object ):
       assert found is True, "could not find " + bc
     # must have more than just tissue observed (ie one of dna, rna, meth, etc)
     
-    
     self.usable_observed_query = self.at_least_one_query*self.not_validation_query
-    
-
     self.usable_observed = self.data_store[self.OBSERVED_key][self.usable_observed_query]
     self.usable_barcodes = self.data_store[self.OBSERVED_key][self.usable_observed_query].index
     assert len(np.intersect1d( self.usable_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
@@ -273,16 +195,10 @@ class TCGABatcherABC( object ):
     
     self.full_observed_ids = pp.find( self.fully_observed_query )
     self.n_fully_observed = self.fully_observed_query.sum()
-  
-    #if self.n_fully_observed <= self.n_full_train:
-    #  print "==> setting test set from %d to %d"%(self.n_full_train,self.n_fully_observed)
     self.n_full_train = self.n_fully_observed
-    
-    # index into usable for test and train
-    
     self.train_full_id_query = np.zeros( len(self.data_store[self.OBSERVED_key]), dtype=bool)
   
-    np.random.seed( self.algo_dict['split_seed'] )
+    
     self.train_full_ids = np.random.permutation( self.n_fully_observed )[:self.n_full_train]
     self.train_full_id_query[ self.full_observed_ids[self.train_full_ids] ] = 1
     
@@ -324,77 +240,43 @@ class TCGABatcherABC( object ):
     assert len( np.intersect1d( self.train_full_barcodes,self.train_non_full_barcodes ) ) == 0, "problem"
     assert len( np.intersect1d( self.train_full_barcodes,self.test_full_barcodes)) == 0, "problem"
     assert len( np.intersect1d( self.train_full_barcodes,self.test_non_full_barcodes)) == 0, "problem"
-    
     assert len( np.intersect1d( self.train_non_full_barcodes,self.test_full_barcodes)) == 0, "problem"
     assert len( np.intersect1d( self.train_non_full_barcodes,self.test_non_full_barcodes)) == 0, "problem"
-    
     assert len( np.intersect1d( self.test_full_barcodes,self.test_non_full_barcodes)) == 0, "problem"
     
     self.test_barcodes = np.union1d( self.test_full_barcodes, self.test_non_full_barcodes )
-    
     self.train_barcodes = np.union1d( self.train_full_barcodes, self.train_non_full_barcodes )
-    # if self.train_mode == ALL:
-    #   print "************************"
-    #   print "************************"
-    #   print "ALL ALL ALL ALL ALL ALL "
-    #   print "************************"
-    #   print "************************"
-    #   self.train_barcodes = np.union1d( self.train_full_barcodes, self.train_non_full_barcodes )
-    # else:
-    #   print "************************"
-    #   print "************************"
-    #   print "FULL FULL FULL FULL FULL"
-    #   print "************************"
-    #   print "************************"
-    #   self.train_barcodes = self.train_full_barcodes
-    #
-    # #pdb.set_trace()
-    # # self.test_barcodes = self.usable_barcodes[self.test_id_query]
-    #
-    # # correct view of observed for train and test
-    # self.test_observed  = self.data_store[self.OBSERVED_key][ self.test_id_query ]
-    # self.train_observed = self.data_store[self.OBSERVED_key][ self.train_id_query ]
-    #
-    # # use these barcodes to locate sources
-    # self.test_barcodes  = self.test_observed.index
-    # self.train_barcodes = self.train_observed.index
+
+    self.MoveValidation2Train( 0.5 )
+    self.RemoveUnwantedTrain()
   
-    #pdb.set_trace()
     assert len(np.intersect1d( self.test_barcodes, self.train_barcodes)) == 0, "train and test are not mutually exclusive!!"
-    assert len(np.intersect1d( self.test_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
-    assert len(np.intersect1d( self.train_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
+    assert len(np.intersect1d( self.test_barcodes, self.validation_barcodes)) == 0, "test and validation are not mutually exclusive!!"
+    assert len(np.intersect1d( self.train_barcodes, self.validation_barcodes)) == 0, "train and validation are not mutually exclusive!!"
     
-    print "TEST BARCODES: "
-    print self.test_barcodes
     self.test_tissue  = self.data_store[self.TISSUE_key].loc[ self.test_barcodes ]
     self.train_tissue = self.data_store[self.TISSUE_key].loc[ self.train_barcodes ]
     self.val_tissue   = self.data_store[self.TISSUE_key].loc[ self.validation_barcodes ]
   
-
-    #pdb.set_trace()
     self.n_train = len(self.train_barcodes)
     self.n_test  = len(self.test_barcodes)
+    self.n_val  = len(self.validation_barcodes)
+  
+    self.data_dict[N_TRAIN] = self.n_train
+    self.data_dict[N_TEST]  = self.n_test
+    
+
+    self.test_tissue  = self.data_store[self.TISSUE_key].loc[ self.test_barcodes ]
+    self.train_tissue = self.data_store[self.TISSUE_key].loc[ self.train_barcodes ]
+    self.val_tissue   = self.data_store[self.TISSUE_key].loc[ self.validation_barcodes ]
+
   
     self.data_dict[N_TRAIN] = self.n_train
     self.data_dict[N_TEST]  = self.n_test
     
     print "** n_train = ", self.n_train
     print "** n_test  = ", self.n_test
-
-    #pdb.set_trace()
-
-    self.test_tissue  = self.data_store[self.TISSUE_key].loc[ self.test_barcodes ]
-    self.train_tissue = self.data_store[self.TISSUE_key].loc[ self.train_barcodes ]
-    self.val_tissue   = self.data_store[self.TISSUE_key].loc[ self.validation_barcodes ]
-
-    self.n_train = len(self.train_barcodes)
-    self.n_test  = len(self.test_barcodes)
-  
-    self.data_dict[N_TRAIN] = self.n_train
-    self.data_dict[N_TEST]  = self.n_test
-    
-    print "** n_train = ", self.n_train
-    print "** n_test  = ", self.n_test
+    print "** n_val  = ", self.n_val
     
     print "TEST: " 
     print self.test_tissue.sum()
@@ -406,17 +288,47 @@ class TCGABatcherABC( object ):
     
     self.fill_store.open()
     z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
-
     self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
     self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
-    
-    #pdb.set_trace()
     self.fill_store.close()
     
+    self.n_train = len(self.train_barcodes)
+    self.n_test  = len(self.test_barcodes)
+    self.n_val   = len(self.validation_barcodes)
     
-    self.n_test = len(self.test_barcodes)
-    self.n_val = len(self.validation_barcodes)
+    self.MakeVizFilenames()
+    self.batch_size     = min( self.batch_size, self.n_train )
+    #assert False, "todo"
+    # make classfier to tissue
+    # used filled tissue for validation without tissue in train
+    # check weights from tissue to hidden make sure there arent too many (figures)
+    # compare training with just one tissue
     
+
+  def MoveValidation2Train( self, percent2move = 0.5  ):
+    I = np.random.permutation( len( self.validation_barcodes ) )
+    n = int(percent2move*len(I))
+    
+    self.train_barcodes = np.hstack((self.train_barcodes,self.validation_barcodes[I[:n]]))
+    self.validation_barcodes = self.validation_barcodes[I[n:]]
+    
+    print self.train_barcodes
+    print self.validation_barcodes
+  
+  def RemoveUnwantedTrain(self):
+    if self.data_dict.has_key("train_tissues") is False:
+      return
+    
+    train_tissues = np.array( [bc.split("_")[0] for bc in self.train_barcodes], dtype=str )
+    train_bcs = []
+    for tissue in self.data_dict["train_tissues"]:
+      I = pp.find( train_tissues==tissue )
+      train_bcs.extend(self.train_barcodes[I])
+    
+    self.train_barcodes = np.array( train_bcs, dtype=str)
+    assert len(self.train_barcodes)>0, "NO TRAINING DATA"
+      
+  def MakeVizFilenames(self):
     self.viz_filename_survival      =  os.path.join( self.savedir, "survival" )
     self.viz_filename_survival_lda  =  os.path.join( self.savedir, "survival__lda" )
     self.viz_filename_z_to_dna      =  os.path.join( self.savedir, "lda_dna" )
@@ -434,7 +346,64 @@ class TCGABatcherABC( object ):
     self.viz_filename_error_sources_per_gene_fill = os.path.join( self.savedir, "errors_fill.png" )
     self.viz_filename_log_pdf_sources_per_gene_fill_all = os.path.join( self.savedir, "log_pdf_sources_z_per_gene_fill_all.png" )
     self.viz_filename_error_sources_per_gene_fill_all = os.path.join( self.savedir, "errors_sources_z_per_gene_fill_all.png" )
+  
+  def Colors(self):
+    self.tissue2color = OrderedDict()
+    self.tissue2shape = OrderedDict()
+    cmap = pp.get_cmap('Set1')
+    colors = cmap(np.linspace(0, 1, len(self.tissue_names)))
+    for idx,t in zip( range(len(colors)),self.tissue_names):
+      self.tissue2color[t] = colors[idx]
+      self.tissue2shape[t] = 'o'
+          
+    self.source2darkcolor = {RNA:"darkblue", DNA:"darkgreen", METH:"darkred", miRNA:"darkorange", RNA+"_b":"lightblue", DNA+"_b":"palegreen", METH+"_b":"lightsalmon", miRNA+"_b":"moccasin"}
+    self.source2lightcolor = {RNA:"lightblue", DNA:"palegreen", METH:"lightsalmon", miRNA:"moccasin",RNA+"_b":"lightblue", DNA+"_b":"palegreen", METH+"_b":"lightsalmon", miRNA+"_b":"moccasin"}
+    self.source2mediumcolor = {RNA:"dodgerblue", DNA:"darksage", METH:"red", miRNA:"orange", RNA+"_b":"darkblue", DNA+"_b":"darkgreen", METH+"_b":"darkred", miRNA+"_b":"darkorange"}
     
+    self.source2mediumcolor[RNA+"+"+DNA]="turquoise"
+    self.source2mediumcolor[RNA+"+"+METH] = "fuchsia"
+    self.source2mediumcolor[DNA+"+"+METH] = "sandybrown"
+    self.source2mediumcolor[RNA+"+"+DNA+"+"+METH]="grey"
+    
+    self.input_combo2fillcolor  = {}
+    self.input_combo2shape      = {}
+    self.input_combo2markersize = {}
+    
+    for nbr in np.arange( 1, len(self.input_sources)+1 ):
+      for combo in itertools.combinations( self.input_sources, nbr ):
+        inputs2use = np.array(combo)
+        inputs = inputs2use[0]
+        for ss in inputs2use[1:]:
+          inputs += "+%s"%(ss)
+          
+        if nbr == 1:
+          self.input_combo2fillcolor[inputs] = self.source2lightcolor[inputs]
+          self.input_combo2shape[inputs] = 'D'
+          self.input_combo2markersize[inputs] = 5
+     
+  def StoreNames(self):
+    self.latent_store_name = self.network_name + "_" + LATENT
+    self.latent_store = OpenHdfStore(self.savedir, self.latent_store_name, mode=self.default_store_mode )
+    self.model_store_name = self.network_name + "_" + MODEL
+    self.survival_store_name = self.network_name + "_" + SURVIVAL
+    
+    # open in "a" mode
+    self.model_store = OpenHdfStore(self.savedir, self.model_store_name, mode="a" )
+    
+    self.epoch_store_name = self.network_name + "_" + EPOCH
+    self.epoch_store = OpenHdfStore(self.savedir, self.epoch_store_name, mode=self.default_store_mode )
+    
+    self.fill_store_name = self.network_name + "_" + FILL
+    self.fill_store = OpenHdfStore(self.savedir, self.fill_store_name, mode="a")
+    
+    self.survival_store = OpenHdfStore(self.savedir, self.survival_store_name, mode=self.default_store_mode )
+    
+    self.survival_store.close()
+    self.fill_store.close()
+    self.latent_store.close()
+    self.model_store.close()
+    self.epoch_store.close()
+     
   def CallBack( self, function_name, sess, cb_info ):
     if function_name == BATCH_EPOCH:
       self.BatchEpoch( sess, cb_info )
@@ -588,6 +557,7 @@ class TCGABatcherABC( object ):
 
   def RunFillZ( self, epoch, sess, feed_dict, impute_dict, mode ):
     #print "FILL Z"
+          
           
     barcodes = impute_dict[BARCODES]
     #batch = self.FillBatch( impute_dict[BARCODES], mode )
@@ -882,6 +852,7 @@ class TCGABatcherABC( object ):
     if mode == "TEST":
       self.AddSeries(  self.epoch_store, TEST_FILL_LOGLIK, values = values, columns = columns )  
     elif mode == "VAL":
+      #pdb.set_trace()
       self.AddSeries(  self.epoch_store, VAL_FILL_LOGLIK, values = values, columns = columns )  
     
     
@@ -997,6 +968,8 @@ class TCGABatcherABC( object ):
         loglik_df = self.epoch_store[TEST_FILL_LOGLIK][query]
         epochs = loglik_df["Epoch"].values
         loglik = loglik_df["LogLik"].values
+        if len(loglik) == 0:
+          continue
         pp.plot( epochs, loglik, 'o-', \
                color=self.source2darkcolor[target_source],\
                mec=self.source2darkcolor[target_source], mew=1, \
@@ -1010,6 +983,9 @@ class TCGABatcherABC( object ):
         loglik_df = self.epoch_store[VAL_FILL_LOGLIK][query]
         epochs = loglik_df["Epoch"].values
         loglik = loglik_df["LogLik"].values
+        if len(loglik) == 0:
+          continue
+        
         pp.plot( epochs, loglik, 'v-', \
                color=self.source2mediumcolor[target_source],\
                mec=self.source2lightcolor[target_source], mew=1, \
@@ -1043,6 +1019,8 @@ class TCGABatcherABC( object ):
         df = self.epoch_store[TEST_FILL_ERROR][query]
         epochs = df["Epoch"].values
         loglik = df["Error"].values
+        if len(loglik) == 0:
+          continue
         pp.plot( epochs, loglik, 'o-', \
                  color=self.source2darkcolor[target_source],\
                  mec=self.source2darkcolor[target_source], mew=1, \
@@ -1056,6 +1034,8 @@ class TCGABatcherABC( object ):
         df = self.epoch_store[VAL_FILL_ERROR][query]
         epochs = df["Epoch"].values
         loglik = df["Error"].values
+        if len(loglik) == 0:
+          continue
         pp.plot( epochs, loglik, 'v-', \
                  color=self.source2mediumcolor[target_source],\
                  mec=self.source2darkcolor[target_source], mew=1, \
@@ -1313,6 +1293,7 @@ class TCGABatcherABC( object ):
       store[store_key]
     except:
       print "AddSeries: Cannot access store with key %s"%(store_key)
+      #pdb.set_trace()
       store[store_key] = pd.DataFrame( [], columns = columns )      
     
     s = pd.Series( values, index = store[ store_key ].columns)
@@ -1357,6 +1338,10 @@ class TCGABatcherABC( object ):
     counts[DNA] = n_dna
     counts[METH] = n_meth
     counts[miRNA] = n_mirna
+    counts[RNA+"_b"] = n_rna
+    counts[DNA+"_b"] = n_dna
+    counts[METH+"_b"] = n_meth
+    counts[miRNA+"_b"] = n_mirna
     return counts
     
   def Epoch( self, epoch_key, sess, info_dict, epoch, feed_dict, impute_dict, mode ):  
