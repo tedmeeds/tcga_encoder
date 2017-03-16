@@ -359,7 +359,7 @@ class TCGABatcher( TCGABatcherABC ):
     
     nbr_splits = 50
     tensor2fill = []
-    drop_factor = float(nbr_splits)/float(nbr_splits-1)
+    drop_factor = 1.0 #float(nbr_splits)/float(nbr_splits-1)
     for drop_idx in range(nbr_splits):
       
       
