@@ -3,6 +3,26 @@ from tcga_encoder.models.vae.batcher_ABC import *
 
   
 class TCGABatcher( TCGABatcherABC ):
+  def MakeVizFilenames(self):
+    self.viz_filename_survival      =  os.path.join( self.savedir, "survival" )
+    self.viz_filename_survival_lda  =  os.path.join( self.savedir, "survival__lda" )
+    self.viz_filename_z_to_dna      =  os.path.join( self.savedir, "lda_dna" )
+    self.viz_filename_z_rec_scatter          =  os.path.join( self.savedir, "z_rec_scatter.png" )
+    self.viz_filename_z_rec_on_z_gen         =  os.path.join( self.savedir, "z_rec_on_z_gen.png" )
+    self.viz_filename_rna_prediction_scatter =  os.path.join( self.savedir, "rna_prediction_scatter.png" )
+    self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
+    self.viz_filename_dna_batch_predict      =  os.path.join( self.savedir, "dna_batch_predict" )
+    self.viz_filename_dna_aucs               =  os.path.join( self.savedir, "dna_aucs.png" )
+    self.viz_filename_weights        =  os.path.join( self.savedir, "weights_" )
+    self.viz_filename_lower_bound            =  os.path.join( self.savedir, "lower_bound.png" )
+    self.viz_filename_log_pdf_sources        = os.path.join( self.savedir, "log_pdf_sources_z.png" )
+    self.viz_filename_log_pdf_sources_per_gene = os.path.join( self.savedir, "log_pdf_batch.png" )
+    self.viz_filename_log_pdf_sources_per_gene_fill = os.path.join( self.savedir, "log_pdf_fill.png" )
+    self.viz_filename_error_sources_per_gene_fill = os.path.join( self.savedir, "errors_fill.png" )
+    self.viz_filename_log_pdf_sources_per_gene_fill_all = os.path.join( self.savedir, "log_pdf_sources_z_per_gene_fill_all.png" )
+    self.viz_filename_error_sources_per_gene_fill_all = os.path.join( self.savedir, "errors_sources_z_per_gene_fill_all.png" )
+    self.viz_scaled_weights = os.path.join( self.savedir, "weights_scaled_inputs.png" )
+    
   def PlotLowerBound(self):
     f = pp.figure()
     pp.plot( self.epoch_store["Batch"]["Epoch"].values, self.epoch_store["Batch"]["Lower Bound"], 'bo-', lw=2 , label="Batch")
@@ -483,3 +503,116 @@ class TCGABatcher( TCGABatcherABC ):
     if use_dna:
       self.WriteRunFillExpectation( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
       self.WriteRunFillLoglikelihood( epoch, DNA, barcodes[dna_observed_query], self.dna_genes, dna_loglikelihood, mode )
+ 
+  def VizWeightsGeneric( self, sess, info_dict ):    
+    print "  -> Generic Viz" 
+    self.model_store.open()
+    keys = self.model_store.keys()
+    
+    old_layer = ""
+    needs_closing=False
+    for k in keys:
+      dum,layer_name, W_or_b, W_or_b_id = k.split("/")
+      if W_or_b == "b":
+        continue
+      #print "processing %s"%(k)
+      if old_layer != layer_name:
+        if needs_closing is True:
+          #print "  closing figure, ",old_layer
+          pp.legend()
+          pp.suptitle(old_layer)
+          pp.savefig( self.viz_filename_weights + "%s.png"%old_layer, fmt="png", bbox_inches = "tight")
+          pp.close(fig_)
+          needs_closing = False
+          
+        if W_or_b == "W":
+          #print "  new figure"
+          fig_ = pp.figure()
+          ax1_ = fig_.add_subplot(121)
+          ax2_ = fig_.add_subplot(122)
+          needs_closing = True
+
+      if W_or_b == "W":
+        #print "  adding weights, ",layer_name
+        W = np.squeeze( self.model_store[k].values ).flatten()
+        ax1_.hist( W, 20, normed=True, alpha=0.5, label = "%s/%s"%(layer_name,W_or_b_id) )
+        pp.grid('on')
+        ax2_.plot( np.sort(W), lw=2, alpha=0.85, label = "%s/%s"%(layer_name,W_or_b_id) )
+        pp.grid('on')
+        needs_closing = True
+        #pdb.set_trace()
+        
+      old_layer = layer_name
+    if needs_closing:
+      #print "  closing figure, ",old_layer
+      pp.legend()
+      pp.suptitle(old_layer)
+      pp.savefig( self.viz_filename_weights + "%s.png"%old_layer, fmt="png", bbox_inches = "tight")
+      pp.close(fig_)
+      needs_closing = False
+    # try:
+    #   rec_rna_weights = self.model_store[ "/rec_hidden1/W/0" ].values.flatten()
+    #   f = pp.figure()
+    #   pp.hist(  rec_rna_weights, 50, normed=True, alpha=0.5 )
+    #   pp.grid('on')
+    #   pp.savefig( self.viz_filename_weights_rec_rna, dpi = 300, fmt="png", bbox_inches = "tight")
+    #   pp.close(f)
+    # except:
+    #   print "** could not viz any model"
+    self.model_store.close()
+    pp.close('all')
+   
+  def VizInputScales(self, sess, info_dict ):
+    self.model_store.open()
+    
+    f = pp.figure()
+    input_sources = ["METH","RNA","miRNA"]
+    orders        = [self.meth_order,self.rna_order,self.mirna_order]
+    data_means    = [self.meth_mean,self.rna_mean,self.mirna_mean]
+    n_sources = len(input_sources)
+    
+    post_fix = "_scaled"
+    idx=1
+    for input_source in input_sources:
+      # try and find...
+      #pdb.set_trace()
+      w_mean = self.model_store[ input_source + post_fix + "/W/w0"].values
+      w_scale = self.model_store[ input_source + post_fix + "/W/w1"].values
+      n_dims, n_tissues = w_mean.shape
+      
+      precision = np.exp( w_scale )
+      std_dev = 1.0 / np.sqrt(precision+1e-12)
+      
+      ax = f.add_subplot( n_sources, 1, idx )
+      
+      w_i = orders[ idx-1 ] #np.arange( n_dims, dtype=int )
+      w_0 = np.arange( n_dims, dtype=int )
+      #pdb.set_trace()
+      colors = "brgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgkmcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymc"
+      for t_idx in range(n_tissues):
+        m = w_mean[:,t_idx][w_i]
+        s = std_dev[:,t_idx][w_i]
+        #pdb.set_trace()
+        ax.fill_between( w_0, m - 0.25*s, m + 0.25*s, alpha=0.25, color=colors[t_idx] )
+        ax.plot( w_0, m,colors[t_idx]+'-' )
+      
+      
+      pp.plot( w_0, data_means[idx-1][w_i], 'k--', lw=2, alpha=0.5)
+      pp.ylabel( input_source )
+      idx+=1
+    
+    #pp.show()
+    #pdb.set_trace() 
+    pp.savefig( self.viz_scaled_weights + ".png", fmt="png", bbox_inches = "tight")  
+    self.model_store.close()
+      
+  def VizModel( self, sess, info_dict ): 
+    print "** VIZ Model"
+    
+    #self.VizWeightsGeneric(sess, info_dict )
+    self.VizInputScales(sess, info_dict )
+    #self.model_store.open()
+    #keys = self.model_store.keys()
+    #print keys
+    #pdb.set_trace()
+    #self.model_store.close()

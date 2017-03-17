@@ -298,6 +298,8 @@ class TCGABatcherABC( object ):
     
     self.MakeVizFilenames()
     self.batch_size     = min( self.batch_size, self.n_train )
+    
+    self.SummarizeData()
     #assert False, "todo"
     # make classfier to tissue
     # used filled tissue for validation without tissue in train
@@ -305,6 +307,27 @@ class TCGABatcherABC( object ):
     # compare training with just one tissue
     
 
+
+  def SummarizeData(self):
+    #pass
+    # self.OBSERVED_key = CLINICAL+"/"+OBSERVED
+    # self.TISSUE_key   = CLINICAL+"/"+TISSUE
+    # self.RNA_key      = RNA+"/"+FAIR
+    # self.miRNA_key      = miRNA+"/"+FAIR
+    # self.METH_key     = METH+"/"+FAIR
+    # self.DNA_keys     = [DNA+"/"+CHANNEL+"/%d"%i for i in range(self.n_dna_channels)]
+    self.rna_mean = self.data_store[self.RNA_key].mean(0)
+    self.rna_std = self.data_store[self.RNA_key].std(0)
+    self.mirna_mean = self.data_store[self.miRNA_key].mean(0)
+    self.mirna_std = self.data_store[self.miRNA_key].std(0)
+    self.meth_mean = self.data_store[self.METH_key].mean(0)
+    self.meth_std = self.data_store[self.METH_key].std(0)
+    
+    self.rna_order = np.argsort( self.rna_mean.values )
+    self.mirna_order = np.argsort( self.mirna_mean.values )
+    self.meth_order = np.argsort( self.meth_mean.values )
+    #pdb.set_trace()
+    
   def MoveValidation2Train( self, percent2move = 0.5  ):
     I = np.random.permutation( len( self.validation_barcodes ) )
     n = int(percent2move*len(I))

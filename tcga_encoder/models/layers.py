@@ -286,6 +286,24 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       
 
     layer = layer_class( shape, input_layer, weights_location, weights_scale, name, transfer )
+
+  elif layer_class == BetaScaledLayer:
+    assert len(input_layers)==2, "must have 2 only"
+    shape = layer_specs[SHAPE]
+    input_layer = input_layers[0]
+    beta_layer  = input_layers[1]
+    
+    #weights_location = tf.Variable( weight_init( shape, constant=0.1 ), name = name+"_location" )
+    #weights_scale    = tf.Variable( weight_init( shape, constant=0.1 ), name = name+"_location" )
+    
+    #assert len(input_layers) == 1, "must provide 1 inputs"
+    #transfer = None
+    #if layer_specs.has_key(TRANSFER):
+    #  transfer = layer_specs[TRANSFER]
+      
+
+    layer = layer_class( shape, input_layer, beta_layer, name )
+
         
   elif layer_class == SumLayer:
     layer = layer_class( input_layers, name )
@@ -737,7 +755,42 @@ class ScaledLayer(object):
     
   def EvalBiases(self):
     return []
+
+class BetaScaledLayer(object):
+  #shape, input_layer, weights_location, weights_scale, name, transfer
+  def __init__( self, shape, input_layer, beta_layer, name = "" ):
+      
+    #self.weights_location = weights_location
+    #self.weights_scale = weights_scale
     
+    #pdb.set_trace()
+    self.a = tf.exp( tf.transpose( beta_layer.weights_a[0] ) )
+    self.b = tf.exp( tf.transpose( beta_layer.weights_b[0] ) )
+    
+    res = [1]
+    res.extend(shape)
+    self.weights = [ tf.transpose( beta_layer.weights_a[0] ), tf.transpose( beta_layer.weights_b[0] )]
+    a_plus_b = self.a+self.b
+    self.mean = self.a / a_plus_b
+    self.std  = tf.sqrt( (self.a*self.b)/( tf.square(a_plus_b)*(a_plus_b+1.0) ) )
+    
+    self.tensor = ( tf.expand_dims( input_layer.tensor, -1 ) - self.mean )*self.std 
+      
+    #pdb.set_trace()
+    self.shape       = shape
+    self.batch_shape = MakeBatchShape(shape)
+    self.name        = name
+    #self.weights = beta_layer.weights
+
+  def EvalWeights(self):
+    if self.weights.__class__ == list:
+      return [w.eval() for w in self.weights]
+    else:
+      return self.weights.eval()
+    
+  def EvalBiases(self):
+    return []
+        
 class DifLayer(object):
   def __init__( self, input_layers, name = "" ):
       
@@ -1596,6 +1649,8 @@ class BetaModelLayer(HiddenLayer):
     
     #self.expectation = (self.a + self.prior_a -1.0)/(self.b + self.prior_b + self.a + self.prior_a - 2.0)
     self.expectation = (self.a + self.prior_a)/(self.b + self.prior_b + self.a + self.prior_a)
+    self.variance = (self.a + self.prior_a)*(self.b + self.prior_b)/( tf.square(self.b + self.prior_b + self.a + self.prior_a)*(self.b + self.prior_b + self.a + self.prior_a+1.0))
+    self.std_dev = tf.sqrt( self.variance)
     self.name             = name
     self.tensor           = [self.a, self.b]
     
