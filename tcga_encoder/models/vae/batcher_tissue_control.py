@@ -578,10 +578,20 @@ class TCGABatcher( TCGABatcherABC ):
       #pdb.set_trace()
       w_mean = self.model_store[ input_source + post_fix + "/W/w0"].values
       w_scale = self.model_store[ input_source + post_fix + "/W/w1"].values
+      
+      log_alpha = w_mean
+      log_beta = w_scale
+      
+      alpha = np.exp( log_alpha )
+      beta = np.exp( log_beta )
+      
+      mean = compute_mean( alpha, beta )
+      variance = compute_variance( alpha, beta )
+      
       n_dims, n_tissues = w_mean.shape
       
-      precision = np.exp( w_scale )
-      std_dev = 1.0 / np.sqrt(precision+1e-12)
+      precision = 1.0 / variance #np.exp( w_scale )
+      std_dev = np.sqrt(variance+1e-12)
       
       ax = f.add_subplot( n_sources, 1, idx )
       
@@ -590,15 +600,16 @@ class TCGABatcher( TCGABatcherABC ):
       #pdb.set_trace()
       colors = "brgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgkmcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymc"
       for t_idx in range(n_tissues):
-        m = w_mean[:,t_idx][w_i]
+        m = mean[:,t_idx][w_i]
         s = std_dev[:,t_idx][w_i]
         #pdb.set_trace()
-        ax.fill_between( w_0, m - 0.25*s, m + 0.25*s, alpha=0.25, color=colors[t_idx] )
+        ax.fill_between( w_0, m - 0.5*s, m + 0.5*s, alpha=0.25, color=colors[t_idx] )
         ax.plot( w_0, m,colors[t_idx]+'-' )
       
       
       pp.plot( w_0, data_means[idx-1][w_i], 'k--', lw=2, alpha=0.5)
       pp.ylabel( input_source )
+      pp.ylim(0,1)
       idx+=1
     
     #pp.show()
@@ -616,3 +627,35 @@ class TCGABatcher( TCGABatcherABC ):
     #print keys
     #pdb.set_trace()
     #self.model_store.close()
+
+  def InitializeAnythingYouWant(self, sess, network ):
+    print "Running : InitializeAnythingYouWant"
+    input_sources = ["METH","RNA","miRNA"] 
+    layers = ["gen_meth_space_basic","gen_rna_space_basic","gen_mirna_space_basic"]
+    
+    n_tissues = len(self.data_store[self.TISSUE_key].columns)
+    #self.data_store[self.TISSUE_key].loc[ batch_barcodes ]
+    
+    # get log_alpha and log_beta values
+    for layer_name, input_name in zip( layers, input_sources ):
+      n_dims = self.dims_dict[ input_name ]
+      
+      alpha = np.zeros( (n_tissues, n_dims ), dtype = float )
+      beta  = np.zeros( (n_tissues, n_dims ), dtype = float )
+      
+      for t_idx, tissue in zip( range( n_tissues), self.data_store[self.TISSUE_key].columns):
+        
+        n_samples = self.train_tissue[ tissue ].sum()
+        alpha[t_idx,:] = self.tissue_statistics[ tissue ][ input_name ][ "alpha"]
+        beta[t_idx,:] = self.tissue_statistics[ tissue ][ input_name ][ "beta"]
+      
+      log_alpha = np.log( alpha + 0.001 ).astype(np.float32)
+      log_beta = np.log( beta + 0.001).astype(np.float32)
+      
+      #layer = network.GetLayer( layer_name )
+      
+      #sess.run( tf.assign(layer.weights[0][0], log_alpha) )
+      #sess.run( tf.assign(layer.weights[1][0], log_beta) )
+      network.GetLayer( layer_name ).SetWeights( sess, [log_alpha, log_beta ])
+      #pdb.set_trace()
+    

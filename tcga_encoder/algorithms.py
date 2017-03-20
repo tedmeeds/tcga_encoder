@@ -103,9 +103,14 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
   # -------------------------------------------------- #
   # TRAIN                                              #
   # -------------------------------------------------- #
+  print "Running : init = tf.global_variables_initializer()"
   init = tf.global_variables_initializer()
   #init = tf.initialize_all_variables()
+  print "Running : sess.run(init)"
   sess.run(init)
+  batcher.InitializeAnythingYouWant( sess, network )
+  
+  print "Running : for epoch in range(n_epochs):"
   for epoch in range(n_epochs):
 
     # -------------------------------------------------- #

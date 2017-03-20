@@ -18,7 +18,28 @@ pd.set_option('display.width', 1000)
 
 #import itertools
 
-
+def compute_mean( a, b ):
+  return a/(a+b)
+  
+def compute_variance( a, b ):
+  return (a*b)/( pow(a+b,2)*(a+b+1))
+  
+def compute_alpha( m, v ):
+  bad = v==0
+  A = -m*(v+m*m-m) / v
+  A[bad] = 1.0
+  
+  #if bad.sum() > 0:
+  #  pdb.set_trace()
+  return A
+  
+def compute_beta( m, v ):
+  bad = v==0
+  B = (v+m*m-m)*(m-1.0)/v
+  B[bad] = 1
+  #if bad.sum() > 0:
+  #  pdb.set_trace()
+  return B
 
 class TCGABatcherABC( object ):
   def __init__(self, network_name, network, data_dict, algo_dict, arch_dict, logging_dict, default_store_mode="w" ):
@@ -307,8 +328,11 @@ class TCGABatcherABC( object ):
     # compare training with just one tissue
     
 
-
+  def InitializeAnythingYouWant( self, sess, network ):
+    pass
+    
   def SummarizeData(self):
+    print "Running : SummarizeData(self)"
     #pass
     # self.OBSERVED_key = CLINICAL+"/"+OBSERVED
     # self.TISSUE_key   = CLINICAL+"/"+TISSUE
@@ -326,7 +350,46 @@ class TCGABatcherABC( object ):
     self.rna_order = np.argsort( self.rna_mean.values )
     self.mirna_order = np.argsort( self.mirna_mean.values )
     self.meth_order = np.argsort( self.meth_mean.values )
-    #pdb.set_trace()
+    
+    self.tissue_statistics = {}
+    
+    tissue_names = self.train_tissue.columns
+    stats = np.zeros( (5,len(tissue_names)))
+    for t_idx, tissue in zip( range(len(tissue_names)),tissue_names ):
+      bcs = self.train_tissue.loc[self.train_tissue[tissue]==1].index.values
+      
+      rna=self.data_store[self.RNA_key].loc[ bcs ]
+      mirna=self.data_store[self.miRNA_key].loc[ bcs ]
+      meth=self.data_store[self.METH_key].loc[ bcs ]
+      
+      self.tissue_statistics[ tissue ] = {}
+      self.tissue_statistics[ tissue ][ RNA ] = {}
+      self.tissue_statistics[ tissue ][ miRNA ] = {}
+      self.tissue_statistics[ tissue ][ METH ] = {}
+      self.tissue_statistics[ tissue ][ RNA ][ "mean"]   = rna.mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ miRNA ][ "mean"] = mirna.mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ METH ][ "mean"]  = meth.mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ RNA ][ "var"]   = rna.var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ miRNA ][ "var"] = mirna.var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ METH ][ "var"]  = meth.var(0).fillna(0)
+      
+
+      self.tissue_statistics[ tissue ][ RNA ][ "alpha"]   = compute_alpha( self.tissue_statistics[ tissue ][ RNA ][ "mean"], self.tissue_statistics[ tissue ][ RNA ][ "var"])
+      self.tissue_statistics[ tissue ][ miRNA ][ "alpha"] = compute_alpha( self.tissue_statistics[ tissue ][ miRNA ][ "mean"], self.tissue_statistics[ tissue ][ miRNA ][ "var"])
+      self.tissue_statistics[ tissue ][ METH ][ "alpha"]  = compute_alpha( self.tissue_statistics[ tissue ][ METH ][ "mean"], self.tissue_statistics[ tissue ][ METH ][ "var"])
+
+      self.tissue_statistics[ tissue ][ RNA ][ "beta"]   = compute_beta( self.tissue_statistics[ tissue ][ RNA ][ "mean"], self.tissue_statistics[ tissue ][ RNA ][ "var"])
+      self.tissue_statistics[ tissue ][ miRNA ][ "beta"] = compute_beta( self.tissue_statistics[ tissue ][ miRNA ][ "mean"], self.tissue_statistics[ tissue ][ miRNA ][ "var"])
+      self.tissue_statistics[ tissue ][ METH ][ "beta"]  = compute_beta( self.tissue_statistics[ tissue ][ METH ][ "mean"], self.tissue_statistics[ tissue ][ METH ][ "var"])
+      
+      #if tissue == "laml":
+      #  pdb.set_trace()
+      
+      #pdb.set_trace()
+    
+    #self.tissue_statistics = pd.DataFrame()
+    
+    
     
   def MoveValidation2Train( self, percent2move = 0.5  ):
     I = np.random.permutation( len( self.validation_barcodes ) )
