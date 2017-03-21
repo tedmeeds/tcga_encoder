@@ -622,16 +622,24 @@ class TCGABatcherABC( object ):
 
   def TrainFillZ( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
+    # val_feed_imputation = batcher.ValBatch()
+    # val_feed_dict = {}
+    # network.FillFeedDict( val_feed_dict, val_feed_imputation )
     
+    self.FillBatch( self.validation_barcodes, mode = "VAL" )
     for batch_ids in chunks( np.arange(len(self.train_barcodes)), 500 ):
       barcodes = self.train_barcodes[batch_ids]
-      impute_dict = self.NextBatch(batch_ids)
-      impute_dict[BARCODES] = barcodes
+      impute_dict = self.FillBatch( barcodes, mode = "TRAIN" ) #self.NextBatch(batch_ids)
+      #impute_dict[BARCODES] = barcodes
       self.batch_ids = batch_ids
-      #pdb.set_trace()
+      
+      
+      
+      train_feed_dict={}
+      self.network.FillFeedDict( train_feed_dict, impute_dict )
       #batch = self.FillBatch( impute_dict[BARCODES], mode )
-      self.RunFillZ( epoch, sess, {}, impute_dict, mode="TRAIN" )
-  
+      self.RunFillZ( epoch, sess, train_feed_dict, impute_dict, mode="TRAIN" )
+      
     
   def BatchFillZ( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
@@ -686,7 +694,10 @@ class TCGABatcherABC( object ):
       X_var = self.fill_store["/Z/TRAIN/Z/var"].values
       X_var[self.batch_ids,:] = z_var
       self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
-      self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )
+      self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )\
+      
+      #if mode=="TRAIN":
+      #  pdb.set_trace()
     else:
       self.fill_store["Z/%s/%s/mu"%(mode,target)]  = pd.DataFrame( z_mu, index = barcodes, columns = columns )
       self.fill_store["Z/%s/%s/var"%(mode,target)] = pd.DataFrame( z_var, index = barcodes, columns = columns )
