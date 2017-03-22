@@ -1328,6 +1328,9 @@ class TCGABatcherABC( object ):
     elif self.n_z <= 80:
       sp_a = 8
       sp_b = 10
+    else:
+      sp_a = int( np.sqrt( self.n_z ) + 1 )
+      sp_b = int( np.ceil( float(self.n_z) / sp_a  ) )
     max_figs = sp_a*sp_b
     
     f = pp.figure(figsize=(14,12))
