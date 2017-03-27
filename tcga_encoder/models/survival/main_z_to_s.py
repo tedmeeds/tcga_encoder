@@ -17,6 +17,63 @@ from scipy import stats
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
+# events_plot( val_proj, val, ax=ax1, name = "validation" )
+def events_plot( projection, data, logging_dict, disease, ax = None, name = "", rgs=None ):
+  if ax is None:
+    f = pp.figure()
+    ax = f.add_subplot(111)
+    
+  X = data[0]
+  T = data[1]
+  E = data[2]
+  I = np.argsort(-projection)
+  y = E
+  #I = np.argsort(-mn_prob)
+  third = int(len(I)/3.0)
+  half = int(len(I)/2.0)
+  
+  if rgs is None:
+    I0 = I[:third]
+    I1 = I[third:2*third]
+    I2 = I[2*third:]
+  else:
+    I0 = pp.find( projection > rgs[0][0])
+    I2 = pp.find( projection < rgs[2][1])
+    I1 = pp.find( (projection > rgs[2][1])  * (projection < rgs[0][0]))
+    #pdb.set_trace()
+  # I0 = I[:half]
+  # I1 = [] #I[third:2*third]
+  # I2 = I[half:]
+  kmf = KaplanMeierFitter()
+  if len(I2) > 0:
+    kmf.fit(T[I2], event_observed=E[I2], label =  "E=%d C=%d"%(E[I2].sum(),len(I2)-E[I2].sum()))
+    ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
+  if len(I1) > 0:
+    kmf.fit(T[I1], event_observed=E[I1], label =  "E=%d C=%d"%(E[I1].sum(),len(I1)-E[I1].sum()))
+    ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='green')
+  if len(I0) > 0:
+    kmf.fit(T[I0], event_observed=E[I0], label = "E=%d C=%d"%(E[I0].sum(),len(I0)-E[I0].sum()))
+    ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='blue')
+  if len(I0) == 0:
+    results = logrank_test(T[I1], T[I2], event_observed_A=E[I1], event_observed_B=E[I2])
+  elif len(I2) == 0:
+    results = logrank_test(T[I0], T[I1], event_observed_A=E[I0], event_observed_B=E[I1])
+  else:
+    results = logrank_test(T[I0], T[I2], event_observed_A=E[I0], event_observed_B=E[I2])
+  pp.title("%s %s Log-rank Test: %0.1f"%(name, disease, results.test_statistic))
+  save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_%s.png"%(name) )
+  pp.savefig(save_location, dpi=300, format='png')
+  #print "ROC mn_prob ", roc_auc_score(y,mn_prob)
+  
+  print "ROC mn_proj ", roc_auc_score(y,projection)
+
+
+  print "LOG RANK TEST: ", results.test_statistic
+  
+  #pdb.set_trace()
+  return roc_auc_score(y,projection), results, (I0,I1,I2)
+  
+  
 def symmetric_kl( m1,s1,m2,s2, sum_axis = None):
   return 0.5*(kl_divergence( m1,s1,m2,s2,sum_axis=sum_axis)+kl_divergence( m2,s2,m1,s1,sum_axis=sum_axis))
 
@@ -96,253 +153,53 @@ def importance_calc_old( w, X, E ):
   #importance = np.mean( i , 0 )
   #importance = np.abs( np.mean( w,0 ) ) / np.var( w,0 )
   return importance
-      
-# def main(yaml_file, weights_matrix):
-#   y = load_yaml( yaml_file)
-#   load_data_from_dict( y[DATA] )
-#   data_dict      = y[DATA] #{N_TRAIN:4000}
-#   survival_dict  = y["survival"]
-#   logging_dict   = y[LOGGING]
-#
-#   logging_dict[SAVEDIR] = os.path.join( HOME_DIR, os.path.join( logging_dict[LOCATION], logging_dict[EXPERIMENT] ) )
-#
-#
-#   #data_location = os.path.join( HOME_DIR, "data/broad_processed_post_recomb/20160128/%s/data.h5"%(data_file) )
-#   fill_location = os.path.join( logging_dict[SAVEDIR], "full_vae_fill.h5" )
-#   survival_location = os.path.join( logging_dict[SAVEDIR], "full_vae_survival.h5" )
-#   #savename = os.path.join( HOME_DIR, "results/tcga_vae_post_recomb/leave_out/tiny/leave_out_%s/survival_xval.png"%(disease))
-#
-#   print "FILL: ", fill_location
-#   print "SURV: ", survival_location
-#   s=pd.HDFStore( survival_location, "r" )
-#   d=data_dict['store'] #pd.HDFStore( data_location, "r" )
-#   f=pd.HDFStore( fill_location, "r" )
-#
-#   #pdb.set_trace()
-#
-#
-#   for survival_spec in survival_dict:
-#     name = survival_spec["name"]
-#     print "running run_pytorch_survival_folds ,", data_dict['validation_tissues']
-#
-#     #folds = survival_spec["folds"]
-#     bootstraps = survival_spec["bootstraps"]
-#     epsilon =  survival_spec["epsilon"]
-#     if survival_spec.has_key("l1_survival"):
-#       l1_survival = survival_spec["l1_survival"]
-#     else:
-#       l1_survival = 0.0
-#     if survival_spec.has_key("n_epochs"):
-#       n_epochs = survival_spec["n_epochs"]
-#     else:
-#       n_epochs = 1000
-#
-#
-#     if survival_spec.has_key("l1_regression"):
-#       l1_regression = survival_spec["l1_regression"]
-#     else:
-#       l1_regression = 0.0
-#
-#     folds_survival =  survival_spec["folds_survival"]
-#     folds_regression =  survival_spec["folds_regression"]
-#
-#
-#
-#     save_weights_template = os.path.join( logging_dict[SAVEDIR], "survival_weights_" )
-#     projections, probabilties, weights, averages, X, y, E_train, T_train = run_pytorch_survival_folds( data_dict['validation_tissues'], \
-#                                                                                f, d, k_fold = folds_survival, \
-#                                                                                n_bootstraps = bootstraps, \
-#                                                                                l1= l1_survival, n_epochs = n_epochs, normalize=True, seed=2 )
-#     disease = data_dict['validation_tissues'][0]
-#
-#
-#     avg_proj = averages[0]
-#     avg_prob = averages[1]
-#
-#     fig = pp.figure()
-#     mn_proj = projections[0]
-#     std_proj = np.sqrt(projections[1])
-#     mn_prob = probabilties[0]
-#     std_prob = np.sqrt(probabilties[1])
-#     mn_w = weights[0]
-#     std_w = np.sqrt(weights[1])
-#
-#     ax1 = fig.add_subplot(111)
-#     I = pp.find( np.isnan(mn_prob))
-#     mn_prob[I] = 0
-#     I = pp.find( np.isinf(mn_prob))
-#     mn_prob[I] = 1
-#
-#     I = pp.find( np.isnan(mn_proj))
-#     mn_proj[I] = 0
-#     I = pp.find( np.isinf(mn_proj))
-#     mn_proj[I] = 1
-#
-#     I = np.argsort(-mn_proj)
-#     #I = np.argsort(-mn_prob)
-#     third = int(len(I)/3.0)
-#     half = int(len(I)/2.0)
-#     # I0 = I[:third]
-#     # I1 = I[third:2*third]
-#     # I2 = I[2*third:]
-#     I0 = I[:half]
-#     I1 = [] #I[third:2*third]
-#     I2 = I[half:]
-#     kmf = KaplanMeierFitter()
-#     if len(I2) > 0:
-#       kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
-#       ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
-#     if len(I1) > 0:
-#       kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
-#       ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='green')
-#     if len(I0) > 0:
-#       kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
-#       ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
-#     results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
-#     pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
-#     save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval.png" )
-#     pp.savefig(save_location, dpi=300, format='png')
-#     print "ROC mn_prob ", roc_auc_score(y,mn_prob)
-#     print "ROC mn_proj ", roc_auc_score(y,mn_proj)
-#
-#
-#     print "LOG RANK TEST: ", results.test_statistic
-#     #pdb.set_trace()
-#
-#     data = {"miRNA":[ "miRNA", ["/miRNA/FAIR"] ],"RNA":[ "RNA", ["/RNA/FAIR"] ], "DNA":["DNA",["/DNA/channel/0"]], "METH":["METH",["/METH/FAIR"]]}
-#     #data = {"METH":["METH",["/METH/FAIR"]]}
-#     #data = {"RNA":["RNA",["/RNA/FAIR"]]}
-#     results = {}
-#     survival_target=mn_proj #- mn_proj.mean()
-#     n2show = 20
-#     for data_name, data_info in data.iteritems():
-#       data_names = data_info[0]
-#       data_keys  = data_info[1]
-#       reg_projections, \
-#       reg_weights, \
-#       reg_averages, \
-#       reg_X, \
-#       reg_y = run_survival_prediction_xval_regression( data_dict['validation_tissues'], f, d, \
-#                                                       targets=survival_target, \
-#                                                       data_keys = data_keys, \
-#                                                       data_names = data_names, \
-#                                                       l1 = l1_regression, \
-#                                                       k_fold = folds_regression, seed = 2  )
-#       #pdb.set_trace()
-#       #reg_X-=reg_X.mean(0)
-#       reg_Ws = reg_weights[2]
-#       reg_bs = reg_weights[3]
-#       #print 'biases: ', reg_rna_bs.mean()
-#       I_reg_parameters = np.argsort( -np.abs( reg_weights[0] ) )
-#       I_reg_predictions = np.argsort( reg_projections[0] )
-#
-#       sorted_reg_X = pd.DataFrame( reg_X.values[I_reg_predictions,:][:,I_reg_parameters], columns = [reg_X.columns[i] for i in I_reg_parameters] )
-#
-#       high_rank_names = [reg_X.columns[i] for i in I_reg_parameters[:n2show]]
-#       low_rank_names = [reg_X.columns[i] for i in I_reg_parameters[-n2show:]]
-#
-#       y_pred = reg_projections[0];
-#       y_true = reg_y ;
-#       reg_r2 = r2_score(y_true, y_pred)
-#       reg_mse = mean_squared_error(y_true, y_pred)
-#       reg_expvar = explained_variance_score(y_true, y_pred)
-#       reg_corr = np.corrcoef( y_true, y_pred )[0][1]
-#
-#       print "%s Regression corr "%data_name, reg_corr
-#       print "%s Regression mse  "%data_name, reg_mse
-#
-#       #importance = importance_calc( reg_weights[2], reg_weights[3], reg_X.values, y_true, normalize = False )
-#       #importance = I_reg_parameters #importance_mat.mean(0)
-#       #pdb.set_trace()
-#       importance = np.abs( reg_weights[0])
-#       importance = np.abs( reg_weights[0]/reg_X.values.mean(0) )
-#
-#       I_w_reg_parameters_importance = np.argsort( -importance )
-#       w_sorted_reg_X3 = pd.DataFrame( np.dot( reg_X.values[I_reg_predictions,:][:,I_w_reg_parameters_importance[:n2show]], np.sign(np.diag(reg_weights[0][I_w_reg_parameters_importance[:n2show]]))), columns = [reg_X.columns[i] for i in I_w_reg_parameters_importance[:n2show]] )
-#
-#
-#       save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_pytorch_w_mn_" )
-#
-#       plot_data_with_importance(w_sorted_reg_X3, importance, I_w_reg_parameters_importance, "%s %s"%(disease, data_name), save_location_data )
-#
-#       importance = np.abs( reg_weights[0])
-#       #importance = np.abs( reg_weights[0]/reg_X.values.mean(0) )
-#
-#       I_w_reg_parameters_importance = np.argsort( -importance )
-#       w_sorted_reg_X3 = pd.DataFrame( np.dot( reg_X.values[I_reg_predictions,:][:,I_w_reg_parameters_importance[:n2show]], np.sign(np.diag(reg_weights[0][I_w_reg_parameters_importance[:n2show]]))), columns = [reg_X.columns[i] for i in I_w_reg_parameters_importance[:n2show]] )
-#
-#
-#       save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_pytorch_w_" )
-#
-#       plot_data_with_importance(w_sorted_reg_X3, importance, I_w_reg_parameters_importance, "%s %s"%(disease, data_name), save_location_data )
-#
-#
-#       save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_pytorch_W_%s.png"%data_name )
-#       f0=pp.figure()
-#       ax1 = f0.add_subplot(111)
-#       ax1.plot(reg_Ws[:,I_w_reg_parameters_importance].T, 'k.', alpha=0.85)
-#       ax1.plot(reg_Ws[:,I_w_reg_parameters_importance].T.mean(1), 'ro', alpha=0.85)
-#       #ax2 = f0.add_subplot(212)
-#       #ax2.plot( reg_Ws.T.mean(1), reg_X.values.mean(0), '.', alpha=0.5)
-#       pp.savefig(save_location_reg, dpi=300, format='png')
-#
-#       save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_v_true_pytorch_%s.png"%data_name )
-#       f0=pp.figure()
-#       ax1 = f0.add_subplot(111)
-#       ax1.plot(y_true, y_pred, 'k.', alpha=0.5)
-#       pp.xlabel( "True"); pp.ylabel( "Pred"); pp.title( "r2 = %0.3f  mse = %0.3f  corr = %0.3f"%(reg_r2,reg_mse,reg_corr ))
-#       #ax2 = f0.add_subplot(212)
-#       #ax2.plot( reg_Ws.T.mean(1), reg_X.values.mean(0), '.', alpha=0.5)
-#       pp.savefig(save_location_reg, dpi=300, format='png')
-#
-#       f2=pp.figure()
-#       ax1 = f2.add_subplot(111)
-#       I = np.argsort( - y_pred )
-#       I0 = I[:half]
-#       I1 = [] #I[third:2*third]
-#       I2 = I[half:]
-#       kmf = KaplanMeierFitter()
-#       if len(I2) > 0:
-#         kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
-#         ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
-#       if len(I1) > 0:
-#         kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
-#         ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='green')
-#       if len(I0) > 0:
-#         kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
-#         ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
-#       results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
-#       print "LOG RANK TEST: ", results.test_statistic
-#       save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval_regression_%s.png"%data_name )
-#       results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
-#       pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
-#       pp.savefig(save_location, dpi=300, format='png')
-#
-#       s.open()
-#       s["survival_xval"] = pd.DataFrame( mn_proj, index = E_train.index, columns = ["log time"])
-#       #pdb.set_trace()
-#       s.close()
-#
-#
-#       #pdb.set_trace()
-#     s.close()
-#     d.close()
-#     f.close()
-#
-  
-######################################################################################################
 
-def get_data( validation_list, fill_store, data_store ):
+######################################################################################################
+def filter_diseases( train_survival, val_survival, filters ):
+  if len(filters) == 0:
+    return train_survival, val_survival
+    
+  diseases_a = np.array( [d_bc.split('_')[0] for d_bc in train_survival.index.values], dtype=str) 
+  diseases_b = np.array( [d_bc.split('_')[0] for d_bc in val_survival.index.values], dtype=str) 
+
+  query_a = np.zeros( len(train_survival), dtype=bool )
+  query_b = np.zeros( len(val_survival), dtype=bool )
+  for f in filters:
+    I_a = diseases_a == f
+    I_b = diseases_b == f
+    
+    query_a |= I_a
+    query_b |= I_b
+    
+  
+  train_survival = train_survival[query_a]
+  val_survival = val_survival[query_b]
+  
+  return train_survival, val_survival
+    
+def add_diseases( train_survival, val_survival, tissue_store ):
+  
+  bcs_a = train_survival.index
+  bcs_b = val_survival.index
+  
+  tissues_a = tissue_store.loc[ bcs_a ].fillna(0)
+  tissues_b = tissue_store.loc[ bcs_b ].fillna(0)
+  
+  #pdb.set_trace()
+  return pd.concat( [train_survival, tissues_a], axis=1), pd.concat( [val_survival, tissues_b], axis=1)
+      
+def get_data( fill_store, data_store, filters = [], add_tissue = False ):
   fill_store.open()
   data_store.open()
   ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
   tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
   surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
   NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
-  val_survival  = NEW_SURVIVAL.join( fill_store["/Z/VAL/Z/mu"], how='inner' ).rename(columns={"patient.days_to_last_followup":"T","patient.days_to_death":"E"} ) #pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
+  
+  val_survival  = NEW_SURVIVAL.join( fill_store["/Z/VAL/Z/mu"], how='inner' ).rename(columns={"patient.days_to_last_followup":"T","patient.days_to_death":"E"} )
   
   #pdb.set_trace()
-  train_survival  = NEW_SURVIVAL.join( fill_store["/Z/BATCH/Z/mu"], how='inner' ).rename(columns={"patient.days_to_last_followup":"T","patient.days_to_death":"E"} ) #pd.concat( [NEW_SURVIVAL, fill_store["/Z/BATCH/Z/mu"]], axis=1, join = 'inner' )
+  train_survival  = NEW_SURVIVAL.join( fill_store["/Z/TRAIN/Z/mu"], how='inner' ).rename(columns={"patient.days_to_last_followup":"T","patient.days_to_death":"E"} ) #pd.concat( [NEW_SURVIVAL, fill_store["/Z/BATCH/Z/mu"]], axis=1, join = 'inner' )
   
   
   Times_train = train_survival[ "T" ].fillna(0).values.astype(int)+train_survival[ "E" ].fillna(0).values.astype(int)
@@ -358,61 +215,19 @@ def get_data( validation_list, fill_store, data_store ):
   train_survival["E"] = Events_train
   train_survival["T"] = Times_train
   
+  train_survival, val_survival = filter_diseases( train_survival, val_survival, filters )
+  
+  if add_tissue is True:
+    train_survival, val_survival = add_diseases( train_survival, val_survival, data_store['/CLINICAL/TISSUE'] )
+  
+  all_tissues = data_store['/CLINICAL/TISSUE']
+  
+  tissue_train = all_tissues.loc[train_survival.index]
+  tissue_val = all_tissues.loc[val_survival.index]
   fill_store.close()
   data_store.close()
   
-  return train_survival, val_survival
-  
-  
-  
-def run_pytorch_survival_folds( disease_list, fill_store, data_store, \
-                                k_fold = 10, \
-                                n_bootstraps = 10, \
-                                l1 = 0.0, \
-                                n_epochs=1000, \
-                                normalize = False, seed = 0):
-  fill_store.open()
-  data_store.open()
-  ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death"]]
-  tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
-  surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
-  NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns ) 
-  val_survival  = pd.concat( [NEW_SURVIVAL, fill_store["/Z/VAL/Z/mu"]], axis=1, join = 'inner' )
-  
-  fill_store.close()
-  data_store.close()
-  
-  #-------
-  predict_survival_train = val_survival #pd.concat( [test_survival, val_survival], axis=0, join = 'outer' )
-  predict_barcodes_train = predict_survival_train.index
-  splt = np.array( [ [s.split("_")[0], s.split("_")[1]] for s in predict_barcodes_train ] )
-  predict_survival_train = pd.DataFrame( predict_survival_train.values, index = splt[:,1], columns = predict_survival_train.columns )
-  predict_survival_train["disease"] = splt[:,0]
-
-  Times_train = predict_survival_train[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+predict_survival_train[ "patient.days_to_death" ].fillna(0).values.astype(int)
-  predict_survival_train["T"] = Times_train
-  Events_train = (1-np.isnan( predict_survival_train[ "patient.days_to_death" ].astype(float)) ).astype(int)
-  predict_survival_train["E"] = Events_train
-  
-  
-  X_columns = val_survival.columns[2:]
-  X = predict_survival_train[X_columns].values.astype(float)
-  i_event = pp.find(predict_survival_train["E"].values)
-  #median_time = np.median( predict_survival_train["T"].values[i_event] )
-  median_time = np.mean( predict_survival_train["T"].values )
-  i_less = pp.find(predict_survival_train["T"].values<median_time)
-  
-  y = predict_survival_train["E"].values.astype(int)
-  #y = np.zeros( len(predict_survival_train["T"].values) )
-  #y[i_less] = 1
-  
-  
-  E = predict_survival_train["E"].values
-  T = np.maximum( 1, predict_survival_train["T"].values )
-  Z = X
-  projections, probabilties, weights, averages = pytorch_survival_xval( E, T, Z, k_fold, l1=l1, n_epochs=n_epochs, normalize=normalize, seed=seed )
-  
-  return projections, probabilties, weights, averages, X, y, Events_train, Times_train
+  return train_survival, tissue_train, val_survival, tissue_val 
 
 
 if __name__ == "__main__":
@@ -467,251 +282,150 @@ if __name__ == "__main__":
     
     folds_survival =  survival_spec["folds_survival"]
     folds_regression =  survival_spec["folds_regression"]
+    if survival_spec.has_key("add_tissue"):
+      add_tissue = survival_spec["add_tissue"]
+    else:
+      add_tissue = False
+
+    if survival_spec.has_key("filters"):
+      filters = survival_spec["filters"]
+    else:
+      filters = []
     
-      
     
     save_weights_template = os.path.join( logging_dict[SAVEDIR], "survival_weights_" ) 
     
     #train, validation = get_data(data_dict['validation_tissues'], f, d)
-    train_survival, val_survival = get_data(data_dict['validation_tissues'], f, d)
-    f.open()
-    #d.open()
+    train_survival, train_tissue, val_survival, val_tissue = get_data(f, d, filters =filters, add_tissue = add_tissue)
+
     
-    Z_train = f["/Z/BATCH/Z/mu"].values
-    Z_val = f["/Z/VAL/Z/mu"].values
-    train_bcs = f["/Z/BATCH/Z/mu"].index.values.astype(str)
-    
-    disease_list = np.array( [st.split('_')[0] for st in train_bcs], dtype=str)
-    diseases = np.unique( disease_list)
-    n_diseases = len(diseases)
-    
-    z_min = np.min( Z_train )
-    z_max = np.max( Z_train )
-    z_plot = np.linspace( 1.1*z_min, 1.1*z_max, 500 )
-    
-    n_z = Z_train.shape[1]
-    train_means = np.zeros( (n_diseases,n_z) )
-    train_stds  = np.zeros( (n_diseases,n_z) )
-    val_means   = np.zeros(n_z)
-    val_stds    = np.zeros(n_z)
-    
-    for idx,disease in zip(range(n_diseases),diseases):
-      I_disease = pp.find( disease_list == disease )
-      train_means[idx,:] = Z_train[I_disease,:].mean(0)
-      train_stds[idx,:] = Z_train[I_disease,:].std(0)
-    
-    val_means = Z_val.mean(0)
-    val_stds = Z_val.std(0)
-    
-    fig=pp.figure()
-    
-    for z_idx in range(min(10,n_z)):
-      ax = fig.add_subplot( 2,5,z_idx+1)
-      for d_idx in range(n_diseases):
-        mu = train_means[d_idx, z_idx ]; std = train_stds[d_idx, z_idx ]
-        
-        pp.plot( z_plot, stats.norm(mu,std).pdf(z_plot), 'k-', lw=1,alpha=0.7 )
-        
-      pp.plot( z_plot, stats.norm(val_means[z_idx],val_stds[z_idx]).pdf(z_plot), 'r-', lw=2, alpha=0.9 )
-    pp.show()
-        
-    sym_kl = kl_divergence( val_means, val_stds, train_means, train_stds, sum_axis = 1 )
-      
-    closest_order = np.argsort( sym_kl )
-    
-    SYM_KL = np.zeros( (n_diseases,n_diseases) )
-    for d_idx in range(n_diseases):
-      SYM_KL[d_idx,:] = kl_divergence( train_means[d_idx,:], train_stds[d_idx,:], \
-                             train_means, train_stds, sum_axis = 1 )
-      
-      closest_order_ = np.argsort( SYM_KL[d_idx,:] )    
-      
-      print diseases[ closest_order_[:5] ]
-      SYM_KL[:,d_idx] = SYM_KL[d_idx,:]
-      
-    SYM_KL = pd.DataFrame( SYM_KL, columns = diseases, index=diseases)
-    pp.close('all')
+    # pdb.set_trace()
+    # fig=pp.figure()
+    #
+    # for z_idx in range(min(10,n_z)):
+    #   ax = fig.add_subplot( 2,5,z_idx+1)
+    #   for d_idx, disease in zip( range(n_diseases), diseases ):
+    #     mu = train_means[d_idx, z_idx ]; std = train_stds[d_idx, z_idx ]
+    #     is_val = False
+    #     for v_disease in data_dict['validation_tissues']:
+    #       if v_disease == disease:
+    #         is_val = True
+    #
+    #     if is_val:
+    #       pp.plot( z_plot, stats.norm(mu,std).pdf(z_plot), 'g--', lw=2,alpha=1 )
+    #     else:
+    #       pp.plot( z_plot, stats.norm(mu,std).pdf(z_plot), 'k-', lw=1,alpha=0.7 )
+    #
+    #   pp.plot( z_plot, stats.norm(val_means[z_idx],val_stds[z_idx]).pdf(z_plot), 'r-', lw=2, alpha=0.9 )
+    #pp.show()
+    #
+    # sym_kl = kl_divergence( val_means, val_stds, train_means, train_stds, sum_axis = 1 )
+    #
+    # closest_order = np.argsort( sym_kl )
+    #
+    # SYM_KL = np.zeros( (n_diseases,n_diseases) )
+    # for d_idx in range(n_diseases):
+    #   SYM_KL[d_idx,:] = kl_divergence( train_means[d_idx,:], train_stds[d_idx,:], \
+    #                          train_means, train_stds, sum_axis = 1 )
+    #
+    #   closest_order_ = np.argsort( SYM_KL[d_idx,:] )
+    #
+    #   print diseases[ closest_order_[:5] ]
+    #   SYM_KL[:,d_idx] = SYM_KL[d_idx,:]
+    #
+    # SYM_KL = pd.DataFrame( SYM_KL, columns = diseases, index=diseases)
+    # pp.close('all')
+    # projections, \
+    # probabilties, \
+    # times, \
+    # weights, train, val = run_pytorch_survival_train_val( train_survival, \
+    #                                                       val_survival, \
+    #                                                       spec = survival_spec )
     projections, \
     probabilties, \
-    weights, averages, X, y, E_train, T_train = run_pytorch_survival_train_val( train_survival, \
-                                                                                val_survival, \
-                                                                                l1= l1_survival, \
-                                                                                n_epochs = n_epochs )
+    times, \
+    weights, train, val = run_tensorflow_survival_train_val( train_survival, train_tissue, \
+                                                          val_survival, val_tissue, \
+                                                          spec = survival_spec )
+    model = weights[1]
+    weights = weights[0]
+    Z_val = val[0]
+    T_val = val[1]
+    E_val = val[2]
+
+    Z_train = train[0]
+    T_train = train[1]
+    E_train = train[2]
+        
+    #model.PlotSurvival( E_val, T_val, Z_val )
+                                                                                
+    train_proj  = projections[0]
+    val_proj    = projections[1]
+    train_prob  = probabilties[0]
+    val_prob    = probabilties[1]
+    train_times = times[0]
+    val_times   = times[1]
+    #projections, probabilties, times, w, train, val
+    
     disease = data_dict['validation_tissues'][0]
 
 
-    avg_proj = averages[0]
-    avg_prob = averages[1]
+    #avg_proj = averages[0]
+    #avg_prob = averages[1]
+
+    mn_w = weights
 
     fig = pp.figure()
-    mn_proj = projections[0]
-    #std_proj = np.sqrt(projections[1])
-    mn_prob = probabilties[0]
-    #std_prob = np.sqrt(probabilties[1])
-    mn_w = weights[0]
-    #std_w = np.sqrt(weights[1])
+    ax2 = fig.add_subplot(111)
+    roc_train, results_train, I_train = events_plot( train_proj, train, logging_dict,  data_dict['validation_tissues'][0], ax=ax2, name = "train" )
 
+    rg0 = min( train_proj[I_train[0]] ),max( train_proj[I_train[0]] )   
+    rg1 = min( train_proj[I_train[1]] ),max( train_proj[I_train[1]] )   
+    rg2 = min( train_proj[I_train[2]] ),max( train_proj[I_train[2]] )    
+    
+    fig = pp.figure()
     ax1 = fig.add_subplot(111)
-    I = pp.find( np.isnan(mn_prob))
-    mn_prob[I] = 0
-    I = pp.find( np.isinf(mn_prob))
-    mn_prob[I] = 1
-
-    I = pp.find( np.isnan(mn_proj))
-    mn_proj[I] = 0
-    I = pp.find( np.isinf(mn_proj))
-    mn_proj[I] = 1
-
-    I = np.argsort(-mn_proj)
-    #I = np.argsort(-mn_prob)
-    third = int(len(I)/3.0)
-    half = int(len(I)/2.0)
-    # I0 = I[:third]
-    # I1 = I[third:2*third]
-    # I2 = I[2*third:]
-    I0 = I[:half]
-    I1 = [] #I[third:2*third]
-    I2 = I[half:]
-    kmf = KaplanMeierFitter()
-    if len(I2) > 0:
-      kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
-      ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
-    if len(I1) > 0:
-      kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
-      ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='green')
-    if len(I0) > 0:
-      kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
-      ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
-    results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
-    pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
-    save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval.png" )
-    pp.savefig(save_location, dpi=300, format='png')
-    print "ROC mn_prob ", roc_auc_score(y,mn_prob)
-    print "ROC mn_proj ", roc_auc_score(y,mn_proj)
-
-
-    print "LOG RANK TEST: ", results.test_statistic
-    # #pdb.set_trace()
+    roc_val, results_val, I_val = events_plot( val_proj, val, logging_dict,  data_dict['validation_tissues'][0], ax=ax1, name = "validation", rgs = [rg0,rg1,rg2] )
+    
+    fig = pp.figure()
+    ax1 = fig.add_subplot(111)
+    roc_val, results_val, I_val = events_plot( val_proj, val, logging_dict,  data_dict['validation_tissues'][0], ax=ax1, name = "validation2")
+    
+    
+    
+    #f.open()
+    #d.open()
+    
+    # Z_train = f["/Z/TRAIN/Z/mu"].values
+    # Z_val = f["/Z/VAL/Z/mu"].values
+    # train_bcs = train_survival.index #f["/Z/TRAIN/Z/mu"].index.values.astype(str)
     #
-    # data = {"miRNA":[ "miRNA", ["/miRNA/FAIR"] ],"RNA":[ "RNA", ["/RNA/FAIR"] ], "DNA":["DNA",["/DNA/channel/0"]], "METH":["METH",["/METH/FAIR"]]}
-    # #data = {"METH":["METH",["/METH/FAIR"]]}
-    # #data = {"RNA":["RNA",["/RNA/FAIR"]]}
-    # results = {}
-    # survival_target=mn_proj #- mn_proj.mean()
-    # n2show = 20
-    # for data_name, data_info in data.iteritems():
-    #   data_names = data_info[0]
-    #   data_keys  = data_info[1]
-    #   reg_projections, \
-    #   reg_weights, \
-    #   reg_averages, \
-    #   reg_X, \
-    #   reg_y = run_survival_prediction_xval_regression( data_dict['validation_tissues'], f, d, \
-    #                                                   targets=survival_target, \
-    #                                                   data_keys = data_keys, \
-    #                                                   data_names = data_names, \
-    #                                                   l1 = l1_regression, \
-    #                                                   k_fold = folds_regression, seed = 2  )
-    #   #pdb.set_trace()
-    #   #reg_X-=reg_X.mean(0)
-    #   reg_Ws = reg_weights[2]
-    #   reg_bs = reg_weights[3]
-    #   #print 'biases: ', reg_rna_bs.mean()
-    #   I_reg_parameters = np.argsort( -np.abs( reg_weights[0] ) )
-    #   I_reg_predictions = np.argsort( reg_projections[0] )
+    # disease_list = np.array( [st.split('_')[0] for st in train_bcs], dtype=str)
+    # diseases = np.unique( disease_list)
+    # n_diseases = len(diseases)
     #
-    #   sorted_reg_X = pd.DataFrame( reg_X.values[I_reg_predictions,:][:,I_reg_parameters], columns = [reg_X.columns[i] for i in I_reg_parameters] )
+    # z_min = np.min( Z_train )
+    # z_max = np.max( Z_train )
+    # z_plot = np.linspace( 1.1*z_min, 1.1*z_max, 500 )
     #
-    #   high_rank_names = [reg_X.columns[i] for i in I_reg_parameters[:n2show]]
-    #   low_rank_names = [reg_X.columns[i] for i in I_reg_parameters[-n2show:]]
+    # n_z = Z_train.shape[1]
+    # train_means = np.zeros( (n_diseases,n_z) )
+    # train_stds  = np.zeros( (n_diseases,n_z) )
+    # val_means   = np.zeros(n_z)
+    # val_stds    = np.zeros(n_z)
     #
-    #   y_pred = reg_projections[0];
-    #   y_true = reg_y ;
-    #   reg_r2 = r2_score(y_true, y_pred)
-    #   reg_mse = mean_squared_error(y_true, y_pred)
-    #   reg_expvar = explained_variance_score(y_true, y_pred)
-    #   reg_corr = np.corrcoef( y_true, y_pred )[0][1]
+    # for idx,disease in zip(range(n_diseases),diseases):
+    #   I_disease = pp.find( disease_list == disease )
+    #   train_means[idx,:] = Z_train[I_disease,:].mean(0)
+    #   train_stds[idx,:] = Z_train[I_disease,:].std(0)
     #
-    #   print "%s Regression corr "%data_name, reg_corr
-    #   print "%s Regression mse  "%data_name, reg_mse
-    #
-    #   #importance = importance_calc( reg_weights[2], reg_weights[3], reg_X.values, y_true, normalize = False )
-    #   #importance = I_reg_parameters #importance_mat.mean(0)
-    #   #pdb.set_trace()
-    #   importance = np.abs( reg_weights[0])
-    #   importance = np.abs( reg_weights[0]/reg_X.values.mean(0) )
-    #
-    #   I_w_reg_parameters_importance = np.argsort( -importance )
-    #   w_sorted_reg_X3 = pd.DataFrame( np.dot( reg_X.values[I_reg_predictions,:][:,I_w_reg_parameters_importance[:n2show]], np.sign(np.diag(reg_weights[0][I_w_reg_parameters_importance[:n2show]]))), columns = [reg_X.columns[i] for i in I_w_reg_parameters_importance[:n2show]] )
-    #
-    #
-    #   save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_pytorch_w_mn_" )
-    #
-    #   plot_data_with_importance(w_sorted_reg_X3, importance, I_w_reg_parameters_importance, "%s %s"%(disease, data_name), save_location_data )
-    #
-    #   importance = np.abs( reg_weights[0])
-    #   #importance = np.abs( reg_weights[0]/reg_X.values.mean(0) )
-    #
-    #   I_w_reg_parameters_importance = np.argsort( -importance )
-    #   w_sorted_reg_X3 = pd.DataFrame( np.dot( reg_X.values[I_reg_predictions,:][:,I_w_reg_parameters_importance[:n2show]], np.sign(np.diag(reg_weights[0][I_w_reg_parameters_importance[:n2show]]))), columns = [reg_X.columns[i] for i in I_w_reg_parameters_importance[:n2show]] )
-    #
-    #
-    #   save_location_data = os.path.join( logging_dict[SAVEDIR], "survival_data_pytorch_w_" )
-    #
-    #   plot_data_with_importance(w_sorted_reg_X3, importance, I_w_reg_parameters_importance, "%s %s"%(disease, data_name), save_location_data )
-    #
-    #
-    #   save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_pytorch_W_%s.png"%data_name )
-    #   f0=pp.figure()
-    #   ax1 = f0.add_subplot(111)
-    #   ax1.plot(reg_Ws[:,I_w_reg_parameters_importance].T, 'k.', alpha=0.85)
-    #   ax1.plot(reg_Ws[:,I_w_reg_parameters_importance].T.mean(1), 'ro', alpha=0.85)
-    #   #ax2 = f0.add_subplot(212)
-    #   #ax2.plot( reg_Ws.T.mean(1), reg_X.values.mean(0), '.', alpha=0.5)
-    #   pp.savefig(save_location_reg, dpi=300, format='png')
-    #
-    #   save_location_reg = os.path.join( logging_dict[SAVEDIR], "survival_predictions_v_true_pytorch_%s.png"%data_name )
-    #   f0=pp.figure()
-    #   ax1 = f0.add_subplot(111)
-    #   ax1.plot(y_true, y_pred, 'k.', alpha=0.5)
-    #   pp.xlabel( "True"); pp.ylabel( "Pred"); pp.title( "r2 = %0.3f  mse = %0.3f  corr = %0.3f"%(reg_r2,reg_mse,reg_corr ))
-    #   #ax2 = f0.add_subplot(212)
-    #   #ax2.plot( reg_Ws.T.mean(1), reg_X.values.mean(0), '.', alpha=0.5)
-    #   pp.savefig(save_location_reg, dpi=300, format='png')
-    #
-    #   f2=pp.figure()
-    #   ax1 = f2.add_subplot(111)
-    #   I = np.argsort( - y_pred )
-    #   I0 = I[:half]
-    #   I1 = [] #I[third:2*third]
-    #   I2 = I[half:]
-    #   kmf = KaplanMeierFitter()
-    #   if len(I2) > 0:
-    #     kmf.fit(T_train[I2], event_observed=E_train[I2], label =  "lda_1 E=%d C=%d"%(E_train[I2].sum(),len(I2)-E_train[I2].sum()))
-    #     ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
-    #   if len(I1) > 0:
-    #     kmf.fit(T_train[I1], event_observed=E_train[I1], label =  "lda_1 E=%d C=%d"%(E_train[I1].sum(),len(I1)-E_train[I1].sum()))
-    #     ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='green')
-    #   if len(I0) > 0:
-    #     kmf.fit(T_train[I0], event_observed=E_train[I0], label = "lda_0 E=%d C=%d"%(E_train[I0].sum(),len(I0)-E_train[I0].sum()))
-    #     ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
-    #   results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
-    #   print "LOG RANK TEST: ", results.test_statistic
-    #   save_location = os.path.join( logging_dict[SAVEDIR], "survival_pytorch_xval_regression_%s.png"%data_name )
-    #   results = logrank_test(T_train[I0], T_train[I2], event_observed_A=E_train[I0], event_observed_B=E_train[I2])
-    #   pp.title("%s Log-rank Test: %0.1f"%(disease, results.test_statistic))
-    #   pp.savefig(save_location, dpi=300, format='png')
-    #
-    #   s.open()
-    #   s["survival_xval"] = pd.DataFrame( mn_proj, index = E_train.index, columns = ["log time"])
-    #   #pdb.set_trace()
-    #   s.close()
-      
-      
-      #pdb.set_trace()
+    # val_means = Z_val.mean(0)
+    # val_stds = Z_val.std(0)
+    
     s.close()
     d.close()
     f.close()  
+  pp.show()
 
 
   

@@ -423,22 +423,27 @@ class WeibullSurvivalModel(nn.Module):
       
       
     def fit( self, E_val, T_val, Z_val, n_epochs = 10000, lr = 2*1e-2, logging_frequency = 500, l1 = 0.0, normalize=False, testing_frequency = 100):
-
+      verbose = False
       self.stop = False
       self.test_cost = np.inf
       optimizer = optim.RMSprop(self.parameters(), lr=lr)
       
       for epoch in xrange(1, n_epochs):
-          
+        if verbose is True:
+          print( "epoch = " + str(epoch))
+        
         train_loss = 0
         optimizer.zero_grad()
-        
+        if verbose is True:
+          print(" a")
         E,T,Z = make_data( E_val, T_val, Z_val, bootstrap = False )
         data  = [E, T, Z]
-        
+        if verbose is True:
+          print(" b")
         log_hazard, log_survival = self(data)
         data_loss = -torch.mean( log_hazard + log_survival ) #loss_function(log_hazard, log_survival)
-        
+        if verbose is True:
+          print(" c")
         weight_loss = 0.0
         if l1 > 0:
           weight_loss += l1*torch.sum( torch.pow( self.beta,2) )
@@ -446,10 +451,17 @@ class WeibullSurvivalModel(nn.Module):
           #weight_loss += l1*torch.sum( torch.abs( self.beta) )
           #weight_loss += l1*torch.sum( torch.abs( self.alpha) )
         loss = data_loss + weight_loss
+        if verbose is True:
+          print(" d")
         loss.backward()
+        if verbose is True:
+          print(" e")
         optimizer.step()
+        if verbose is True:
+          print(" f")
 
         if epoch%logging_frequency == 0:
+          print(" XX")
           print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, data_loss.data[0] ))
           print('                alpha0: {:.3f} '.format( self.alpha0.data[0]))
           b_str = ""
@@ -457,11 +469,13 @@ class WeibullSurvivalModel(nn.Module):
             b_str += "%0.3f "%(b)
           print('                beta0: {:.3f} beta: {:s}'.format( self.beta0.data[0], b_str ) ) 
         if epoch%testing_frequency == 0:
+          print(" YY")
           self.test(epoch, logging_frequency)
           if self.stop is True:
             print("!!!!!!!!! early stopping" )
             return
       if n_epochs%logging_frequency == 0:
+        print(" ZZ")
         print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, data_loss.data[0] ))
         print('                alpha0: {:.3f} '.format( self.alpha0.data[0]))
         b_str = ""

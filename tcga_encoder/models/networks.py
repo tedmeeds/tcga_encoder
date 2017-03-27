@@ -84,6 +84,9 @@ class NeuralNetwork(object):
         
       elif key == OUTPUT:
         layer_specs[key] = value
+        
+      elif key == "weight_constant":
+        layer_specs[key] = value
           
       elif key == LAYER:
         pass  
@@ -98,6 +101,8 @@ class NeuralNetwork(object):
         layer_specs[key] = value
         
       else:
+        #elif key == OUTPUT:
+        layer_specs[key] = value
         print "WARNING: skipping layer specs for KEY=%s"%(key)
         
     return layer_specs

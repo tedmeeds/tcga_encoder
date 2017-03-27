@@ -220,6 +220,11 @@ def ForwardPropagate( input_layers, weights, biases, transfer_function = None, n
       activations = transfer_function( tf.add( added_activations, biases ), name = "act_%s"%(name) )
     else:
       activations = tf.add( added_activations, biases, name = "act_%s"%(name) )
+  else:
+    if transfer_function is not None:  
+      activations = transfer_function( added_activations, name = "act_%s"%(name) )
+    else:
+      activations = added_activations #, biases, name = "act_%s"%(name) )
     
   return activations, input_activations
 
@@ -242,7 +247,10 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     if layer_specs.has_key("biases"):
       has_biases = layer_specs["biases"]
     
-    weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases  )  
+    constant = 0.1
+    if layer_specs.has_key("weight_constant"):
+          constant = layer_specs["weight_constant"]
+    weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases, constant=constant  )  
     # if shared_layer is None:
     #   weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
     #   #total_penalty = tf.add_n( penalties )
@@ -271,7 +279,11 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       transfer = layer_specs[TRANSFER]
       
     layer = layer_class( layer_specs[SHAPE], input_layers, name, transfer )
-    
+   
+  elif layer_class == WeibullModelLayer:
+     assert len(input_layers) == 2, "must provide 2 inputs"
+     layer = layer_class( input_layers[0], input_layers[1], name )
+     
   elif layer_class == ScaledLayer:
     shape = layer_specs[SHAPE]
     input_layer = input_layers[0]
@@ -915,6 +927,80 @@ class DroppedSourceHiddenLayer(HiddenLayer):
   #   return __init__( self, shape, model, nam
       
 
+class WeibullModelLayer(object):
+  def __init__( self, scale_var, shape_var, name="" ):
+    # alpha == scale
+    # beta == shape
+    self.shape_var = shape_var.tensor
+    self.scale_var = scale_var.tensor
+    self.a = self.scale_var
+    self.b = self.shape_var
+    
+    self.log_scale = tf.log( self.scale_var + 1e-12)
+    self.log_shape = tf.log( self.shape_var + 1e-12)
+    self.name = name
+    
+  def EvalWeights(self):
+    return [] #return wa.extend(wb) #[w[0].eval() for w in self.weights]
+    
+  def EvalBiases(self):
+    #wa = [w.eval() for w in self.biases_a]
+    #wb = [w.eval() for w in self.biases_b]
+    #wa.extend(wb) #[w[0].eval() for w in self.weights]
+    
+    return []
+
+  def SetWeights( self, sess, weights ):
+    return None
+        
+      
+  def SetBiases( self, sess, biases ):
+    return None
+  
+  #  def LogLikelihood( self, E, T, Z ):
+  #    # E: events, binary vector indicating "death" (n by 1)
+  #    # T: time of event or censor (n by 1)
+  #    # Z: matrix of covariates (n by dim)
+  #    log_hazard = self.LogHazard( T, Z )
+  #    log_survival = self.LogSurvival( T, Z )
+  #
+  #    return E*log_hazard + log_survival
+  
+  def LogHazard( self, T ):
+    return self.log_shape + self.log_scale + (self.scale_var-1.0)*tf.log( T )
+  
+  def LogSurvival( self, T ):
+    return -self.CumulativeHazard( T)
+  
+  def LogCumulativeHazard( self, T ):
+    return self.log_shape + self.scale_var*tf.log(T)
+
+  def CumulativeHazard( self, T ):
+    return tf.exp( self.LogCumulativeHazard(T) )
+                
+  def LogLikelihood( self, X, as_matrix = False, boolean_mask = None ):
+    #pdb.set_trace()
+    #Z = X[0]
+    T = X[0]
+    E = X[1]
+    log_hazard = self.LogHazard( T.tensor )
+    log_survival = self.LogSurvival( T.tensor )
+    #
+    #    return E*log_hazard + log_survival
+    
+    
+    self.loglik_matrix = E.tensor*log_hazard + log_survival
+
+    
+    if boolean_mask is not None:
+      self.loglik_matrix = tf.boolean_mask( self.loglik_matrix, boolean_mask )
+      
+    self.loglik = tf.reduce_sum(self.loglik_matrix ,name = self.name+"_loglik")
+    if as_matrix is True:
+      return self.loglik_matrix
+    else:
+      return self.loglik
+  
 
       
 class GaussianModelLayer(HiddenLayer):    

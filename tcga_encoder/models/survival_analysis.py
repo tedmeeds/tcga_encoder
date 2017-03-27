@@ -10,7 +10,9 @@ import pdb
 from lifelines import KaplanMeierFitter
 import torch
 from torch.autograd import Variable
-from tcga_encoder.models.pytorch.weibull_survival import WeibullSurvivalModel,WeibullSurvivalModelNeuralNetwork
+from tcga_encoder.models.tf.weibull_survival import WeibullSurvivalModel
+from tcga_encoder.models.tf.main import main as tf_main
+#from tcga_encoder.models.pytorch.weibull_survival import WeibullSurvivalModel,WeibullSurvivalModelNeuralNetwork
 from tcga_encoder.models.pytorch.lasso_regression import PytorchLasso
 from tcga_encoder.models.pytorch.bootstrap_linear_regression import BootstrapLinearRegression, BootstrapLassoRegression
 from tcga_encoder.models.pytorch.dropout_linear_regression import DropoutLinearRegression
@@ -337,7 +339,106 @@ def predict_groups_with_loo_with_regression_gprior( X, y, C ):
   #avg_probability=mean_probabilities
   return (mean_projections,var_projections),(w_mn,w_var,Ws,bs),(avg_projection,)
 
-def pytorch_survival_train_val( train, val, l1=0, n_epochs=1000 ):
+def tensorflow_survival_train_val( train, val, spec = None ):
+  l1 = 0
+  n_epochs = 1000
+  lr = 1e-3
+  logging_frequency = 2000
+  testing_frequency = 100
+  if spec is not None:
+    if spec.has_key( "lr" ):
+      lr = float( spec["lr"] )
+    if spec.has_key( "l1" ):
+      l1 = float( spec["l1"] )
+    if spec.has_key( "n_epochs" ):
+      n_epochs = int( spec["n_epochs"] )
+    if spec.has_key( "logging_frequency" ):
+      logging_frequency = int( spec["logging_frequency"] )
+    if spec.has_key( "testing_frequency" ):
+      testing_frequency = int( spec["testing_frequency"] )
+  
+  print( "Running : pytorch_survival_train_val")
+  print ("  with  ")
+  print( " l1 = " + str(l1))
+  print( " n_epochs = " + str(n_epochs))
+  print( " lr = " + str(lr))
+  print( " logging_frequency = " + str(logging_frequency))
+  print( " testing_frequency = " + str(testing_frequency))
+  Z_train = train[0]
+  T_train = train[1]
+  E_train = train[2]
+  tissue_train = train[3]
+  
+  Z_val = val[0]
+  T_val = val[1]
+  E_val = val[2]
+  tissue_val = val[3]
+  
+  #Z_val -= Z_train.mean(0)
+  #Z_val /= Z_train.std(0)
+  
+  #Z_train -= Z_train.mean(0)
+  #Z_train /= Z_train.std(0)
+  #print "epsilon", epsilon
+  n,dim = Z_val.shape
+  assert len(T_val) == n, "incorrect sizes"
+  assert len(E_val) == n, "incorrect sizes"
+  
+  
+  model, sess = tf_main( train, val, spec)
+  model.sess = sess
+  
+  print "Done: model.fit()"
+  
+  
+  
+  
+  w = model.GetWeights( sess) #np.zeros(5) #model.w.data.numpy().flatten() #beta.data.numpy()
+
+  #pdb.set_trace()
+  test_proj = np.squeeze( model.LogTime( sess, Z_val, tissue_val, at_time=0.5 ) )
+  train_proj = np.squeeze( model.LogTime( sess, Z_train, tissue_train, at_time=0.5 ) )
+  
+  train_cost = model.ComputeCost(sess, train)
+  test_cost = model.ComputeCost(sess, val)
+  
+  test_time = np.exp( test_proj ) 
+  #T_test_proj = Variable( torch.FloatTensor( test_time ) )
+  #test_prob = model.LogLikelihood( E_test_py, T_test_py, Z_test_py ).data.numpy()
+  
+  #train_proj = np.squeeze( model.LogTime( Z_train_py, at_time=0.5 ).data.numpy() )
+  
+  train_time = np.exp( train_proj ) 
+  #T_train_proj = Variable( torch.FloatTensor( train_time ) )
+  #train_prob = model.LogLikelihood( E_train_py, T_train_py, Z_train_py ).data.numpy()
+  #pdb.set_trace()
+  return (train_proj, test_proj), (train_cost, test_cost), (train_time, test_time), (w,model)
+  
+def pytorch_survival_train_val( train, val, spec = None ):
+  l1 = 0
+  n_epochs = 1000
+  lr = 1e-3
+  logging_frequency = 2000
+  testing_frequency = 100
+  if spec is not None:
+    if spec.has_key( "lr" ):
+      lr = float( spec["lr"] )
+    if spec.has_key( "l1" ):
+      l1 = float( spec["l1"] )
+    if spec.has_key( "n_epochs" ):
+      n_epochs = int( spec["n_epochs"] )
+    if spec.has_key( "logging_frequency" ):
+      logging_frequency = int( spec["logging_frequency"] )
+    if spec.has_key( "testing_frequency" ):
+      testing_frequency = int( spec["testing_frequency"] )
+  
+  print( "Running : pytorch_survival_train_val")
+  print ("  with  ")
+  print( " l1 = " + str(l1))
+  print( " n_epochs = " + str(n_epochs))
+  print( " lr = " + str(lr))
+  print( " logging_frequency = " + str(logging_frequency))
+  print( " testing_frequency = " + str(testing_frequency))
   Z_train = train[0]
   T_train = train[1]
   E_train = train[2]
@@ -346,15 +447,17 @@ def pytorch_survival_train_val( train, val, l1=0, n_epochs=1000 ):
   T_val = val[1]
   E_val = val[2]
   
-  Z_val -= Z_train.mean(0)
-  Z_val /= Z_train.std(0)
+  #Z_val -= Z_train.mean(0)
+  #Z_val /= Z_train.std(0)
   
-  Z_train -= Z_train.mean(0)
-  Z_train /= Z_train.std(0)
+  #Z_train -= Z_train.mean(0)
+  #Z_train /= Z_train.std(0)
   #print "epsilon", epsilon
   n,dim = Z_val.shape
   assert len(T_val) == n, "incorrect sizes"
   assert len(E_val) == n, "incorrect sizes"
+  
+  
   
   avg_projection = np.zeros( n, dtype=float )
   avg_probability = np.zeros( n, dtype=float )
@@ -381,67 +484,32 @@ def pytorch_survival_train_val( train, val, l1=0, n_epochs=1000 ):
   #model =  WeibullSurvivalModelNeuralNetwork( dim, K )
   model.add_test(E_test_py,T_test_py,Z_test_py)
   #model.fit( E_train, T_train, Z_train, lr = 1e-3, logging_frequency = 2000, l1 = l1, n_epochs = n_epochs, normalize=False )
-  model.fit( E_train, T_train, Z_train, lr = 1e-3, logging_frequency = 2000, l1 = l1, n_epochs = n_epochs, normalize=False )
+  model.fit( E_train, T_train, Z_train, lr = lr, \
+                                        logging_frequency = logging_frequency, \
+                                        l1 = l1, \
+                                        n_epochs = n_epochs, \
+                                        normalize=False, testing_frequency=testing_frequency )
   
+  print "Done: model.fit()"
   w = model.w.data.numpy().flatten() #beta.data.numpy()
 
   #pdb.set_trace()
   test_proj = np.squeeze( model.LogTime( Z_test_py, at_time=0.5 ).data.numpy() )
   
-  time_proj = np.exp( test_proj )
   
-  T_test_proj = Variable( torch.FloatTensor( time_proj ) )
-  #
-  # S_test_proj = np.squeeze(model.Survival( T_test_proj, Z_test ).data.numpy())
-  # S_test      = np.squeeze(model.Survival( T_test, Z_test ).data.numpy())
-
-  #
-  # f = pp.figure()
-  # ax1 = f.add_subplot(121)
-  # kmf = KaplanMeierFitter()
-  # kmf.fit(T_train.data.numpy(), event_observed=E_train.data.numpy(), label =  "train" )
-  # ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
-  # kmf.fit(T_test.data.numpy(), event_observed=E_test.data.numpy(), label =  "test" )
-  # ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
-  # model.PlotSurvival( E_train, T_train, Z_train, ax=ax1, color = "b" )
-  # ax=model.PlotSurvival( E_test, T_test, Z_test, ax=ax1, color = "r" )
-  #
-  # ax1 = f.add_subplot(122)
-  # kmf = KaplanMeierFitter()
-  # kmf.fit(T_val.data.numpy(), event_observed=E_val.data.numpy(), label =  "train" )
-  # ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='blue')
-  # kmf.fit(T_test.data.numpy(), event_observed=E_test.data.numpy(), label =  "test" )
-  # ax1=kmf.plot(ax=ax1,at_risk_counts=False,show_censors=True, color='red')
-  # model.PlotSurvival( E_train, T_train, Z_train, ax=ax1, color = "b" )
-  # ax=model.PlotSurvival( E_test, T_test, Z_test, ax=ax1, color = "r" )
-  #ax.vlines(time_proj,0,1)
-  #ax.plot( np.vstack( (T_test.data.numpy(), time_proj) ), np.vstack( (S_test, S_test_proj) ), 'm-')
-  #pp.title("TRAIN")
-
-  #pp.show()
-  #pdb.set_trace()
-  #pp.close('all')
+  test_time = np.exp( test_proj ) 
+  T_test_proj = Variable( torch.FloatTensor( test_time ) )
   test_prob = model.LogLikelihood( E_test_py, T_test_py, Z_test_py ).data.numpy()
-  #pdb.set_trace()  
-  mean_projections   += test_proj
-  mean_probabilities += test_prob
   
-  var_projections   += np.square( test_proj )
-  var_probabilities += np.square( test_prob )
+  train_proj = np.squeeze( model.LogTime( Z_train_py, at_time=0.5 ).data.numpy() )
   
-  w_mean += w
-  w_var += np.square(w)
-  w_mn = w_mean 
+  train_time = np.exp( train_proj ) 
+  T_train_proj = Variable( torch.FloatTensor( train_time ) )
+  train_prob = model.LogLikelihood( E_train_py, T_train_py, Z_train_py ).data.numpy()
 
-  #I=pp.find( np.isinf(avg_probability) )
-  #avg_probability[I] = 1 
-    
-  w_var   -= np.square( w_mean )
+  return (train_proj, test_proj), (train_prob, test_prob), (train_time, test_time), w
   
-  var_projections   -= np.square( mean_projections )
-  var_probabilities -= np.square( mean_probabilities )
-  
-  return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
+  #return (mean_projections,var_projections),(mean_probabilities,var_probabilities),(w_mean,w_var),(avg_projection,avg_probability)
   
   
 def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomize = True, seed = 0, l1 = 0.0, n_epochs = 1000, normalize = False ):
@@ -500,6 +568,7 @@ def pytorch_survival_xval( E, T, Z_orig, k_fold = 10, n_bootstraps = 10, randomi
     model.add_test(E_test,T_test,Z_test)
     #model.fit( E_train, T_train, Z_train, lr = 1e-3, logging_frequency = 2000, l1 = l1, n_epochs = n_epochs, normalize=False )
     model.fit( E_train_val, T_train_val, Z_train_val, lr = 1e-3, logging_frequency = 2000, l1 = l1, n_epochs = n_epochs, normalize=False )
+    
     
     w = model.w.data.numpy().flatten() #beta.data.numpy()
 
@@ -1084,7 +1153,7 @@ def run_survival_analysis_lda_loo( disease_list, fill_store, data_store, k_fold 
   
   return projections, probabilties, weights, averages, X, y, Events_train, Times_train
 
-def run_pytorch_survival_train_val( train_survival, val_survival, l1= 0.0, n_epochs = 1000 ):
+def run_pytorch_survival_train_val( train_survival, val_survival, spec = None ):
   # projections, \
   # probabilties, \
   # weights, averages, X, y, E_train, T_train =
@@ -1106,10 +1175,38 @@ def run_pytorch_survival_train_val( train_survival, val_survival, l1= 0.0, n_epo
   
   train = [X_train, T_train, E_train]
   val = [X_val, T_val, E_val]
-  projections, probabilties, weights, averages = pytorch_survival_train_val( train, val, l1=l1, n_epochs=n_epochs )
+  #(train_proj, test_proj), (train_prob, test_prob), (train_time, test_time), w
+  projections, probabilties, times, w = pytorch_survival_train_val( train, val, spec = spec )
   
-  return projections, probabilties, weights, averages, X_val, E_val, E_train, T_train
+  return projections, probabilties, times, w, train, val
 
+def run_tensorflow_survival_train_val( train_survival, tissue_train, val_survival, tissue_val, spec = None ):
+  # projections, \
+  # probabilties, \
+  # weights, averages, X, y, E_train, T_train =
+  
+  X_columns = val_survival.columns[2:]
+  
+  X_train = train_survival[X_columns].values.astype(float)
+  X_val   = val_survival[X_columns].values.astype(float)
+  
+  i_event = pp.find(train_survival["E"].values)
+  E_train = train_survival["E"].values.astype(int)
+  
+  i_event = pp.find(val_survival["E"].values)
+  E_val = val_survival["E"].values.astype(int)
+  
+  #E = predict_survival_train["E"].values
+  T_train = np.maximum( 1, train_survival["T"].values )
+  T_val   = np.maximum( 1, val_survival["T"].values )
+  
+  train = [X_train, T_train, E_train, tissue_train.values]
+  val = [X_val, T_val, E_val, tissue_val.values]
+  #(train_proj, test_proj), (train_prob, test_prob), (train_time, test_time), w
+  projections, probabilties, times, w = tensorflow_survival_train_val( train, val, spec = spec )
+  
+  return projections, probabilties, times, w, train, val
+  
 def run_pytorch_survival_folds( disease_list, fill_store, data_store, \
                                 k_fold = 10, \
                                 n_bootstraps = 10, \
