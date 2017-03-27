@@ -33,13 +33,13 @@ def events_plot( projection, data, logging_dict, disease, ax = None, name = "", 
   half = int(len(I)/2.0)
   
   if rgs is None:
-    I0 = I[:third]
-    I1 = I[third:2*third]
-    I2 = I[2*third:]
+    I0 = I[:half]
+    I1 = []#I[third:2*third]
+    I2 = I[half:]
   else:
     I0 = pp.find( projection > rgs[0][0])
     I2 = pp.find( projection < rgs[2][1])
-    I1 = pp.find( (projection > rgs[2][1])  * (projection < rgs[0][0]))
+    I1 = []#pp.find( (projection > rgs[2][1])  * (projection < rgs[0][0]))
     #pdb.set_trace()
   # I0 = I[:half]
   # I1 = [] #I[third:2*third]
@@ -340,7 +340,7 @@ if __name__ == "__main__":
     roc_train, results_train, I_train = events_plot( train_proj, train, logging_dict,  data_dict['validation_tissues'][0], ax=ax2, name = "train" )
 
     rg0 = min( train_proj[I_train[0]] ),max( train_proj[I_train[0]] )   
-    rg1 = min( train_proj[I_train[1]] ),max( train_proj[I_train[1]] )   
+    rg1 = []#min( train_proj[I_train[1]] ),max( train_proj[I_train[1]] )   
     rg2 = min( train_proj[I_train[2]] ),max( train_proj[I_train[2]] )    
     
     fig = pp.figure()
