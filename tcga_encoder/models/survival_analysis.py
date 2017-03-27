@@ -494,14 +494,14 @@ def pytorch_survival_train_val( train, val, spec = None ):
   w = model.w.data.numpy().flatten() #beta.data.numpy()
 
   #pdb.set_trace()
-  test_proj = np.squeeze( model.LogTime( Z_test_py, at_time=0.9 ).data.numpy() )
+  test_proj = np.squeeze( model.LogTime( Z_test_py, at_time=0.5 ).data.numpy() )
   
   
   test_time = np.exp( test_proj ) 
   T_test_proj = Variable( torch.FloatTensor( test_time ) )
   test_prob = model.LogLikelihood( E_test_py, T_test_py, Z_test_py ).data.numpy()
   
-  train_proj = np.squeeze( model.LogTime( Z_train_py, at_time=0.9 ).data.numpy() )
+  train_proj = np.squeeze( model.LogTime( Z_train_py, at_time=0.5 ).data.numpy() )
   
   train_time = np.exp( train_proj ) 
   T_train_proj = Variable( torch.FloatTensor( train_time ) )
