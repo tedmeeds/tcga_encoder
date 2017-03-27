@@ -299,48 +299,8 @@ if __name__ == "__main__":
     train_survival, train_tissue, val_survival, val_tissue = get_data(f, d, filters =filters, add_tissue = add_tissue)
 
     
-    # pdb.set_trace()
-    # fig=pp.figure()
-    #
-    # for z_idx in range(min(10,n_z)):
-    #   ax = fig.add_subplot( 2,5,z_idx+1)
-    #   for d_idx, disease in zip( range(n_diseases), diseases ):
-    #     mu = train_means[d_idx, z_idx ]; std = train_stds[d_idx, z_idx ]
-    #     is_val = False
-    #     for v_disease in data_dict['validation_tissues']:
-    #       if v_disease == disease:
-    #         is_val = True
-    #
-    #     if is_val:
-    #       pp.plot( z_plot, stats.norm(mu,std).pdf(z_plot), 'g--', lw=2,alpha=1 )
-    #     else:
-    #       pp.plot( z_plot, stats.norm(mu,std).pdf(z_plot), 'k-', lw=1,alpha=0.7 )
-    #
-    #   pp.plot( z_plot, stats.norm(val_means[z_idx],val_stds[z_idx]).pdf(z_plot), 'r-', lw=2, alpha=0.9 )
-    #pp.show()
-    #
-    # sym_kl = kl_divergence( val_means, val_stds, train_means, train_stds, sum_axis = 1 )
-    #
-    # closest_order = np.argsort( sym_kl )
-    #
-    # SYM_KL = np.zeros( (n_diseases,n_diseases) )
-    # for d_idx in range(n_diseases):
-    #   SYM_KL[d_idx,:] = kl_divergence( train_means[d_idx,:], train_stds[d_idx,:], \
-    #                          train_means, train_stds, sum_axis = 1 )
-    #
-    #   closest_order_ = np.argsort( SYM_KL[d_idx,:] )
-    #
-    #   print diseases[ closest_order_[:5] ]
-    #   SYM_KL[:,d_idx] = SYM_KL[d_idx,:]
-    #
-    # SYM_KL = pd.DataFrame( SYM_KL, columns = diseases, index=diseases)
-    # pp.close('all')
-    # projections, \
-    # probabilties, \
-    # times, \
-    # weights, train, val = run_pytorch_survival_train_val( train_survival, \
-    #                                                       val_survival, \
-    #                                                       spec = survival_spec )
+    pdb.set_trace()
+
     projections, \
     probabilties, \
     times, \
