@@ -1,4 +1,4 @@
-
+import tensorflow
 import tcga_encoder
 import sys, os, yaml
 import numpy as np
