@@ -299,7 +299,7 @@ if __name__ == "__main__":
     train_survival, train_tissue, val_survival, val_tissue = get_data(f, d, filters =filters, add_tissue = add_tissue)
 
     
-    pdb.set_trace()
+    #pdb.set_trace()
 
     projections, \
     probabilties, \
