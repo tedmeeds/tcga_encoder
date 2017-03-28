@@ -1756,7 +1756,7 @@ class BetaModelLayer(HiddenLayer):
     #wa = [w.eval() for w in self.biases_a]
     #wb = [w.eval() for w in self.biases_b]
     #wa.extend(wb) #[w[0].eval() for w in self.weights]
-
+    print "BIASES: ", self.biases
     if self.biases is None:
       return []
     return [w.eval() for w in self.biases]
