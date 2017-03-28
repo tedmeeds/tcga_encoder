@@ -882,6 +882,8 @@ class HiddenLayer(object):
       return self.weights.eval()
     
   def EvalBiases(self):
+    if self.biases is None:
+      return []
     if self.biases.__class__ == list:
       return [w.eval() for w in self.biases]
     else:
@@ -1040,6 +1042,8 @@ class GaussianModelLayer(HiddenLayer):
     return [w[0].eval() for w in self.weights]
     
   def EvalBiases(self):
+    if self.biases is None:
+      return []
     return [w.eval() for w in self.biases]
 
   def SetWeights( self, sess, weights ):
@@ -1752,7 +1756,9 @@ class BetaModelLayer(HiddenLayer):
     #wa = [w.eval() for w in self.biases_a]
     #wb = [w.eval() for w in self.biases_b]
     #wa.extend(wb) #[w[0].eval() for w in self.weights]
-    
+
+    if self.biases is None:
+      return []
     return [w.eval() for w in self.biases]
 
   def SetWeights( self, sess, weights ):
