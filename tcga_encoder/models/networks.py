@@ -331,6 +331,7 @@ class NeuralNetwork(object):
     #pdb.set_trace()
       
   def SaveBiases( self, store, name, weights, key = "b" ):
+    print "SaveBiases", name, weights
     if weights.__class__ == list:
       for w, idx in zip( weights, range(len(weights))):
         store[ name + "/%s/b%d"%(key,idx) ] = pd.DataFrame( w )
