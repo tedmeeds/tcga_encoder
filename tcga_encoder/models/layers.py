@@ -888,7 +888,7 @@ class HiddenLayer(object):
       b = []
       for w in self.biases:
         if w is not None:
-          b.append( w.eval)
+          b.append( w.eval())
       return b  
       #return [w.eval() for w in self.biases]
     else:
@@ -1052,7 +1052,7 @@ class GaussianModelLayer(HiddenLayer):
     b = []
     for w in self.biases:
       if w is not None:
-        b.append( w.eval)
+        b.append( w.eval())
     return b
     
     # if self.biases is None:
@@ -1772,7 +1772,7 @@ class BetaModelLayer(HiddenLayer):
       b = []
       for w in self.biases:
         if w is not None:
-          b.append( w.eval)
+          b.append( w.eval())
       return b  
       #return [w.eval() for w in self.biases]
     else:
