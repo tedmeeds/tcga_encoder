@@ -13,31 +13,13 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 
-#import tensorflow as tf
-
-#load_data_from_dict
-
-#from tensorflow import *
-
-
-
-#from models.layers import *
-#from models.regularizers import *
-#from models.algorithms import *
-
-#from models.vae.tcga_models import *
-#from utils.utils import *
-#from data.load_datasets_from_broad import load_sources
-
-#from utils.image_utils import *
-
 
 def add_variables( var_dict, data_dict ):
   # add very specific numbers:
   var_dict["dna_dim"]    = data_dict['dataset'].GetDimension("DNA")
   var_dict["meth_dim"]   = data_dict['dataset'].GetDimension("METH")
   var_dict["rna_dim"]    = data_dict['dataset'].GetDimension("RNA")
-  var_dict["mirna_dim"]    = data_dict['dataset'].GetDimension("miRNA")
+  var_dict["mirna_dim"]  = data_dict['dataset'].GetDimension("miRNA")
   var_dict["tissue_dim"] = data_dict['dataset'].GetDimension("TISSUE")
   
 def load_architecture( arch_dict, data_dict ):

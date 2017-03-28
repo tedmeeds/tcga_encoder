@@ -65,12 +65,16 @@ class TCGABatcherABC( object ):
     self.latent_store.close()
     self.model_store.close()
     self.epoch_store.close()  
-    
-  def Initialize(self):
+
+  def GetAlgoDictStuff(self):
     self.beta = self.algo_dict["beta_init"]
     self.free_bits = self.algo_dict["free_bits_init"]
     self.r1 = self.algo_dict["r1"]
     self.r2 = self.algo_dict["r2"]
+        
+  def Initialize(self):
+    self.GetAlgoDictStuff()
+
     self.savedir    = self.logging_dict[SAVEDIR]
     
     self.keep_rates = OrderedDict()
@@ -130,9 +134,9 @@ class TCGABatcherABC( object ):
           
 
         
-    self.observation_source_indices = []
-    for source in self.arch_dict["sources"]:
-      self.observation_source_indices.append( self.observed_source2idx[source] )
+    # self.observation_source_indices = []
+    # for source in self.arch_dict["sources"]:
+    #   self.observation_source_indices.append( self.observed_source2idx[source] )
 
     self.observation_source_indices_input = []
     for source in self.arch_dict[INPUT_SOURCES]:
@@ -353,26 +357,48 @@ class TCGABatcherABC( object ):
     
     self.tissue_statistics = {}
     
+    
     tissue_names = self.train_tissue.columns
     stats = np.zeros( (5,len(tissue_names)))
     for t_idx, tissue in zip( range(len(tissue_names)),tissue_names ):
       bcs = self.train_tissue.loc[self.train_tissue[tissue]==1].index.values
       
-      rna=self.data_store[self.RNA_key].loc[ bcs ]
-      mirna=self.data_store[self.miRNA_key].loc[ bcs ]
-      meth=self.data_store[self.METH_key].loc[ bcs ]
+      #pdb.set_trace()
+      
+      #mirna=self.data_store[self.miRNA_key].loc[ bcs ]
+      
       
       self.tissue_statistics[ tissue ] = {}
       self.tissue_statistics[ tissue ][ RNA ] = {}
       self.tissue_statistics[ tissue ][ miRNA ] = {}
       self.tissue_statistics[ tissue ][ METH ] = {}
-      self.tissue_statistics[ tissue ][ RNA ][ "mean"]   = rna.mean(0).fillna(0)
-      self.tissue_statistics[ tissue ][ miRNA ][ "mean"] = mirna.mean(0).fillna(0)
-      self.tissue_statistics[ tissue ][ METH ][ "mean"]  = meth.mean(0).fillna(0)
-      self.tissue_statistics[ tissue ][ RNA ][ "var"]   = rna.var(0).fillna(0)
-      self.tissue_statistics[ tissue ][ miRNA ][ "var"] = mirna.var(0).fillna(0)
-      self.tissue_statistics[ tissue ][ METH ][ "var"]  = meth.var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ RNA ][ "mean"]   = self.data_store[self.RNA_key].mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ miRNA ][ "mean"] = self.data_store[self.miRNA_key].mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ METH ][ "mean"]  = self.data_store[self.METH_key].mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ RNA ][ "var"]   = self.data_store[self.RNA_key].var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ miRNA ][ "var"] = self.data_store[self.miRNA_key].var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ METH ][ "var"]  = self.data_store[self.METH_key].var(0).fillna(0)
+
+      try:
+        rna=self.data_store[self.RNA_key].loc[ bcs ]
+        self.tissue_statistics[ tissue ][ RNA ][ "mean"]   = rna.mean(0).fillna(0)
+        self.tissue_statistics[ tissue ][ RNA ][ "var"]   = rna.var(0).fillna(0)
+      except:
+        print "No RNA for %s"%(tissue)
       
+      try:
+        mirna=self.data_store[self.miRNA_key].loc[ bcs ]
+        self.tissue_statistics[ tissue ][ miRNA ][ "mean"] = mirna.mean(0).fillna(0)
+        self.tissue_statistics[ tissue ][ miRNA ][ "var"] = mirna.var(0).fillna(0)
+      except:
+        print "No miRNA for %s"%(tissue)
+        
+      try:
+        meth=self.data_store[self.METH_key].loc[ bcs ]
+        self.tissue_statistics[ tissue ][ METH ][ "var"]  = meth.var(0).fillna(0)  
+        self.tissue_statistics[ tissue ][ METH ][ "mean"]  = meth.mean(0).fillna(0)    
+      except:
+        print "No METH for %s"%(tissue)
 
       self.tissue_statistics[ tissue ][ RNA ][ "alpha"]   = compute_alpha( self.tissue_statistics[ tissue ][ RNA ][ "mean"], self.tissue_statistics[ tissue ][ RNA ][ "var"])
       self.tissue_statistics[ tissue ][ miRNA ][ "alpha"] = compute_alpha( self.tissue_statistics[ tissue ][ miRNA ][ "mean"], self.tissue_statistics[ tissue ][ miRNA ][ "var"])
@@ -444,7 +470,7 @@ class TCGABatcherABC( object ):
           
     self.source2darkcolor = {RNA:"darkblue", DNA:"darkgreen", METH:"darkred", miRNA:"darkorange", RNA+"_b":"lightblue", DNA+"_b":"palegreen", METH+"_b":"lightsalmon", miRNA+"_b":"moccasin"}
     self.source2lightcolor = {RNA:"lightblue", DNA:"palegreen", METH:"lightsalmon", miRNA:"moccasin",RNA+"_b":"lightblue", DNA+"_b":"palegreen", METH+"_b":"lightsalmon", miRNA+"_b":"moccasin"}
-    self.source2mediumcolor = {RNA:"dodgerblue", DNA:"darksage", METH:"red", miRNA:"orange", RNA+"_b":"darkblue", DNA+"_b":"darkgreen", METH+"_b":"darkred", miRNA+"_b":"darkorange"}
+    self.source2mediumcolor = {RNA:"dodgerblue", DNA:"yellowgreen", METH:"red", miRNA:"orange", RNA+"_b":"darkblue", DNA+"_b":"darkgreen", METH+"_b":"darkred", miRNA+"_b":"darkorange"}
     
     self.source2mediumcolor[RNA+"+"+DNA]="turquoise"
     self.source2mediumcolor[RNA+"+"+METH] = "fuchsia"
@@ -984,7 +1010,6 @@ class TCGABatcherABC( object ):
     self.epoch_store.open()
   
     f = pp.figure()
-  
     pp.plot( self.epoch_store["Batch"]["Epoch"].values, self.epoch_store["Batch"]["Lower Bound"], 'bo-', lw=2 , label="Batch")
     if self.n_test > 0:
       pp.plot( self.epoch_store["Test"]["Epoch"].values, self.epoch_store["Test"]["Lower Bound"], 'ro-', lw=2, label="Test" )
@@ -1756,16 +1781,16 @@ class TCGABatcherABC( object ):
               #pdb.set_trace()
               batch_data[i_idx,J[j]] = 0
             
-        w = float(len(self.observation_source_indices))/batch_data.sum(1)
-        #w = batch[ "observed_sources" ][:,self.observation_source_indices].sum(1)
-      
-      
-        sm = batch_data.sum(0)
-        both = np.sum( batch_data.sum(1)==2 )
-        only_first  = np.sum( batch_data[:,0]*(1-batch_data[:,1]))
-        only_second = np.sum( batch_data[:,1]*(1-batch_data[:,0]))
-        neither = np.sum( (1-batch_data[:,1])*(1-batch_data[:,0]))
-            
+        # w = float(len(self.observation_source_indices_input))/batch_data.sum(1)
+        # #w = batch[ "observed_sources" ][:,self.observation_source_indices].sum(1)
+        #
+        #
+        # sm = batch_data.sum(0)
+        # both = np.sum( batch_data.sum(1)==2 )
+        # only_first  = np.sum( batch_data[:,0]*(1-batch_data[:,1]))
+        # only_second = np.sum( batch_data[:,1]*(1-batch_data[:,0]))
+        # neither = np.sum( (1-batch_data[:,1])*(1-batch_data[:,0]))
+        #
             
       
       
@@ -1790,7 +1815,8 @@ class TCGABatcherABC( object ):
         batch[ layer_name ] = 1-batch_data
         #pdb.set_trace()
       else:
-        pass #print "cannot batch this source " + layer_name
+        self.FillDerivedPlaceholder( batch, layer_name, mode )
+        #pass #print "cannot batch this source " + layer_name
         
       # if mode == "BATCH":
       #   print layer_name
@@ -1804,8 +1830,11 @@ class TCGABatcherABC( object ):
       batch[ "beta" ] = 1.0
       batch["free_bits"] = 0.0
     else:
-      batch[ "beta" ] = self.beta
-      batch["free_bits"] = self.free_bits
+      try:
+        batch[ "beta" ] = self.beta
+        batch["free_bits"] = self.free_bits
+      except:
+        pass
       
     for layer_name, layer in self.network.dropouts.iteritems():
       #print "** Found dropout layer"

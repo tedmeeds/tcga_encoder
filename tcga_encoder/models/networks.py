@@ -331,7 +331,7 @@ class NeuralNetwork(object):
     #pdb.set_trace()
       
   def SaveBiases( self, store, name, weights, key = "b" ):
-    print "SaveBiases", name, weights
+    #print "SaveBiases", name, weights
     if weights.__class__ == list:
       for w, idx in zip( weights, range(len(weights))):
         store[ name + "/%s/b%d"%(key,idx) ] = pd.DataFrame( w )
@@ -891,25 +891,28 @@ class VanillaClassifier(NeuralNetwork):
 
     self.loglikes_data  = self.OrderedDictOp( tf.reduce_sum, self.loglikes_data_as_matrix )
 
-    self.log_p_x  = tf.add_n( self.loglikes_data.values(), name = "log_p_x" )
+    self.log_p_x  = tf.reduce_mean( tf.add_n( self.loglikes_data.values(), name = "log_p_x" ) )
 
-    self.cost = -arch_dict[VARIABLES][LOGLIK_FACTOR]*self.log_p_x + self.weight_penalty
+    self.cost = -self.log_p_x + self.weight_penalty
 
     model_layer     = self.GetLayer( arch_dict[DATA_LOGLIK][0][MODEL] )
     obs_layer       = self.GetLayer( arch_dict[DATA_LOGLIK][0][OBSERVATIONS] )
     
     # correct error
-    self.error = tf.reduce_sum( obs_layer.tensor*(1.0-model_layer.expectation)+(1-obs_layer.tensor)*model_layer.expectation, 1 )
+    self.error = tf.reduce_mean( obs_layer.tensor*(1.0-model_layer.expectation)+(1-obs_layer.tensor)*model_layer.expectation )
     
     
     # BAD ERROR: self.error = tf.reduce_sum( obs_layer.tensor*model_layer.expectation+(1-obs_layer.tensor)*(1-model_layer.expectation), 1 )
     #all_labels_true = tf.reduce_min(tf.cast(correct_prediction), tf.float32), 1)
     #accuracy2 = tf.reduce_mean(all_labels_true)
     
-    self.correct_prediction = tf.equal(tf.round(model_layer.expectation), tf.round(obs_layer.tensor))
-    self.all_labels_true = tf.reduce_min(tf.cast(self.correct_prediction, tf.float32), 1)
+    self.correct_prediction = tf.cast( tf.equal(tf.round(model_layer.expectation), tf.round(obs_layer.tensor)), tf.float32 )
+    
+    #self.all_labels_true = tf.cast(self.correct_prediction, tf.float32)
 
-    self.accuracy =  tf.reduce_mean(tf.cast(self.all_labels_true, tf.float32))
+    self.accuracy =  tf.reduce_mean(self.correct_prediction)
+    
+    #pdb.set_trace()
     self.batch_log_tensors = [self.log_p_x,self.weight_penalty,self.accuracy, self.error]
     self.batch_log_columns = ["Epoch","log p(x)", "log p(w)", "accuracy", "error"]
     
