@@ -885,7 +885,12 @@ class HiddenLayer(object):
     if self.biases is None:
       return []
     if self.biases.__class__ == list:
-      return [w.eval() for w in self.biases]
+      b = []
+      for w in self.biases:
+        if w is not None:
+          b.append( w.eval)
+      return b  
+      #return [w.eval() for w in self.biases]
     else:
       return self.biases.eval()
       
@@ -1044,7 +1049,15 @@ class GaussianModelLayer(HiddenLayer):
   def EvalBiases(self):
     if self.biases is None:
       return []
-    return [w.eval() for w in self.biases]
+    b = []
+    for w in self.biases:
+      if w is not None:
+        b.append( w.eval)
+    return b
+    
+    # if self.biases is None:
+    #   return []
+    # return [w.eval() for w in self.biases]
 
   def SetWeights( self, sess, weights ):
     assert weights.__class__ == list, "should assign same weights"
@@ -1753,13 +1766,17 @@ class BetaModelLayer(HiddenLayer):
     return wa #return wa.extend(wb) #[w[0].eval() for w in self.weights]
     
   def EvalBiases(self):
-    #wa = [w.eval() for w in self.biases_a]
-    #wb = [w.eval() for w in self.biases_b]
-    #wa.extend(wb) #[w[0].eval() for w in self.weights]
-    print "BIASES: ", self.biases
     if self.biases is None:
       return []
-    return [w.eval() for w in self.biases]
+    if self.biases.__class__ == list:
+      b = []
+      for w in self.biases:
+        if w is not None:
+          b.append( w.eval)
+      return b  
+      #return [w.eval() for w in self.biases]
+    else:
+      return self.biases.eval()
 
   def SetWeights( self, sess, weights ):
     assert weights.__class__ == list, "should assign same weights"
