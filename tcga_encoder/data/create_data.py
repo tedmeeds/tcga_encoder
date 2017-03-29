@@ -50,7 +50,10 @@ if __name__ == "__main__":
     if source_name == DNA:
       dna_h5, dna_genes = process_dna( source_spec, broad_location )
       mutation_channels = source_spec["mutation_channels"]
-      dataset.AddDNA( broad_location, source_spec["data_store"], dna_h5, mutation_channels=mutation_channels, genes2keep=dna_genes )
+      min_nbr_in_pan  = None:
+      if source_spec.has_key("min_nbr_in_pan"):
+        min_nbr_in_pan = source_spec["min_nbr_in_pan"]
+      dataset.AddDNA( broad_location, source_spec["data_store"], dna_h5, mutation_channels=mutation_channels, genes2keep=dna_genes, min_nbr_in_pan=min_nbr_in_pan )
     elif source_name == RNA:
       rna_h5 = ReadH5( os.path.join( broad_location, source_spec["data_store"]) )
       nbr = source_spec["nbr"]

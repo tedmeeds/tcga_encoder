@@ -188,7 +188,7 @@ class MultiSourceData(object):
           assert False, "Problem assigning to tissue"
         #pdb.set_trace()
     
-  def AddDNA( self, broad_location, filename, h5store, mutation_channels, genes2keep = None, diseases = None ):
+  def AddDNA( self, broad_location, filename, h5store, mutation_channels, genes2keep = None, diseases = None, min_nbr_in_pan = None ):
     print "*****************************************"
     print "**                                     **"
     print "**          DNA                        **"
@@ -314,6 +314,10 @@ class MultiSourceData(object):
       print "All     mutations = %d"%(all_mutations.sum())
       #pdb.set_trace()
       self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ] = pd.DataFrame( channel_mutations, index=patient_rows, columns=gene_columns )
+      
+      if min_nbr_in_pan is not None:
+        summed = self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum()
+        pdb.set_trace()
       print self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum().sort_values(ascending=False)
       channel_idx+=1  
       
