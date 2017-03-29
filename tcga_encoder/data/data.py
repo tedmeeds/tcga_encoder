@@ -282,6 +282,10 @@ class MultiSourceData(object):
       n_channel = len(channels)
       query = np.array([ (h5["Variant_Classification"]==d).values.reshape((n,1)) for d in channels ]).reshape((n,n_channel))
       query = query.sum(1).astype(bool)
+      
+      alt_query = np.zeros( (n,1), dtype=bool )
+      for d in channels:
+        alt_query |= h5["Variant_Classification"]==d).values.reshape((n,1))
        #.T.sum(1).reshape((n,n_channel)).astype(bool)
       
       # query = np.squeeze( query.T.sum(1).reshape((n,n_channel)).astype(bool) )
@@ -290,8 +294,10 @@ class MultiSourceData(object):
       
       channel_mutations = np.zeros( (n_patients,n_genes), dtype=int )
       for disease, barcode, symbol in h5[query][["admin.disease_code","patient.bcr_patient_barcode","Hugo_Symbol"]].values:
-        channel_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] = 1
+        channel_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] += 1
       
+      print "query.sum() = %d"%(query.sum())
+      print "alt_query.sum() = %d"%(alt_query.sum())
       print "Channel mutations = %d"%(channel_mutations.sum())
       print "All     mutations = %d"%(all_mutations.sum())
       pdb.set_trace()
