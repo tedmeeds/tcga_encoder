@@ -893,7 +893,7 @@ class VanillaClassifier(NeuralNetwork):
 
     self.log_p_x  = tf.reduce_mean( tf.add_n( self.loglikes_data.values(), name = "log_p_x" ) )
 
-    self.cost = -self.log_p_x + self.weight_penalty
+    
 
     model_layer     = self.GetLayer( arch_dict[DATA_LOGLIK][0][MODEL] )
     obs_layer       = self.GetLayer( arch_dict[DATA_LOGLIK][0][OBSERVATIONS] )
@@ -901,6 +901,8 @@ class VanillaClassifier(NeuralNetwork):
     # correct error
     self.error = tf.reduce_mean( obs_layer.tensor*(1.0-model_layer.expectation)+(1-obs_layer.tensor)*model_layer.expectation )
     
+    # self.cost = -self.log_p_x + self.weight_penalty
+    self.cost = -self.log_p_x + self.weight_penalty
     
     # BAD ERROR: self.error = tf.reduce_sum( obs_layer.tensor*model_layer.expectation+(1-obs_layer.tensor)*(1-model_layer.expectation), 1 )
     #all_labels_true = tf.reduce_min(tf.cast(correct_prediction), tf.float32), 1)

@@ -53,8 +53,79 @@ class DnaBatcher( TCGABatcherABC ):
     pass
    
   def SummarizeData(self):
-    pass
-     
+    print "Running: SummarizeData()"
+    self.dna_mean = self.data_store[self.DNA_keys[0]].loc[self.train_barcodes].mean(0)
+    self.dna_std = self.data_store[self.DNA_keys[0]].loc[self.train_barcodes].std(0)
+
+    self.dna_order = np.argsort( self.dna_mean.values )
+    
+    self.tissue_statistics = {}
+    
+    
+    tissue_names = self.train_tissue.columns
+    stats = np.zeros( (5,len(tissue_names)))
+    for t_idx, tissue in zip( range(len(tissue_names)),tissue_names ):
+      bcs = self.train_tissue.loc[self.train_tissue[tissue]==1].index.values
+      
+      #pdb.set_trace()
+      
+      #mirna=self.data_store[self.miRNA_key].loc[ bcs ]
+      
+      
+      self.tissue_statistics[ tissue ] = {}
+      self.tissue_statistics[ tissue ][ DNA ] = {}
+      self.tissue_statistics[ tissue ][ DNA ][ "mean"]   = self.data_store[self.DNA_keys[0]].mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ DNA ][ "var"]   = self.data_store[self.DNA_keys[0]].var(0).fillna(0)
+
+      try:
+        dna=self.data_store[self.DNA_keys[0]].loc[ bcs ]
+        self.tissue_statistics[ tissue ][ DNA ][ "mean"]   = dna.mean(0).fillna(0)
+        self.tissue_statistics[ tissue ][ DNA ][ "var"]   = dna.var(0).fillna(0)
+      except:
+        print "No DNA for %s"%(tissue)   
+  
+  def InitializeAnythingYouWant(self, sess, network ):
+    print "Running : InitializeAnythingYouWant"
+    input_sources = ["DNA"] 
+    layers = ["dna_predictions"]
+    
+    n_tissues = len(self.data_store[self.TISSUE_key].columns)
+    #self.data_store[self.TISSUE_key].loc[ batch_barcodes ]
+    m = self.dna_mean.values + 1e-5
+    beta_0 = np.log( m ) - np.log( 1.0 - m )
+    # get log_alpha and log_beta values
+    for layer_name, input_name in zip( layers, input_sources ):
+      n_dims = self.dims_dict[ input_name ]
+      
+      alpha = np.zeros( (self.n_z, n_dims ), dtype = float )
+      beta  = np.zeros( (n_tissues, n_dims ), dtype = float )
+      
+      for t_idx, tissue in zip( range( n_tissues), self.data_store[self.TISSUE_key].columns):
+        
+        n_samples = self.train_tissue[ tissue ].sum()
+        m = self.tissue_statistics[ tissue ][ DNA ][ "mean"].values + 1e-5
+        
+        beta[t_idx,:] = np.log( m ) - np.log( 1.0 - m )
+        
+        
+      
+      #log_alpha = np.log( alpha + 0.001 ).astype(np.float32)
+      #log_beta = np.log( beta + 0.001).astype(np.float32)
+      
+      #layer = network.GetLayer( layer_name )
+      
+      #sess.run( tf.assign(layer.weights[0][0], log_alpha) )
+      #sess.run( tf.assign(layer.weights[1][0], log_beta) )
+      if len(network.GetLayer( layer_name ).weights) == 2:
+        # 
+        print "initialize as if log reg and tissue specific biases"
+        #pdb.set_trace()
+        network.GetLayer( layer_name ).SetWeights( sess, [alpha, beta ])
+      else:
+        if network.GetLayer( layer_name ).biases is not None:
+          print "initialize with tissue specific biases"
+          network.GetLayer( layer_name ).SetBiases( sess, [beta_0])
+         
   def StoreNames(self):
     #self.latent_store_name = self.network_name + "_" + LATENT
     #self.latent_store = OpenHdfStore(self.savedir, self.latent_store_name, mode=self.default_store_mode )
@@ -382,6 +453,8 @@ class DnaBatcher( TCGABatcherABC ):
     
     self.PlotFillError(main_sources)
     
+    self.PlotAucs()
+    
     self.epoch_store.close()
     pp.close('all')
       
@@ -437,7 +510,70 @@ class DnaBatcher( TCGABatcherABC ):
     #pdb.set_trace()
     self.WriteRunFillExpectation( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
     self.WriteRunFillLoglikelihood( epoch, DNA, barcodes[dna_observed_query], self.dna_genes, dna_loglikelihood, mode )
+    
+    self.WriteAucs( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
 
+  def WriteAucs( self, epoch, target, barcodes, columns, obs_query, X, Y, mode ):
+    #inputs = inputs2use[0]
+    #for s in inputs2use[1:]:
+    #  inputs += "+%s"%(s)
+    print "Running: WriteAucs"
+    self.fill_store.open()
+    if target == DNA:
+      #for channel in range(self.n_dna_channels):
+      s = "/AUC/%s/%s/"%(mode,target )
+      #self.fill_store[ s ] = pd.DataFrame( X, index = barcodes, columns = columns )
+      x_obs = X[obs_query,:] #.flatten()
+      y_obs = Y[obs_query,:] # .flatten()
+      
+      auc = np.zeros( x_obs.shape[1] )
+      ok = np.zeros( x_obs.shape[1] )
+      for d_idx in xrange( x_obs.shape[1] ):
+        
+        if y_obs[:,d_idx].sum()>0:
+          auc[d_idx] = roc_auc_score(y_obs[:,d_idx],x_obs[:,d_idx])
+          ok[d_idx] = 1
+        # else:
+        #   auc[d_idx] = 1.0
+      #errors = 1.0-auc
+      #pdb.set_trace()
+       
+      ok = pp.find(ok)
+      auc = auc[ ok ]
+      columns = columns[ ok ]
+      self.fill_store[ s ] = pd.DataFrame( auc.reshape((1,len(auc))), columns = columns )
+
+    
+    self.fill_store.close()
+  
+  def PlotAucs( self ):
+    self.fill_store.open()
+    #pdb.set_trace()
+    s = "/AUC/VAL/%s/"%(DNA )
+    
+    f = pp.figure(figsize=(12,10))
+    ax=f.add_subplot(111)
+    df = self.fill_store[s]
+
+    I = np.argsort( np.squeeze(df.values))
+    
+    
+    
+    mean = self.tissue_statistics[ self.validation_tissues[0] ][ DNA ][ "mean"]
+    sorted_mean = pd.DataFrame( np.squeeze(mean.values)[I].reshape((1,len(I))), columns = np.array(df.columns)[I] )
+    sorted_all_mean = pd.DataFrame( np.squeeze(self.dna_mean.values)[I].reshape((1,len(I))), columns = np.array(df.columns)[I] )
+    sorted = pd.DataFrame( np.squeeze(df.values)[I].reshape((1,len(I))), columns = np.array(df.columns)[I] )
+    #pdb.set_trace()
+
+    sorted_mean.T.plot(kind='bar',ax=ax, sharex=True)
+    sorted.T.plot(ax=ax)
+    sorted_all_mean.T.plot(kind='bar',ax=ax, fontsize=6, sharex=True)
+    sorted_mean.T.plot(kind='bar',ax=ax, fontsize=6, sharex=True)
+                 
+    pp.title( "mean = %0.3f"%(df.values.mean()))
+    pp.savefig( self.viz_filename_dna_aucs, fmt="png", bbox_inches = "tight")
+    self.fill_store.close()
+    
   def Epoch( self, epoch_key, sess, info_dict, epoch, feed_dict, impute_dict, mode ):  
     barcodes = impute_dict[BARCODES]
     batch_tensor_evals = sess.run( self.network.batch_log_tensors, feed_dict = feed_dict )
@@ -474,56 +610,13 @@ class DnaBatcher( TCGABatcherABC ):
     #pdb.set_trace()
     if mode == "BATCH":
       self.AddSeries(  self.epoch_store, BATCH_SOURCE_LOGPDF, values = epoch_values, columns = epoch_columns )
+      self.PrintRow( self.epoch_store, epoch_key )
     elif mode == "TEST" and self.n_test>0: 
       self.AddSeries(  self.epoch_store, TEST_SOURCE_LOGPDF, values = epoch_values, columns = epoch_columns )
       self.PrintRow( self.epoch_store, epoch_key )
     elif mode == "VAL" and self.n_val>0:
       self.AddSeries(  self.epoch_store, VAL_SOURCE_LOGPDF, values = epoch_values, columns = epoch_columns )
       self.PrintRow( self.epoch_store, epoch_key )
-      
-    
-    # if mode == "TEST" or mode == "VAL":
-    #   #print "!!!!!!!!"
-    #   #print "testing product model"
-    #   input_observations = impute_dict[INPUT_OBSERVATIONS]
-    #
-    #   tensors = []
-    #   tensors.extend( self.network.GetTensor("rec_z_space_rna") )
-    #   #tensors.extend( self.network.GetTensor("rec_z_space_dna") )
-    #   tensors.extend( self.network.GetTensor("rec_z_space_meth") )
-    #   tensors.extend( self.network.GetTensor("rec_z_space") )
-    #
-    #   if self.network is tcga_encoder.models.networks.ConditionalVariationalAutoEncoder:
-    #     tensors.extend( self.network.GetTensor("gen_z_space") )
-    #
-    #   tensor_evals = sess.run( tensors, feed_dict = feed_dict )
-    #
-    #   rna_mean  = tensor_evals[0]
-    #   rna_var   = tensor_evals[1]
-    #   #dna_mean  = tensor_evals[2]
-    #   #dna_var   = tensor_evals[3]
-    #   meth_mean = tensor_evals[2]
-    #   meth_var  = tensor_evals[3]
-    #   z_mean    = tensor_evals[4]
-    #   z_var     = tensor_evals[5]
-    #   if self.network is tcga_encoder.models.networks.ConditionalVariationalAutoEncoder:
-    #     z_mean_g  = tensor_evals[6]
-    #     z_var_g   = tensor_evals[7]
-    #
-    #   self.fill_store.open()
-    #   self.fill_store[ "%s/Z/%s/mu"%(mode,RNA)]   = pd.DataFrame( rna_mean, index = barcodes, columns = self.z_columns )
-    #   self.fill_store[ "%s/Z/%s/var"%(mode,RNA)]  = pd.DataFrame( rna_var, index = barcodes, columns = self.z_columns )
-    #   #self.fill_store[ "%s/Z/%s/mu"%(mode,DNA)]   = pd.DataFrame( dna_mean, index = barcodes, columns = self.z_columns )
-    #   #self.fill_store[ "%s/Z/%s/var"%(mode,DNA)]  = pd.DataFrame( dna_var, index = barcodes, columns = self.z_columns )
-    #   self.fill_store[ "%s/Z/%s/mu"%(mode,METH)]  = pd.DataFrame( meth_mean, index = barcodes, columns = self.z_columns )
-    #   self.fill_store[ "%s/Z/%s/var"%(mode,METH)] = pd.DataFrame( meth_var, index = barcodes, columns = self.z_columns )
-    #   self.fill_store[ "%s/Z/rec/mu"%mode]        = pd.DataFrame( z_mean, index = barcodes, columns = self.z_columns )
-    #   self.fill_store[ "%s/Z/rec/var"%mode]       = pd.DataFrame( z_var, index = barcodes, columns = self.z_columns )
-    #   if self.network is tcga_encoder.models.networks.ConditionalVariationalAutoEncoder:
-    #     self.fill_store[ "%s/Z/gen/mu"%mode]        = pd.DataFrame( z_mean_g, index = barcodes, columns = self.z_columns )
-    #     self.fill_store[ "%s/Z/gen/var"%mode]       = pd.DataFrame( z_var_g, index = barcodes, columns = self.z_columns )
-    #   self.fill_store.close()
-
  
   def VizWeightsGeneric( self, sess, info_dict ):    
     print "  -> Generic Viz" 
@@ -590,8 +683,8 @@ class DnaBatcher( TCGABatcherABC ):
     self.VizWeightsGeneric(sess, info_dict )
 
 
-  def InitializeAnythingYouWant(self, sess, network ):
-    pass
+  # def InitializeAnythingYouWant(self, sess, network ):
+  #   pass
     # print "Running : InitializeAnythingYouWant"
     # input_sources = ["METH","RNA","miRNA"]
     # layers = ["gen_meth_space_basic","gen_rna_space_basic","gen_mirna_space_basic"]

@@ -106,7 +106,8 @@ class TCGABatcherABC( object ):
     self.RNA_key      = RNA+"/"+FAIR
     self.miRNA_key      = miRNA+"/"+FAIR
     self.METH_key     = METH+"/"+FAIR
-    self.DNA_keys     = [DNA+"/"+CHANNEL+"/%d"%i for i in range(self.n_dna_channels)]
+    #self.DNA_keys     = [DNA+"/"+CHANNEL+"/%d"%i for i in range(self.n_dna_channels)]
+    self.DNA_keys     = ["/DNA/variant/Missense_Mutation"]
     
     self.n_z            = self.var_dict[N_Z]
     self.z_columns = ["z%d"%z for z in range(self.n_z)]
