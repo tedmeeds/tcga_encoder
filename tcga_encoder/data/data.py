@@ -251,14 +251,14 @@ class MultiSourceData(object):
       self.AddInfo( DNA, "channel_%d"%(channel_idx), s )
       channel_idx += 1
     channels = np.array(channels)
-    query = np.squeeze(np.array([ (h5["Variant_Classification"]==d).values.reshape((n,1)) for d in channels ])).T.sum(1).astype(bool)
+    #query = np.squeeze(np.array([ (h5["Variant_Classification"]==d).values.reshape((n,1)) for d in channels ])).T.sum(1).astype(bool)
     
-    alt_query = np.zeros( (n,1), dtype=bool )
+    query = np.zeros( (n,1), dtype=bool )
     for d in channels:
-      alt_query |= (h5["Variant_Classification"]==d).values.reshape((n,1))
+      query |= (h5["Variant_Classification"]==d).values.reshape((n,1))
 
 
-    alt_h5 = h5[alt_query]
+    #alt_h5 = h5[alt_query]
     h5 = h5[query]
     
     self.store[ DNA + "/" + MUTATIONS ] = h5
@@ -286,12 +286,12 @@ class MultiSourceData(object):
         
         
       n_channel = len(channels)
-      query = np.array([ (h5["Variant_Classification"]==d).values.reshape((n,1)) for d in channels ]).reshape((n,n_channel))
-      query = query.sum(1).astype(bool)
+      #query = np.array([ (h5["Variant_Classification"]==d).values.reshape((n,1)) for d in channels ]).reshape((n,n_channel))
+      #query = query.sum(1).astype(bool)
       
-      alt_query = np.zeros( (n,1), dtype=bool )
+      query = np.zeros( (n,1), dtype=bool )
       for d in channels:
-        alt_query |= (h5["Variant_Classification"]==d).values.reshape((n,1))
+        query |= (h5["Variant_Classification"]==d).values.reshape((n,1))
        #.T.sum(1).reshape((n,n_channel)).astype(bool)
       
       # query = np.squeeze( query.T.sum(1).reshape((n,n_channel)).astype(bool) )
@@ -302,14 +302,15 @@ class MultiSourceData(object):
       for disease, barcode, symbol in h5[query][["admin.disease_code","patient.bcr_patient_barcode","Hugo_Symbol"]].values:
         channel_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] += 1
 
-      alt_channel_mutations = np.zeros( (n_patients,n_genes), dtype=int )
-      for disease, barcode, symbol in h5[alt_query][["admin.disease_code","patient.bcr_patient_barcode","Hugo_Symbol"]].values:
-        alt_channel_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] += 1
+      # alt_channel_mutations = np.zeros( (n_patients,n_genes), dtype=int )
+      # for disease, barcode, symbol in h5[alt_query][["admin.disease_code","patient.bcr_patient_barcode","Hugo_Symbol"]].values:
+      #   alt_channel_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] += 1
       
+      assert channel_mutations.sum() == all_mutations.sum(), "should be the same"
       print "query.sum() = %d"%(query.sum())
-      print "alt_query.sum() = %d"%(alt_query.sum())
+      #print "alt_query.sum() = %d"%(alt_query.sum())
       print "Channel mutations = %d"%(channel_mutations.sum())
-      print "AltChannel mutations = %d"%(alt_channel_mutations.sum())
+      #print "AltChannel mutations = %d"%(alt_channel_mutations.sum())
       print "All     mutations = %d"%(all_mutations.sum())
       pdb.set_trace()
       self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ] = pd.DataFrame( channel_mutations, index=patient_rows, columns=gene_columns )
