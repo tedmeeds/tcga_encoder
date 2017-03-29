@@ -253,7 +253,13 @@ class MultiSourceData(object):
     channels = np.array(channels)
     query = np.squeeze(np.array([ (h5["Variant_Classification"]==d).values.reshape((n,1)) for d in channels ])).T.sum(1).astype(bool)
     
+    alt_query = np.zeros( (n,1), dtype=bool )
+    for d in channels:
+      alt_query |= (h5["Variant_Classification"]==d).values.reshape((n,1))
+
+    
     h5 = h5[query]
+    alt_h5 = h5[alt_query]
     
     self.store[ DNA + "/" + MUTATIONS ] = h5
     
