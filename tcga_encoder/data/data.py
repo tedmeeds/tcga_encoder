@@ -257,9 +257,9 @@ class MultiSourceData(object):
     for d in channels:
       alt_query |= (h5["Variant_Classification"]==d).values.reshape((n,1))
 
-    
-    h5 = h5[query]
+
     alt_h5 = h5[alt_query]
+    h5 = h5[query]
     
     self.store[ DNA + "/" + MUTATIONS ] = h5
     
