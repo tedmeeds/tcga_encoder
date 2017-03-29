@@ -261,6 +261,7 @@ class MultiSourceData(object):
     # sparse matrices
     n = len(h5)
     channel_idx = 0
+    all_mutations = np.zeros( (n_patients,n_genes), dtype=int )
     for mcs in mutation_channels:
       channels = []
       for channel in mcs:
@@ -274,6 +275,7 @@ class MultiSourceData(object):
           variant_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] = 1
           #pdb.set_trace()
       
+        all_mutations += variant_mutations
         self.store[ DNA + "/" + VARIANT + "/%s"%channel ] = pd.DataFrame( variant_mutations, index=patient_rows, columns=gene_columns )
         
         
@@ -290,6 +292,8 @@ class MultiSourceData(object):
       for disease, barcode, symbol in h5[query][["admin.disease_code","patient.bcr_patient_barcode","Hugo_Symbol"]].values:
         channel_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] = 1
       
+      print "Channel mutations = %d"%(channel_mutations.sum())
+      print "All     mutations = %d"%(all_mutations.sum())
       pdb.set_trace()
       self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ] = pd.DataFrame( channel_mutations, index=patient_rows, columns=gene_columns )
       channel_idx+=1  
