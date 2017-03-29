@@ -312,7 +312,7 @@ class MultiSourceData(object):
       print "Channel mutations = %d"%(channel_mutations.sum())
       #print "AltChannel mutations = %d"%(alt_channel_mutations.sum())
       print "All     mutations = %d"%(all_mutations.sum())
-      pdb.set_trace()
+      #pdb.set_trace()
       self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ] = pd.DataFrame( channel_mutations, index=patient_rows, columns=gene_columns )
       channel_idx+=1  
       
