@@ -61,7 +61,7 @@ class DnaBatcher( TCGABatcherABC ):
     
     self.tissue_statistics = {}
     
-    
+    #pdb.set_trace()
     tissue_names = self.train_tissue.columns
     stats = np.zeros( (5,len(tissue_names)))
     for t_idx, tissue in zip( range(len(tissue_names)),tissue_names ):
@@ -93,6 +93,9 @@ class DnaBatcher( TCGABatcherABC ):
     #self.data_store[self.TISSUE_key].loc[ batch_barcodes ]
     m = self.dna_mean.values + 1e-5
     beta_0 = np.log( m ) - np.log( 1.0 - m )
+    
+    if np.any(np.isnan(beta_0)) or np.any(np.isinf(beta_0)):
+      pdb.set_trace()
     # get log_alpha and log_beta values
     for layer_name, input_name in zip( layers, input_sources ):
       n_dims = self.dims_dict[ input_name ]
@@ -106,7 +109,8 @@ class DnaBatcher( TCGABatcherABC ):
         m = self.tissue_statistics[ tissue ][ DNA ][ "mean"].values + 1e-5
         
         beta[t_idx,:] = np.log( m ) - np.log( 1.0 - m )
-        
+        if np.any(np.isnan(beta[t_idx,:])) or np.any(np.isinf(beta[t_idx,:])):
+          pdb.set_trace()
         
       
       #log_alpha = np.log( alpha + 0.001 ).astype(np.float32)

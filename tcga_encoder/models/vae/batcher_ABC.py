@@ -106,8 +106,8 @@ class TCGABatcherABC( object ):
     self.RNA_key      = RNA+"/"+FAIR
     self.miRNA_key      = miRNA+"/"+FAIR
     self.METH_key     = METH+"/"+FAIR
-    #self.DNA_keys     = [DNA+"/"+CHANNEL+"/%d"%i for i in range(self.n_dna_channels)]
-    self.DNA_keys     = ["/DNA/variant/Missense_Mutation"]
+    self.DNA_keys     = [DNA+"/"+CHANNEL+"/%d"%i for i in range(self.n_dna_channels)]
+    #self.DNA_keys     = ["/DNA/variant/Missense_Mutation"]
     
     self.n_z            = self.var_dict[N_Z]
     self.z_columns = ["z%d"%z for z in range(self.n_z)]
@@ -931,7 +931,12 @@ class TCGABatcherABC( object ):
       x = X[obs_query,:].flatten()
       y = Y[obs_query,:].flatten()
       if y.sum()>0:
-        auc = roc_auc_score(y,x)
+        print "y: ", y
+        print "x: ", x
+        try:
+          auc = roc_auc_score(y,x)
+        except:
+          pdb.set_trace()
       else:
         auc = 1.0
       errors = 1.0-auc
@@ -1649,13 +1654,14 @@ class TCGABatcherABC( object ):
         #for idx,DNA_key in zip(range(len(self.DNA_keys)-1),self.DNA_keys[:-1]):
         for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
           batch_data = self.data_store[DNA_key].loc[ batch_barcodes ].fillna( 0 ).values
-          if mode == "TEST" or mode == "VAL" or mode == "TRAIN":
-            dna_data += batch_data
-          else:
-            if layer_name == DNA_TARGET or layer_name == DNA_INPUT:
-            #if layer_name == DNA_TARGET:
-              dna_data = self.AddDnaNoise( batch_data, rate = 0.1 )
+          # if mode == "TEST" or mode == "VAL" or mode == "TRAIN":
+          #   dna_data += batch_data
+          # else:
+          #   if layer_name == DNA_TARGET or layer_name == DNA_INPUT:
+          #   #if layer_name == DNA_TARGET:
+          #     dna_data = self.AddDnaNoise( batch_data, rate = 0.1 )
           #
+          dna_data = batch_data
           #dna_data.append(batch_data.fillna( 0 ).values)
         
         batch[ layer_name ] = np.minimum(1.0,dna_data)# np.array( dna_data )

@@ -278,7 +278,7 @@ class MultiSourceData(object):
         
         variant_mutations = np.zeros( (n_patients,n_genes), dtype=int )
         for disease,barcode, symbol in h5[query][["admin.disease_code","patient.bcr_patient_barcode","Hugo_Symbol"]].values:
-          variant_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] += 1
+          variant_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] = 1
           #pdb.set_trace()
       
         all_mutations += variant_mutations
@@ -300,7 +300,7 @@ class MultiSourceData(object):
       
       channel_mutations = np.zeros( (n_patients,n_genes), dtype=int )
       for disease, barcode, symbol in h5[query][["admin.disease_code","patient.bcr_patient_barcode","Hugo_Symbol"]].values:
-        channel_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] += 1
+        channel_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] = 1
 
       # alt_channel_mutations = np.zeros( (n_patients,n_genes), dtype=int )
       # for disease, barcode, symbol in h5[alt_query][["admin.disease_code","patient.bcr_patient_barcode","Hugo_Symbol"]].values:
