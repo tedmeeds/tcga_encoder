@@ -284,7 +284,8 @@ class MultiSourceData(object):
         all_mutations += variant_mutations
         self.store[ DNA + "/" + VARIANT + "/%s"%channel ] = pd.DataFrame( variant_mutations, index=patient_rows, columns=gene_columns )
         
-        
+      
+      all_mutations = np.minimum( all_mutations, 1.0 )  
       n_channel = len(channels)
       #query = np.array([ (h5["Variant_Classification"]==d).values.reshape((n,1)) for d in channels ]).reshape((n,n_channel))
       #query = query.sum(1).astype(bool)
