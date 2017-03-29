@@ -314,6 +314,7 @@ class MultiSourceData(object):
       print "All     mutations = %d"%(all_mutations.sum())
       #pdb.set_trace()
       self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ] = pd.DataFrame( channel_mutations, index=patient_rows, columns=gene_columns )
+      print self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum().sort()
       channel_idx+=1  
       
   def AddRNA( self, broad_location, filename, h5store, nbr_genes, method = "max_var_fair", diseases = None ):
