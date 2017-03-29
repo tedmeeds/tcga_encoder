@@ -285,7 +285,7 @@ class MultiSourceData(object):
       
       alt_query = np.zeros( (n,1), dtype=bool )
       for d in channels:
-        alt_query |= h5["Variant_Classification"]==d).values.reshape((n,1))
+        alt_query |= (h5["Variant_Classification"]==d).values.reshape((n,1))
        #.T.sum(1).reshape((n,n_channel)).astype(bool)
       
       # query = np.squeeze( query.T.sum(1).reshape((n,n_channel)).astype(bool) )
