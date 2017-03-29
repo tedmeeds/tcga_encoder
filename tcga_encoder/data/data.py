@@ -317,7 +317,9 @@ class MultiSourceData(object):
       
       if min_nbr_in_pan is not None:
         summed = self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum()
-        pdb.set_trace()
+        selected_genes = summed[summed>=min_nbr_in_pan].index
+        self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ] = self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ][ selected_genes ]
+        #pdb.set_trace()
       print self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum().sort_values(ascending=False)
       channel_idx+=1  
       
