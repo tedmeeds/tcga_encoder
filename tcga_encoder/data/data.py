@@ -306,13 +306,14 @@ class MultiSourceData(object):
       # for disease, barcode, symbol in h5[alt_query][["admin.disease_code","patient.bcr_patient_barcode","Hugo_Symbol"]].values:
       #   alt_channel_mutations[self.dna_patient2idx[disease+"_"+barcode]][self.dna_gene2idx[symbol]] += 1
       
-      assert channel_mutations.sum() == all_mutations.sum(), "should be the same"
+      
       print "query.sum() = %d"%(query.sum())
       #print "alt_query.sum() = %d"%(alt_query.sum())
       print "Channel mutations = %d"%(channel_mutations.sum())
       #print "AltChannel mutations = %d"%(alt_channel_mutations.sum())
       print "All     mutations = %d"%(all_mutations.sum())
       #pdb.set_trace()
+      assert channel_mutations.sum() == all_mutations.sum(), "should be the same"
       self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ] = pd.DataFrame( channel_mutations, index=patient_rows, columns=gene_columns )
       
       if min_nbr_in_pan is not None:
