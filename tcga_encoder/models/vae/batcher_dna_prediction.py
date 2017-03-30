@@ -127,7 +127,10 @@ class DnaBatcher( TCGABatcherABC ):
           # 
           print "initialize as if log reg and tissue specific biases"
           #pdb.set_trace()
-          network.GetLayer( layer_name ).SetWeights( sess, [alpha, beta ])
+          try:
+            network.GetLayer( layer_name ).SetWeights( sess, [alpha, beta ])
+          except:
+            print "could not init bias weights"
         else:
           if network.GetLayer( layer_name ).biases is not None:
             print "initialize with tissue specific biases"
