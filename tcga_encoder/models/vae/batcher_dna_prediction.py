@@ -122,7 +122,7 @@ class DnaBatcher( TCGABatcherABC ):
       
       #sess.run( tf.assign(layer.weights[0][0], log_alpha) )
       #sess.run( tf.assign(layer.weights[1][0], log_beta) )
-      if 0:
+      if 1:
         if len(network.GetLayer( layer_name ).weights) == 2:
           # 
           print "initialize as if log reg and tissue specific biases"
