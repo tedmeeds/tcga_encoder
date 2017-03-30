@@ -81,6 +81,7 @@ def main(yaml_file):
   train( sess, network, algo_dict, data_dict, logging_dict, results_dict )
   batcher = algo_dict[BATCHER]
   batcher.CloseAll()
+  return batcher
   
   
 ######################################################################################################
@@ -91,7 +92,12 @@ if __name__ == "__main__":
   
   
     
-  main( yaml_file )
+  batcher = main( yaml_file )
+  fill = batcher.fill_source_store
+  fill.open()
+  Z_train = fill["/Z/TRAIN/Z/mu"].loc[ batcher.train_barcodes]
+  Z_val = fill["/Z/VAL/Z/mu"].loc[ batcher.validation_barcodes]
+  fill.close()
 
   
   
