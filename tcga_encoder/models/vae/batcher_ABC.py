@@ -1569,6 +1569,8 @@ class TCGABatcherABC( object ):
   def ValBatch( self ):
     return self.FillBatch( self.validation_barcodes, mode = "VAL" )
 
+  def FillDerivedPlaceholder( self, batch, layer_name, mode ):
+      pass
   def FillBatch( self, batch_barcodes, mode = "BATCH" ):
     batch = OrderedDict()
     
