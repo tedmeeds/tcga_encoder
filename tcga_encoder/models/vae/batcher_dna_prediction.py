@@ -86,6 +86,8 @@ class DnaBatcher( TCGABatcherABC ):
   
   def InitializeAnythingYouWant(self, sess, network ):
     print "Running : InitializeAnythingYouWant"
+    self.selected_aucs = {}
+    
     input_sources = ["DNA"] 
     layers = ["dna_predictions"]
     
@@ -120,15 +122,16 @@ class DnaBatcher( TCGABatcherABC ):
       
       #sess.run( tf.assign(layer.weights[0][0], log_alpha) )
       #sess.run( tf.assign(layer.weights[1][0], log_beta) )
-      if len(network.GetLayer( layer_name ).weights) == 2:
-        # 
-        print "initialize as if log reg and tissue specific biases"
-        #pdb.set_trace()
-        network.GetLayer( layer_name ).SetWeights( sess, [alpha, beta ])
-      else:
-        if network.GetLayer( layer_name ).biases is not None:
-          print "initialize with tissue specific biases"
-          network.GetLayer( layer_name ).SetBiases( sess, [beta_0])
+      if 0:
+        if len(network.GetLayer( layer_name ).weights) == 2:
+          # 
+          print "initialize as if log reg and tissue specific biases"
+          #pdb.set_trace()
+          network.GetLayer( layer_name ).SetWeights( sess, [alpha, beta ])
+        else:
+          if network.GetLayer( layer_name ).biases is not None:
+            print "initialize with tissue specific biases"
+            network.GetLayer( layer_name ).SetBiases( sess, [beta_0])
          
   def StoreNames(self):
     #self.latent_store_name = self.network_name + "_" + LATENT
@@ -165,9 +168,10 @@ class DnaBatcher( TCGABatcherABC ):
   def MakeVizFilenames(self):
     self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
     self.viz_filename_dna_batch_predict      =  os.path.join( self.savedir, "dna_batch_predict" )
-    self.viz_filename_dna_aucs               =  os.path.join( self.savedir, "dna_aucs.png" )
+    self.viz_filename_dna_aucs               =  os.path.join( self.savedir, "dna_aucs" )
     self.viz_filename_lower_bound            =  os.path.join( self.savedir, "dna_lower_bound.png" )
     self.viz_filename_error_sources_per_gene_fill = os.path.join( self.savedir, "dna_errors_fill.png" )
+    #self.viz_filename_weights        =  os.path.join( self.savedir, "weights_" )
     self.viz_dna_weights = os.path.join( self.savedir, "dna_weights" )
     
   def PlotLogPdf(self):
@@ -457,7 +461,8 @@ class DnaBatcher( TCGABatcherABC ):
     
     self.PlotFillError(main_sources)
     
-    self.PlotAucs()
+    self.PlotAucs("VAL")
+    self.PlotAucs("TRAIN")
     
     self.epoch_store.close()
     pp.close('all')
@@ -468,7 +473,7 @@ class DnaBatcher( TCGABatcherABC ):
     use_rna = True
     use_meth = True
     use_mirna = True
-          
+    
     barcodes = impute_dict[BARCODES]
     batch = self.FillBatch( impute_dict[BARCODES], mode )
     #not_observed = np.setdiff1d( self.input_sources, inputs2use )
@@ -521,7 +526,8 @@ class DnaBatcher( TCGABatcherABC ):
     #inputs = inputs2use[0]
     #for s in inputs2use[1:]:
     #  inputs += "+%s"%(s)
-    print "Running: WriteAucs"
+    
+    #print "Running: WriteAucs"
     self.fill_store.open()
     if target == DNA:
       #for channel in range(self.n_dna_channels):
@@ -541,32 +547,38 @@ class DnaBatcher( TCGABatcherABC ):
         #   auc[d_idx] = 1.0
       #errors = 1.0-auc
       #pdb.set_trace()
-       
-      ok = pp.find(ok)
-      auc = auc[ ok ]
-      columns = columns[ ok ]
+      self.selected_aucs[s] = pp.find(ok) 
+      #ok = pp.find(ok)
+      auc = auc[ self.selected_aucs[s] ]
+      columns = columns[ self.selected_aucs[s] ]
       self.fill_store[ s ] = pd.DataFrame( auc.reshape((1,len(auc))), columns = columns )
-
+      #pdb.set_trace()
     
     self.fill_store.close()
   
-  def PlotAucs( self ):
+  def PlotAucs( self, mode ):
     self.fill_store.open()
     #pdb.set_trace()
-    s = "/AUC/VAL/%s/"%(DNA )
     
-    f = pp.figure(figsize=(12,10))
+    s = "/AUC/%s/%s/"%(mode,DNA )
+    
+    
+    f = pp.figure(figsize=(14,4))
     ax=f.add_subplot(111)
     df = self.fill_store[s]
 
-    I = np.argsort( np.squeeze(df.values))
-    
+    I_local = np.argsort( np.squeeze(df.values))
+    #print s
+    #print "len(I_local) = ", len(I_local)
+    #pdb.set_trace()
+    I_global = self.selected_aucs[s][ I_local ]
+    #I = self.dna_order
     
     
     mean = self.tissue_statistics[ self.validation_tissues[0] ][ DNA ][ "mean"]
-    sorted_mean = pd.DataFrame( np.squeeze(mean.values)[I].reshape((1,len(I))), columns = np.array(df.columns)[I] )
-    sorted_all_mean = pd.DataFrame( np.squeeze(self.dna_mean.values)[I].reshape((1,len(I))), columns = np.array(df.columns)[I] )
-    sorted = pd.DataFrame( np.squeeze(df.values)[I].reshape((1,len(I))), columns = np.array(df.columns)[I] )
+    sorted_mean = pd.DataFrame( np.squeeze(mean.values)[I_global].reshape((1,len(I_global))), columns = np.array(self.dna_mean.index.values)[I_global] )
+    sorted_all_mean = pd.DataFrame( np.squeeze(self.dna_mean.values)[I_global].reshape((1,len(I_global))), columns = np.array(self.dna_mean.index.values)[I_global] )
+    sorted = pd.DataFrame( np.squeeze(df.values)[I_local].reshape((1,len(I_local))), columns = np.array(df.columns)[I_local] )
     #pdb.set_trace()
 
     sorted_mean.T.plot(kind='bar',ax=ax, sharex=True)
@@ -575,7 +587,7 @@ class DnaBatcher( TCGABatcherABC ):
     sorted_mean.T.plot(kind='bar',ax=ax, fontsize=6, sharex=True)
                  
     pp.title( "mean = %0.3f"%(df.values.mean()))
-    pp.savefig( self.viz_filename_dna_aucs, fmt="png", bbox_inches = "tight")
+    pp.savefig( self.viz_filename_dna_aucs + "_%s.png"%(mode), fmt="png", bbox_inches = "tight", dpi=600)
     self.fill_store.close()
     
   def Epoch( self, epoch_key, sess, info_dict, epoch, feed_dict, impute_dict, mode ):  
@@ -639,7 +651,7 @@ class DnaBatcher( TCGABatcherABC ):
           #print "  closing figure, ",old_layer
           pp.legend()
           pp.suptitle(old_layer)
-          pp.savefig( self.viz_filename_weights + "%s.png"%old_layer, fmt="png", bbox_inches = "tight")
+          pp.savefig( self.viz_dna_weights + "%s.png"%old_layer, fmt="png", bbox_inches = "tight")
           pp.close(fig_)
           needs_closing = False
           

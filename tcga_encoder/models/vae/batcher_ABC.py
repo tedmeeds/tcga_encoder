@@ -448,9 +448,9 @@ class TCGABatcherABC( object ):
     self.viz_filename_z_rec_scatter          =  os.path.join( self.savedir, "z_rec_scatter.png" )
     self.viz_filename_z_rec_on_z_gen         =  os.path.join( self.savedir, "z_rec_on_z_gen.png" )
     self.viz_filename_rna_prediction_scatter =  os.path.join( self.savedir, "rna_prediction_scatter.png" )
-    self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
-    self.viz_filename_dna_batch_predict      =  os.path.join( self.savedir, "dna_batch_predict" )
-    self.viz_filename_dna_aucs               =  os.path.join( self.savedir, "dna_aucs.png" )
+    # self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
+    # self.viz_filename_dna_batch_predict      =  os.path.join( self.savedir, "dna_batch_predict" )
+    # self.viz_filename_dna_aucs               =  os.path.join( self.savedir, "dna_aucs.png" )
     self.viz_filename_weights        =  os.path.join( self.savedir, "weights_" )
     self.viz_filename_lower_bound            =  os.path.join( self.savedir, "lower_bound.png" )
     self.viz_filename_log_pdf_sources        = os.path.join( self.savedir, "log_pdf_sources_z.png" )
@@ -931,8 +931,8 @@ class TCGABatcherABC( object ):
       x = X[obs_query,:].flatten()
       y = Y[obs_query,:].flatten()
       if y.sum()>0:
-        print "y: ", y
-        print "x: ", x
+        #print "y: ", y
+        #print "x: ", x
         try:
           auc = roc_auc_score(y,x)
         except:
