@@ -134,7 +134,10 @@ class DnaBatcher( TCGABatcherABC ):
         else:
           if network.GetLayer( layer_name ).biases is not None:
             print "initialize with tissue specific biases"
-            network.GetLayer( layer_name ).SetBiases( sess, [beta_0])
+            try:
+              network.GetLayer( layer_name ).SetBiases( sess, [beta_0])
+            except:
+              print "could not init bias biases"
          
   def StoreNames(self):
     #self.latent_store_name = self.network_name + "_" + LATENT
