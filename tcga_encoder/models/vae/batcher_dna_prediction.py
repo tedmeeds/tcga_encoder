@@ -196,8 +196,13 @@ class DnaBatcher( TCGABatcherABC ):
       self.fill_source_store.open()
       if mode == "BATCH" or mode == "TRAIN":
         #pdb.set_trace()
-        batch_data = self.fill_source_store["/Z/TRAIN/Z/mu"].loc[ batch["barcodes"] ]
-
+        batch_data_mu = self.fill_source_store["/Z/TRAIN/Z/mu"].loc[ batch["barcodes"] ]
+        batch_data_var = self.fill_source_store["/Z/TRAIN/Z/var"].loc[ batch["barcodes"] ]
+        
+        n,d = batch_data_mu.values.shape
+        batch_data_values = batch_data_mu.values + np.sqrt(batch_data_var.values)*np.random.randn(n,d)
+        #batch_data = self.fill_source_store["/Z/TRAIN/Z/mu"].loc[ batch["barcodes"] ]
+        batch_data = pd.DataFrame(batch_data_values, index=batch_data_mu.index, columns=batch_data_mu.columns)
       else:
         #pdb.set_trace()
         batch_data = self.fill_source_store["/Z/VAL/Z/mu"].loc[ batch["barcodes"] ]
@@ -586,7 +591,7 @@ class DnaBatcher( TCGABatcherABC ):
     sorted_all_mean.T.plot(kind='bar',ax=ax, fontsize=6, sharex=True)
     sorted_mean.T.plot(kind='bar',ax=ax, fontsize=6, sharex=True)
                  
-    pp.title( "mean = %0.3f"%(df.values.mean()))
+    pp.title( "mean = %0.3f median = %0.3f"%(df.values.mean(), np.median(df.values)))
     pp.savefig( self.viz_filename_dna_aucs + "_%s.png"%(mode), fmt="png", bbox_inches = "tight", dpi=600)
     self.fill_store.close()
     
