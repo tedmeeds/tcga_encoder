@@ -84,6 +84,30 @@ class DnaBatcher( TCGABatcherABC ):
       except:
         print "No DNA for %s"%(tissue)   
   
+  def MakeBarcodes(self):
+    self.fill_source_store.open()
+    #z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
+    #self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
+    #self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
+    
+    #pdb.set_trace()
+    
+    self.train_barcodes = self.fill_source_store["Z/TRAIN/Z/mu"].index.values
+    self.validation_barcodes = self.fill_source_store["Z/VAL/Z/mu"].index.values
+    self.test_barcodes = [] #self.fill_source_store["Z/TEST/Z/mu"].index.values
+    
+    obs_dna = self.data_store["/CLINICAL/observed"]["DNA"][ self.data_store["/CLINICAL/observed"]["DNA"] ==1 ]
+    dna_barcodes = obs_dna.index.values
+    
+    self.train_barcodes      = np.intersect1d( self.train_barcodes, dna_barcodes)
+    self.validation_barcodes = np.intersect1d( self.validation_barcodes, dna_barcodes)
+    
+    self.fill_source_store.close()
+    
+  def InitFillStore(self):
+    pass
+  
+    
   def InitializeAnythingYouWant(self, sess, network ):
     print "Running : InitializeAnythingYouWant"
     self.selected_aucs = {}
@@ -108,9 +132,9 @@ class DnaBatcher( TCGABatcherABC ):
       for t_idx, tissue in zip( range( n_tissues), self.data_store[self.TISSUE_key].columns):
         
         n_samples = self.train_tissue[ tissue ].sum()
-        m = self.tissue_statistics[ tissue ][ DNA ][ "mean"].values + 1e-5
+        m = self.tissue_statistics[ tissue ][ DNA ][ "mean"].values 
         
-        beta[t_idx,:] = np.log( m ) - np.log( 1.0 - m )
+        beta[t_idx,:] = np.log( m + 1e-3 ) - np.log( 1.0 - m + 1e-3)
         if np.any(np.isnan(beta[t_idx,:])) or np.any(np.isinf(beta[t_idx,:])):
           pdb.set_trace()
         
@@ -206,7 +230,7 @@ class DnaBatcher( TCGABatcherABC ):
         batch_data_var = self.fill_source_store["/Z/TRAIN/Z/var"].loc[ batch["barcodes"] ]
         
         n,d = batch_data_mu.values.shape
-        batch_data_values = batch_data_mu.values + np.sqrt(batch_data_var.values)*np.random.randn(n,d)
+        batch_data_values = batch_data_mu.values #+ np.sqrt(batch_data_var.values)*np.random.randn(n,d)
         #batch_data = self.fill_source_store["/Z/TRAIN/Z/mu"].loc[ batch["barcodes"] ]
         batch_data = pd.DataFrame(batch_data_values, index=batch_data_mu.index, columns=batch_data_mu.columns)
       else:

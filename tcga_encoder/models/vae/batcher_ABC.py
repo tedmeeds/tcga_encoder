@@ -158,6 +158,64 @@ class TCGABatcherABC( object ):
       self.observed_batch_order[ source ] = source_idx
       source_idx+=1
        
+    self.MakeBarcodes()
+    
+        
+    self.test_tissue  = self.data_store[self.TISSUE_key].loc[ self.test_barcodes ]
+    self.train_tissue = self.data_store[self.TISSUE_key].loc[ self.train_barcodes ]
+    self.val_tissue   = self.data_store[self.TISSUE_key].loc[ self.validation_barcodes ]
+  
+    self.n_train = len(self.train_barcodes)
+    self.n_test  = len(self.test_barcodes)
+    self.n_val  = len(self.validation_barcodes)
+  
+    self.data_dict[N_TRAIN] = self.n_train
+    self.data_dict[N_TEST]  = self.n_test
+    
+
+    self.test_tissue  = self.data_store[self.TISSUE_key].loc[ self.test_barcodes ]
+    self.train_tissue = self.data_store[self.TISSUE_key].loc[ self.train_barcodes ]
+    self.val_tissue   = self.data_store[self.TISSUE_key].loc[ self.validation_barcodes ]
+
+  
+    self.data_dict[N_TRAIN] = self.n_train
+    self.data_dict[N_TEST]  = self.n_test
+    
+    print "** n_train = ", self.n_train
+    print "** n_test  = ", self.n_test
+    print "** n_val  = ", self.n_val
+    
+    print "TEST: " 
+    print self.test_tissue.sum()
+    print "TRAIN: " 
+    print self.train_tissue.sum()
+    print "VAL: " 
+    print self.val_tissue.sum()
+    #pdb.set_trace()
+    
+    self.InitFillStore()
+    # self.fill_store.open()
+    # z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
+    # self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
+    # self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
+    # self.fill_store.close()
+    
+    self.n_train = len(self.train_barcodes)
+    self.n_test  = len(self.test_barcodes)
+    self.n_val   = len(self.validation_barcodes)
+    
+    self.MakeVizFilenames()
+    self.batch_size     = min( self.batch_size, self.n_train )
+    
+    self.SummarizeData()
+    #assert False, "todo"
+    # make classfier to tissue
+    # used filled tissue for validation without tissue in train
+    # check weights from tissue to hidden make sure there arent too many (figures)
+    # compare training with just one tissue
+  
+  
+  def MakeBarcodes(self):
     print "** getting validations"
     self.at_least_one_query = self.data_store[self.OBSERVED_key].values[:,self.observed_product_sources].sum(1)>0
     
@@ -279,63 +337,18 @@ class TCGABatcherABC( object ):
     assert len(np.intersect1d( self.test_barcodes, self.train_barcodes)) == 0, "train and test are not mutually exclusive!!"
     assert len(np.intersect1d( self.test_barcodes, self.validation_barcodes)) == 0, "test and validation are not mutually exclusive!!"
     assert len(np.intersect1d( self.train_barcodes, self.validation_barcodes)) == 0, "train and validation are not mutually exclusive!!"
-    
-    self.test_tissue  = self.data_store[self.TISSUE_key].loc[ self.test_barcodes ]
-    self.train_tissue = self.data_store[self.TISSUE_key].loc[ self.train_barcodes ]
-    self.val_tissue   = self.data_store[self.TISSUE_key].loc[ self.validation_barcodes ]
-  
-    self.n_train = len(self.train_barcodes)
-    self.n_test  = len(self.test_barcodes)
-    self.n_val  = len(self.validation_barcodes)
-  
-    self.data_dict[N_TRAIN] = self.n_train
-    self.data_dict[N_TEST]  = self.n_test
-    
+      
 
-    self.test_tissue  = self.data_store[self.TISSUE_key].loc[ self.test_barcodes ]
-    self.train_tissue = self.data_store[self.TISSUE_key].loc[ self.train_barcodes ]
-    self.val_tissue   = self.data_store[self.TISSUE_key].loc[ self.validation_barcodes ]
+  def InitializeAnythingYouWant( self, sess, network ):
+    pass
 
-  
-    self.data_dict[N_TRAIN] = self.n_train
-    self.data_dict[N_TEST]  = self.n_test
-    
-    print "** n_train = ", self.n_train
-    print "** n_test  = ", self.n_test
-    print "** n_val  = ", self.n_val
-    
-    print "TEST: " 
-    print self.test_tissue.sum()
-    print "TRAIN: " 
-    print self.train_tissue.sum()
-    print "VAL: " 
-    print self.val_tissue.sum()
-    #pdb.set_trace()
-    
+  def InitFillStore(self):
     self.fill_store.open()
     z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
     self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
     self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
     self.fill_store.close()
-    
-    self.n_train = len(self.train_barcodes)
-    self.n_test  = len(self.test_barcodes)
-    self.n_val   = len(self.validation_barcodes)
-    
-    self.MakeVizFilenames()
-    self.batch_size     = min( self.batch_size, self.n_train )
-    
-    self.SummarizeData()
-    #assert False, "todo"
-    # make classfier to tissue
-    # used filled tissue for validation without tissue in train
-    # check weights from tissue to hidden make sure there arent too many (figures)
-    # compare training with just one tissue
-    
-
-  def InitializeAnythingYouWant( self, sess, network ):
-    pass
-    
+        
   def SummarizeData(self):
     print "Running : SummarizeData(self)"
     #pass
@@ -501,13 +514,13 @@ class TCGABatcherABC( object ):
     self.survival_store_name = self.network_name + "_" + SURVIVAL
     
     # open in "a" mode
-    self.model_store = OpenHdfStore(self.savedir, self.model_store_name, mode="a" )
+    self.model_store = OpenHdfStore(self.savedir, self.model_store_name, mode="w" )
     
     self.epoch_store_name = self.network_name + "_" + EPOCH
     self.epoch_store = OpenHdfStore(self.savedir, self.epoch_store_name, mode=self.default_store_mode )
     
     self.fill_store_name = self.network_name + "_" + FILL
-    self.fill_store = OpenHdfStore(self.savedir, self.fill_store_name, mode="a")
+    self.fill_store = OpenHdfStore(self.savedir, self.fill_store_name, mode="w")
     
     self.survival_store = OpenHdfStore(self.savedir, self.survival_store_name, mode=self.default_store_mode )
     
@@ -666,7 +679,8 @@ class TCGABatcherABC( object ):
       self.network.FillFeedDict( train_feed_dict, impute_dict )
       #batch = self.FillBatch( impute_dict[BARCODES], mode )
       self.RunFillZ( epoch, sess, train_feed_dict, impute_dict, mode="TRAIN" )
-      
+    self.fill_store.open()
+    pdb.set_trace()
     
   def BatchFillZ( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
@@ -723,8 +737,9 @@ class TCGABatcherABC( object ):
       self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
       self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )\
       
-      #if mode=="TRAIN":
-      #  pdb.set_trace()
+      if mode=="TRAIN":
+        print "some nan ? = ", np.sum( np.isnan(z_mu))
+        #pdb.set_trace()
     else:
       self.fill_store["Z/%s/%s/mu"%(mode,target)]  = pd.DataFrame( z_mu, index = barcodes, columns = columns )
       self.fill_store["Z/%s/%s/var"%(mode,target)] = pd.DataFrame( z_var, index = barcodes, columns = columns )
