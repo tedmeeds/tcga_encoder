@@ -680,7 +680,7 @@ class TCGABatcherABC( object ):
       #batch = self.FillBatch( impute_dict[BARCODES], mode )
       self.RunFillZ( epoch, sess, train_feed_dict, impute_dict, mode="TRAIN" )
     self.fill_store.open()
-    pdb.set_trace()
+    #pdb.set_trace()
     
   def BatchFillZ( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
