@@ -587,7 +587,19 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
     self.loglikes_pos_target_as_matrix  = self.BuildLoglikelihoods( arch_dict["positive_target_data_loglik"],    data_dict, arch_dict[VARIABLES], as_matrix = self.use_matrix )
     self.loglikes_neg_target_as_matrix  = self.BuildLoglikelihoods( arch_dict["negative_target_data_loglik"],    data_dict, arch_dict[VARIABLES], as_matrix = self.use_matrix )
 
-
+    pos_model_layer     = self.GetLayer( arch_dict["positive_target_data_loglik"][0][MODEL] )
+    pos_obs_layer       = self.GetLayer( arch_dict["positive_target_data_loglik"][0][OBSERVATIONS] )
+    neg_model_layer     = self.GetLayer( arch_dict["negative_target_data_loglik"][0][MODEL] )
+    neg_obs_layer       = self.GetLayer( arch_dict["negative_target_data_loglik"][0][OBSERVATIONS] )
+    
+    #self.correct_prediction_pos = tf.cast( tf.equal(tf.round(pos_model_layer.expectation), tf.round(pos_obs_layer.tensor)), tf.float32 )
+    #self.correct_prediction_neg = tf.cast( tf.equal(tf.round(neg_model_layer.expectation), tf.round(neg_obs_layer.tensor)), tf.float32 )
+    self.correct_prediction_pos = tf.equal(tf.argmax(pos_model_layer.expectation,1), tf.argmax(pos_obs_layer.tensor,1))
+    self.correct_prediction_neg = tf.equal(tf.argmax(neg_model_layer.expectation,1), tf.argmax(neg_obs_layer.tensor,1))
+    
+    self.accuracy_pos = tf.reduce_sum(tf.cast(self.correct_prediction_pos, tf.float32))
+    self.accuracy_neg = tf.reduce_sum(tf.cast(self.correct_prediction_neg, tf.float32))
+    
     self.loglikes_data  = self.OrderedDictOp( tf.reduce_sum, self.loglikes_data_as_matrix )
     self.loglikes_rec   = self.OrderedDictOp( tf.reduce_sum, self.loglikes_rec_as_matrix )
     self.loglikes_prior = self.OrderedDictOp( tf.reduce_sum, self.loglikes_prior_as_matrix )
@@ -605,14 +617,14 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
      
     self.batch_log_tensors = [self.lower_bound,self.log_p_x_given_z,self.log_p_z,self.log_q_z]
     self.batch_log_tensors.extend( self.log_p_source_given_z )
-    self.batch_log_tensors.extend( [self.log_p_t_given_z_pos, self.log_p_t_given_z_neg])
+    self.batch_log_tensors.extend( [self.log_p_t_given_z_pos, self.log_p_t_given_z_neg,self.accuracy_pos,self.accuracy_neg])
     self.batch_log_columns = ["Epoch","Lower Bound","log p(x|z)", "log p(z)", "log q(z|x)"]
     source_names = ["log p(%s|z)"%specs[SHORT] for specs in arch_dict[DATA_LOGLIK] ]
     self.batch_log_columns.extend(source_names)
-    self.batch_log_columns.extend(["log p(t|z_copy) +", "log p(t|z_rec) -"])
+    self.batch_log_columns.extend(["log p(t|z_copy) +", "log p(t|z_rec) -", "acc T+", "acc T-"])
      
   def CostToMinimize(self):
-    return -self.lower_bound + self.weight_penalty + self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
+    return -self.lower_bound + self.weight_penalty + 0*self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
 
   def FillFeedDict( self, feed_dict, imputation_dict ):
     # use stuff from imputation_dict to fill feed_dict

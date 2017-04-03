@@ -98,8 +98,10 @@ class TCGABatcherAdversarial( TCGABatcher ):
     epoch_log_p_source_z_values.extend( log_p_source_z_values )
     epoch_source_columns = ['Epoch']
     epoch_source_columns.extend(self.arch_dict[TARGET_SOURCES])
-    epoch_source_columns[-2] = "T+"
-    epoch_source_columns[-1] = "T-"
+    epoch_source_columns[-4] = "T+"
+    epoch_source_columns[-3] = "T-"
+    epoch_source_columns[-2] = "acc T+"
+    epoch_source_columns[-1] = "acc T-"
     if mode == "BATCH":
       #pdb.set_trace()
       self.AddSeries(  self.epoch_store, BATCH_SOURCE_LOGPDF, values = epoch_log_p_source_z_values, columns = epoch_source_columns )
