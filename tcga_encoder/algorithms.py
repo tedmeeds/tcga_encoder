@@ -112,7 +112,7 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
   
   print "Running : for epoch in range(n_epochs):"
   for epoch in range(n_epochs):
-    batcher.DoWhatYouWantAtEpoch( sess, epoch, network )
+    
     
     # -------------------------------------------------- #
     # BATCH SET-UP                                       #
@@ -121,9 +121,15 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
     batch_ids             = batch_id_generator.next()
     batch_feed_imputation = batcher.NextBatch(batch_ids)
 
+
+    cb_info[EPOCH]                 = epoch+1
+    cb_info[BATCH_FEED_DICT]       = batch_feed_dict
+    cb_info[BATCH_FEED_IMPUTATION] = batch_feed_imputation
+    cb_info[BATCH_IDS]             = batch_ids #batch_feed_imputation["batch_ids"]
+    
     network.FillFeedDict( batch_feed_dict, batch_feed_imputation )
     batch_feed_dict[learning_rate_placeholder] = current_learning_rate
-
+    batcher.DoWhatYouWantAtEpoch( sess, epoch, network,cb_info )
     # -------------------------------------------------- #
     # TRAIN STEP                                         #
     # -------------------------------------------------- #
@@ -132,10 +138,6 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
     # -------------------------------------------------- #
     # CALLBACKS                                          #
     # -------------------------------------------------- #
-    cb_info[EPOCH]                 = epoch+1
-    cb_info[BATCH_FEED_DICT]       = batch_feed_dict
-    cb_info[BATCH_FEED_IMPUTATION] = batch_feed_imputation
-    cb_info[BATCH_IDS]             = batch_ids #batch_feed_imputation["batch_ids"]
     for cb_idx in pp.find( np.mod(epoch+1,call_back_rates)==0 ):
       if call_backs[cb_idx] == LEARNING_DECAY:
         print "** Decreasing learning rate"

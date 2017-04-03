@@ -52,13 +52,14 @@ class TCGABatcherAdversarial( TCGABatcher ):
       self.fill_store.close()
 
     
-  def DoWhatYouWantAtEpoch( self, sess, epoch, network ):
+  def DoWhatYouWantAtEpoch( self, sess, epoch, network,info_dict ):
     # pass weights from 
     #pdb.set_trace()
     #network.GetLayer( "target_prediction_pos" ).SetWeights( sess, network.GetLayer( "target_prediction_neg" ).EvalWeights() )
     #network.GetLayer( "target_prediction_pos" ).SetBiases( sess, network.GetLayer( "target_prediction_neg" ).EvalBiases() )
     network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
     network.GetLayer( "target_prediction_neg" ).SetBiases( sess, network.GetLayer( "target_prediction_pos" ).EvalBiases() )
+    self.BatchFillZ(sess,info_dict)
     #pass
     
   def Epoch( self, epoch_key, sess, info_dict, epoch, feed_dict, impute_dict, mode ):  
