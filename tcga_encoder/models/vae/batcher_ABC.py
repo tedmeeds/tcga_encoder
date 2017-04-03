@@ -341,12 +341,17 @@ class TCGABatcherABC( object ):
 
   def InitializeAnythingYouWant( self, sess, network ):
     pass
-
+    
+  def DoWhatYouWantAtEpoch( self, sess, epoch ):
+    pass
+    
   def InitFillStore(self):
     self.fill_store.open()
     z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
-    self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
-    self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
+    self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.random.randn( len(self.train_barcodes),self.n_z) , index = self.train_barcodes, columns = z_columns )
+    self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.ones( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
+    self.fill_store["Z/VAL/Z/mu"]  = pd.DataFrame( np.random.randn( len(self.validation_barcodes),self.n_z) , index = self.validation_barcodes, columns = z_columns )
+    self.fill_store["Z/VAL/Z/var"] = pd.DataFrame( np.ones( (len(self.validation_barcodes),self.n_z) ), index = self.validation_barcodes, columns = z_columns )
     self.fill_store.close()
         
   def SummarizeData(self):
@@ -737,9 +742,9 @@ class TCGABatcherABC( object ):
       self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
       self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )\
       
-      if mode=="TRAIN":
-        print "some nan ? = ", np.sum( np.isnan(z_mu))
-        #pdb.set_trace()
+      # if mode=="TRAIN":
+      #   print "some nan ? = ", np.sum( np.isnan(z_mu))
+      #   #pdb.set_trace()
     else:
       self.fill_store["Z/%s/%s/mu"%(mode,target)]  = pd.DataFrame( z_mu, index = barcodes, columns = columns )
       self.fill_store["Z/%s/%s/var"%(mode,target)] = pd.DataFrame( z_var, index = barcodes, columns = columns )
@@ -1439,11 +1444,11 @@ class TCGABatcherABC( object ):
       store[store_key]
     except:
       print "AddSeries: Cannot access store with key %s"%(store_key)
-      #pdb.set_trace()
+      
       store[store_key] = pd.DataFrame( [], columns = columns )      
     
     s = pd.Series( values, index = store[ store_key ].columns)
-  
+    #pdb.set_trace()
     store[ store_key ] = store[ store_key ].append( s, ignore_index = True )
     
     store.close()
@@ -1477,7 +1482,14 @@ class TCGABatcherABC( object ):
       n_mirna = d[miRNA_TARGET_MASK].sum()
     else:
       n_mirna = len(d[BARCODES])
-   
+      
+    if d.has_key(TISSUE_INPUT):
+      #pdb.set_trace()
+      n_tissue = len(d[TISSUE_INPUT])
+    else:
+      n_tissue = len(d[BARCODES])
+      
+    # pdb.set_trace()
     # HACK to get the sizes correct
     n_batch_size = len(d[BARCODES])
     counts[RNA] = n_rna
@@ -1488,6 +1500,8 @@ class TCGABatcherABC( object ):
     counts[DNA+"_b"] = n_dna
     counts[METH+"_b"] = n_meth
     counts[miRNA+"_b"] = n_mirna
+    counts[TISSUE] = n_tissue
+    
     return counts
     
   def Epoch( self, epoch_key, sess, info_dict, epoch, feed_dict, impute_dict, mode ):  

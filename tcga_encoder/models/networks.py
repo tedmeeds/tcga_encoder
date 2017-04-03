@@ -158,6 +158,7 @@ class NeuralNetwork(object):
             inputs.append( self.GetLayer(name) )
             input_list.append(name)
           else:
+            print "Could not find %s, so... looking for input_template"%(name)
             assert layer_dict.has_key( "input_template" ), "need a template if layer does not exist."
             input_list = []
             name_template = layer_dict["input_template"] # how to sub in name
@@ -555,7 +556,78 @@ class VanillaVariationalAutoEncoder(NeuralNetwork):
     if imputation_dict.has_key("free_bits"):
       #print "filling beta"
       feed_dict[self.free_bits] = imputation_dict["free_bits"]
+
+class AdversarialVariationalAutoEncoder(NeuralNetwork):
+  def __init__( self, arch_dict, data_dict ):
+    self.layers   = OrderedDict()
+    self.dropouts = OrderedDict()
+    
+    self.use_matrix = True
+    
+    self.arch = arch_dict
+    #self.beta       = tf.placeholder( tf.float32, [], name="beta" )
+    #self.free_bits = tf.placeholder( tf.float32, [], name="free_bits" )
+    
+    self.recognition_names = self.BuildLayers( arch_dict[RECOGNITION], data_dict, arch_dict[VARIABLES] )
+    self.generative_names  = self.BuildLayers( arch_dict[GENERATIVE],  data_dict, arch_dict[VARIABLES] )
+    self.negative_names  = self.BuildLayers( arch_dict["negative_target"],  data_dict, arch_dict[VARIABLES] )
+    self.positive_names  = self.BuildLayers( arch_dict["positive_target"],  data_dict, arch_dict[VARIABLES] )
+    
+    self.weight_penalties = self.ApplyRegularizers( arch_dict[REGULARIZERS], arch_dict[VARIABLES] )
+    if len(self.weight_penalties)>0:
+      self.weight_penalty = tf.add_n( self.weight_penalties )
+    else:
+      self.weight_penalty = 0.0
       
+    #pdb.set_trace()
+    self.loglikes_data_as_matrix  = self.BuildLoglikelihoods( arch_dict[DATA_LOGLIK],    data_dict, arch_dict[VARIABLES], as_matrix = self.use_matrix )
+    self.loglikes_rec_as_matrix   = self.BuildLoglikelihoods( arch_dict[REC_Z_LOGLIK],   data_dict, arch_dict[VARIABLES], as_matrix = self.use_matrix )
+    self.loglikes_prior_as_matrix = self.BuildLoglikelihoods( arch_dict[PRIOR_Z_LOGLIK], data_dict, arch_dict[VARIABLES], as_matrix = self.use_matrix )
+
+    self.loglikes_pos_target_as_matrix  = self.BuildLoglikelihoods( arch_dict["positive_target_data_loglik"],    data_dict, arch_dict[VARIABLES], as_matrix = self.use_matrix )
+    self.loglikes_neg_target_as_matrix  = self.BuildLoglikelihoods( arch_dict["negative_target_data_loglik"],    data_dict, arch_dict[VARIABLES], as_matrix = self.use_matrix )
+
+
+    self.loglikes_data  = self.OrderedDictOp( tf.reduce_sum, self.loglikes_data_as_matrix )
+    self.loglikes_rec   = self.OrderedDictOp( tf.reduce_sum, self.loglikes_rec_as_matrix )
+    self.loglikes_prior = self.OrderedDictOp( tf.reduce_sum, self.loglikes_prior_as_matrix )
+    
+    self.log_p_source_given_z = self.loglikes_data.values()
+    self.log_p_x_given_z  = tf.add_n( self.loglikes_data.values(), name = "log_p_x_given_z" )
+    self.log_p_z          = tf.add_n( self.loglikes_prior.values(), name = "log_p_z" )
+    self.log_q_z          = tf.add_n( self.loglikes_rec.values(), name = "log_q_z" )
+    
+    self.log_p_t_given_z_pos = tf.reduce_sum( self.loglikes_pos_target_as_matrix.values(), name = "log_p_t_given_z_pos" )
+    self.log_p_t_given_z_neg = tf.reduce_sum( self.loglikes_neg_target_as_matrix.values(), name = "log_p_t_given_z_neg" )
+    
+    #self.lower_bound = self.log_p_x_given_z + self.log_p_z - self.log_q_z
+    self.lower_bound = self.log_p_x_given_z + self.log_p_z - self.log_q_z 
+     
+    self.batch_log_tensors = [self.lower_bound,self.log_p_x_given_z,self.log_p_z,self.log_q_z]
+    self.batch_log_tensors.extend( self.log_p_source_given_z )
+    self.batch_log_tensors.extend( [self.log_p_t_given_z_pos, self.log_p_t_given_z_neg])
+    self.batch_log_columns = ["Epoch","Lower Bound","log p(x|z)", "log p(z)", "log q(z|x)"]
+    source_names = ["log p(%s|z)"%specs[SHORT] for specs in arch_dict[DATA_LOGLIK] ]
+    self.batch_log_columns.extend(source_names)
+    self.batch_log_columns.extend(["log p(t|z) +", "log p(t|z) -"])
+     
+  def CostToMinimize(self):
+    return -( self.lower_bound - self.weight_penalty + self.log_p_t_given_z_pos - 0*self.log_p_t_given_z_neg)
+
+  def FillFeedDict( self, feed_dict, imputation_dict ):
+    # use stuff from imputation_dict to fill feed_dict
+    for name, imputed_values in imputation_dict.iteritems():
+      if self.HasLayer( name ) and self.HasDropout( name ) is False:
+        feed_dict[ self.GetTensor(name) ]  = imputed_values
+      elif self.HasDropout( name ):
+        feed_dict[ self.GetDropout(name).GetKeepRateTensor() ]  = imputed_values
+    # if imputation_dict.has_key("beta"):
+    #   #print "filling beta"
+    #   feed_dict[self.beta] = imputation_dict["beta"]
+    # if imputation_dict.has_key("free_bits"):
+    #   #print "filling beta"
+    #   feed_dict[self.free_bits] = imputation_dict["free_bits"]
+            
 class MixtureVariationalAutoEncoder(NeuralNetwork):
   def __init__( self, arch_dict, data_dict ):
     self.layers   = OrderedDict()

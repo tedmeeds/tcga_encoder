@@ -159,10 +159,18 @@ def EstimateWeightShape( input_shape, output_shape ):
   
   return weight_shape
                                                             
-def MakeWeights( input_sources, output_shape, name = "", has_biases=True, constant=None, shared_layers = None, shared_idx = None ):
+def MakeWeights( input_sources, output_shape, name = "", has_biases=True, constant=None, shared_layers = None, shared_idx = None, layer_specs=None ):
     weights   = []
     default_constant = 0.1
     input_idx = 0
+    
+    is_trainable = True
+    if layer_specs is not None:
+      if layer_specs.has_key("trainable"):
+        #pdb.set_trace()
+        is_trainable = layer_specs["trainable"]
+        
+    
     for input_source in input_sources:
       
       weight_shape = EstimateWeightShape( input_source.shape, output_shape )
@@ -184,14 +192,15 @@ def MakeWeights( input_sources, output_shape, name = "", has_biases=True, consta
             w = borrowed_layer.weights[shared_idx][0]
             is_shared = True
       if is_shared is False:
-        w = tf.Variable( weight_init( weight_shape, constant=default_constant ), name = "w_"+input_source.name+"2"+name )
+        #pdb.set_trace()
+        w = tf.Variable( weight_init( weight_shape, constant=default_constant ), name = "w_"+input_source.name+"2"+name, trainable=is_trainable )
       else:
         print "USING BORROWED WEIGHT"
       weights.append(w)
     
     biases = None
     if has_biases:
-      biases = tf.Variable( tf.zeros(tuple(output_shape), dtype=tf.float32), name = "b_"+name  )
+      biases = tf.Variable( tf.zeros(tuple(output_shape), dtype=tf.float32), name = "b_"+name, trainable=is_trainable  )
     
     return weights, biases 
 
@@ -250,7 +259,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     constant = 0.1
     if layer_specs.has_key("weight_constant"):
           constant = layer_specs["weight_constant"]
-    weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases, constant=constant  )  
+    weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases, constant=constant, layer_specs=layer_specs  )  
     # if shared_layer is None:
     #   weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
     #   #total_penalty = tf.add_n( penalties )
@@ -337,7 +346,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       has_biases = layer_specs["biases"]
     
     if shared_layers is None:
-      weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
+      weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases, layer_specs=layer_specs  )
       #total_penalty = tf.add_n( penalties )
     else:
       weights = shared_layers.weights
@@ -380,8 +389,8 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
 
     
     if shared_layers is None:
-      weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases  )
-      weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases  )
+      weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases, layer_specs=layer_specs  )
+      weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases, layer_specs=layer_specs  )
     else:
       weights_mu    = shared_weights.weights[0]
       weights_var   = shared_weights.weights[1]
@@ -414,8 +423,8 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     
     if shared_layers is None:
       weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases  )
-      weights_logprec_mu, biases_logprec_mu = MakeWeights( input_layers, shape, name+"_"+LOG_PREC_MU, has_biases=has_biases  )
-      weights_logprec_var, biases_logprec_var   = MakeWeights( input_layers, shape, name+"_"+LOG_PREC_VAR, has_biases=has_biases  )
+      weights_logprec_mu, biases_logprec_mu = MakeWeights( input_layers, shape, name+"_"+LOG_PREC_MU, has_biases=has_biases, layer_specs=layer_specs  )
+      weights_logprec_var, biases_logprec_var   = MakeWeights( input_layers, shape, name+"_"+LOG_PREC_VAR, has_biases=has_biases, layer_specs=layer_specs  )
     else:
       weights_mu    = shared_weights.weights[0]
       weights_var   = shared_weights.weights[1]
@@ -449,9 +458,9 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
 
     
     if shared_layers is None:
-      weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases  )
-      weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases  )
-      weights_nu, biases_nu   = MakeWeights( input_layers, shape, name+"_"+NU, has_biases=has_biases  )
+      weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases, layer_specs=layer_specs  )
+      weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases, layer_specs=layer_specs  )
+      weights_nu, biases_nu   = MakeWeights( input_layers, shape, name+"_"+NU, has_biases=has_biases, layer_specs=layer_specs  )
     else:
       weights_mu    = shared_weights.weights[0]
       weights_var   = shared_weights.weights[1]
@@ -484,9 +493,9 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
 
     
     if shared_layers is None:
-      weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases  )
-      weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases  )
-      weights_v, biases_v   = MakeWeights( input_layers, shape, name+"_"+"V", has_biases=has_biases  )
+      weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases, layer_specs=layer_specs  )
+      weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases, layer_specs=layer_specs  )
+      weights_v, biases_v   = MakeWeights( input_layers, shape, name+"_"+"V", has_biases=has_biases, layer_specs=layer_specs  )
     else:
       weights_mu    = shared_weights.weights[0]
       weights_var   = shared_weights.weights[1]
@@ -561,9 +570,9 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       has_biases = layer_specs["biases"]
     
     
-    weights_log_a, biases_log_a =  MakeWeights( input_layers, shape, name+"_log_a", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 0  )
+    weights_log_a, biases_log_a =  MakeWeights( input_layers, shape, name+"_log_a", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 0, layer_specs=layer_specs  )
     
-    weights_log_b,  biases_log_b = MakeWeights( input_layers, shape, name+"_log_b", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 1  )
+    weights_log_b,  biases_log_b = MakeWeights( input_layers, shape, name+"_log_b", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 1, layer_specs=layer_specs  )
 
     a, a_input          = ForwardPropagate( input_layers, weights_log_a, biases_log_a, \
                                                      transfer_function=tf.exp, name=name+"_"+A )
@@ -602,7 +611,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       has_biases = layer_specs["biases"]
     
     if shared_layers is None:
-      weights, biases  = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
+      weights, biases  = MakeWeights( input_layers, shape, name, has_biases=has_biases , layer_specs=layer_specs )
     else:
       weights = shared_weights.weights
       biases = shared_weights.biases
@@ -651,7 +660,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       has_biases = layer_specs["biases"]
 
     if shared_layers is None:
-      weights, biases = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
+      weights, biases = MakeWeights( input_layers, shape, name, has_biases=has_biases, layer_specs=layer_specs  )
     else:
       weights = shared_weights.weights
       biases = shared_weights.biases

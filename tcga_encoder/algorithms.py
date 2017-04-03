@@ -112,7 +112,8 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
   
   print "Running : for epoch in range(n_epochs):"
   for epoch in range(n_epochs):
-
+    batcher.DoWhatYouWantAtEpoch( sess, epoch, network )
+    
     # -------------------------------------------------- #
     # BATCH SET-UP                                       #
     # -------------------------------------------------- #
