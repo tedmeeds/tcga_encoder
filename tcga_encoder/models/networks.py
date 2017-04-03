@@ -612,7 +612,7 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
     self.batch_log_columns.extend(["log p(t|z_copy) +", "log p(t|z_rec) -"])
      
   def CostToMinimize(self):
-    return -self.lower_bound + self.weight_penalty #+ 0*self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
+    return -self.lower_bound + self.weight_penalty + 0*self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
 
   def FillFeedDict( self, feed_dict, imputation_dict ):
     # use stuff from imputation_dict to fill feed_dict
