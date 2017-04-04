@@ -4,6 +4,7 @@ from tcga_encoder.models.vae.batcher_tissue_control import *
   
 class TCGABatcherAdversarial( TCGABatcher ):
   def MakeVizFilenames(self):
+    self.fill_z_input = True
     self.viz_filename_survival      =  os.path.join( self.savedir, "survival" )
     self.viz_filename_survival_lda  =  os.path.join( self.savedir, "survival__lda" )
     self.viz_filename_z_to_dna      =  os.path.join( self.savedir, "lda_dna" )
@@ -25,12 +26,22 @@ class TCGABatcherAdversarial( TCGABatcher ):
 
   def FillDerivedPlaceholder( self, batch, layer_name, mode ):
     
-    if layer_name == "Z_rec_input":
+    if layer_name == "Z_rec_input" and self.fill_z_input is True:
+      #print "Getting Z for batch for ids ", batch["barcodes"][:5]
       self.fill_store.open()
       if mode == "BATCH" or mode == "TRAIN":
-        #pdb.set_trace()
+        # #pdb.set_trace()
+        # try:
+        #   batch_data_mu = self.fill_store["/Z/BATCH/Z/mu"].loc[ batch["barcodes"] ]
+        #   batch_data_var = self.fill_store["/Z/BATCH/Z/var"].loc[ batch["barcodes"] ]
+        # except:
+        #   print "getting from train..."
         batch_data_mu = self.fill_store["/Z/TRAIN/Z/mu"].loc[ batch["barcodes"] ]
         batch_data_var = self.fill_store["/Z/TRAIN/Z/var"].loc[ batch["barcodes"] ]
+        #pdb.set_trace()
+        #batch_data_mu = self.fill_store["/Z/BATCH/Z/mu"].loc[ batch["barcodes"] ]
+        
+        #batch_data_var = self.fill_store["/Z/BATCH/Z/var"].loc[ batch["barcodes"] ]
         
         n,d = batch_data_mu.values.shape
         batch_data_values = batch_data_mu.values #+ np.sqrt(batch_data_var.values)*np.random.randn(n,d)
@@ -49,6 +60,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       # batch[ layer_name ] = self.NormalizemiRnaInput( batch_data_values )
       batch[ layer_name ] = batch_data
       batch[ layer_name ][nans] = 0
+      #pdb.set_trace()
       self.fill_store.close()
 
     
@@ -59,8 +71,13 @@ class TCGABatcherAdversarial( TCGABatcher ):
     #network.GetLayer( "target_prediction_pos" ).SetBiases( sess, network.GetLayer( "target_prediction_neg" ).EvalBiases() )
     #network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
     #network.GetLayer( "target_prediction_neg" ).SetBiases( sess, network.GetLayer( "target_prediction_pos" ).EvalBiases() )
-    self.BatchFillZ(sess,info_dict)
+    
+    #self.BatchFillZ(sess,info_dict)
+    self.fill_z_input = False
+    self.TrainFillZ(sess,info_dict)
+    self.fill_z_input = True
     #pass
+    #pdb.set_trace()
     
   def Epoch( self, epoch_key, sess, info_dict, epoch, feed_dict, impute_dict, mode ):  
     barcodes = impute_dict[BARCODES]
@@ -762,6 +779,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
 
   def InitializeAnythingYouWant(self, sess, network ):
     print "Running : InitializeAnythingYouWant"
+    self.fill_z_input = True
+    
     input_sources = ["METH","RNA","miRNA"] 
     layers = ["gen_meth_space_basic","gen_rna_space_basic","gen_mirna_space_basic"]
     

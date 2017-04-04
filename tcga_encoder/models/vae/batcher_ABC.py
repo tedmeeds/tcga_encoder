@@ -733,8 +733,9 @@ class TCGABatcherABC( object ):
 
     self.fill_store.open()
     
-    if mode == "TRAIN" and target == "Z":
+    if (mode == "TRAIN" or mode == "BATCH") and target == "Z":
       #pdb.set_trace()
+      #print "Filling batch for ids ", barcodes[:5]
       X_mu = self.fill_store["/Z/TRAIN/Z/mu"].values
       X_mu[self.batch_ids,:] = z_mu
       X_var = self.fill_store["/Z/TRAIN/Z/var"].values
@@ -746,6 +747,7 @@ class TCGABatcherABC( object ):
       #   print "some nan ? = ", np.sum( np.isnan(z_mu))
       #   #pdb.set_trace()
     else:
+      
       self.fill_store["Z/%s/%s/mu"%(mode,target)]  = pd.DataFrame( z_mu, index = barcodes, columns = columns )
       self.fill_store["Z/%s/%s/var"%(mode,target)] = pd.DataFrame( z_var, index = barcodes, columns = columns )
       
@@ -1539,6 +1541,7 @@ class TCGABatcherABC( object ):
     
     if mode == "BATCH":
       self.AddSeries(  self.epoch_store, BATCH_SOURCE_LOGPDF, values = epoch_log_p_source_z_values, columns = epoch_source_columns )
+      self.PrintRow( self.epoch_store, epoch_key )
     elif mode == "TEST" and self.n_test>0:
       self.AddSeries(  self.epoch_store, TEST_SOURCE_LOGPDF, values = epoch_log_p_source_z_values, columns = epoch_source_columns )
       self.PrintRow( self.epoch_store, epoch_key )
