@@ -74,6 +74,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     #self.BatchFillZ(sess,info_dict)
     self.fill_z_input = False
+    self.ValFillZ(sess,info_dict)
     self.BatchFillZ(sess,info_dict)
     self.fill_z_input = True
     #pass
