@@ -342,7 +342,7 @@ class TCGABatcherABC( object ):
   def InitializeAnythingYouWant( self, sess, network ):
     pass
     
-  def DoWhatYouWantAtEpoch( self, sess, epoch ):
+  def DoWhatYouWantAtEpoch( self, sess, epoch, network, info_dict):
     pass
     
   def InitFillStore(self):
