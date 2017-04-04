@@ -660,10 +660,10 @@ class TCGABatcherABC( object ):
     
     self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="VAL" )
     
-    feed_dict   = info_dict[BATCH_FEED_DICT]
-    impute_dict = info_dict[BATCH_FEED_IMPUTATION]
-    self.batch_ids = info_dict["batch_ids"]
-    self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="BATCH" )
+    # feed_dict   = info_dict[BATCH_FEED_DICT]
+    # impute_dict = info_dict[BATCH_FEED_IMPUTATION]
+    # self.batch_ids = info_dict["batch_ids"]
+    # self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="BATCH" )
 
   def TrainFillZ( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
