@@ -123,6 +123,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     if mode == "BATCH":
       #pdb.set_trace()
       self.AddSeries(  self.epoch_store, BATCH_SOURCE_LOGPDF, values = epoch_log_p_source_z_values, columns = epoch_source_columns )
+      self.PrintRow( self.epoch_store, epoch_key )
     elif mode == "TEST" and self.n_test>0:
       self.AddSeries(  self.epoch_store, TEST_SOURCE_LOGPDF, values = epoch_log_p_source_z_values, columns = epoch_source_columns )
       self.PrintRow( self.epoch_store, epoch_key )
