@@ -75,6 +75,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
     #self.BatchFillZ(sess,info_dict)
     self.fill_z_input = False
     self.TestFillZ(sess,info_dict)
+    
+    #impute_dict = self.FillBatch( self.validation_barcodes, mode = "VAL" )
      #
     # barcodes = self.validation_barcodes
     # impute_dict = self.FillBatch( barcodes, mode = "VAL" ) #self.NextBatch(batch_ids)

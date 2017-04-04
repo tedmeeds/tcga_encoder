@@ -657,14 +657,14 @@ class TCGABatcherABC( object ):
     
     #feed_dict   = info_dict[VAL_FEED_DICT]
     #impute_dict = info_dict[VAL_FEED_IMPUTATION]
-    
-    barcodes = self.validation_barcodes
-    impute_dict = self.FillBatch( barcodes, mode = "VAL" ) #self.NextBatch(batch_ids)
+    impute_dict = self.FillBatch( self.validation_barcodes, mode = "VAL" )
+    #barcodes = self.validation_barcodes
+    #impute_dict = self.FillBatch( barcodes, mode = "VAL" ) #self.NextBatch(batch_ids)
     #impute_dict[BARCODES] = barcodes
-    self.batch_ids = batch_ids
+    #self.batch_ids = batch_ids
     feed_dict={}
     
-    network.FillFeedDict( feed_dict, impute_dict )
+    self.network.FillFeedDict( feed_dict, impute_dict )
     self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="VAL" )
     
     # feed_dict   = info_dict[BATCH_FEED_DICT]
@@ -683,7 +683,7 @@ class TCGABatcherABC( object ):
       barcodes = self.train_barcodes[batch_ids]
       impute_dict = self.FillBatch( barcodes, mode = "TRAIN" ) #self.NextBatch(batch_ids)
       #impute_dict[BARCODES] = barcodes
-      self.batch_ids = batch_ids
+      #self.batch_ids = batch_ids
       
       
       
@@ -698,7 +698,7 @@ class TCGABatcherABC( object ):
     epoch       = info_dict[EPOCH]
     feed_dict   = info_dict[BATCH_FEED_DICT]
     impute_dict = info_dict[BATCH_FEED_IMPUTATION]
-    self.batch_ids = info_dict["batch_ids"]
+    #self.batch_ids = info_dict["batch_ids"]
     self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="BATCH" )
 
 
@@ -742,13 +742,32 @@ class TCGABatcherABC( object ):
     
     if (mode == "TRAIN" or mode == "BATCH") and target == "Z":
       #pdb.set_trace()
+      S = self.fill_store["/Z/TRAIN/Z/mu"]
+      #print "before: "
+      #print S.loc[barcodes[:2]]
+      #print "before:"
+      #print self.fill_store["/Z/TRAIN/Z/mu"].loc[barcodes[:2]]
+      #prev = S.loc[barcodes[:2]]
+      
       #print "Filling batch for ids ", barcodes[:5]
-      X_mu = self.fill_store["/Z/TRAIN/Z/mu"].values
-      X_mu[self.batch_ids,:] = z_mu
-      X_var = self.fill_store["/Z/TRAIN/Z/var"].values
-      X_var[self.batch_ids,:] = z_var
-      self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
-      self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )\
+      #X_mu = self.fill_store["/Z/TRAIN/Z/mu"].values
+      
+      S.loc[ barcodes ] = z_mu 
+      #self.fill_store["/Z/TRAIN/Z/mu"].loc[ barcodes ] = z_mu
+      #print "after:"
+      #print S.loc[barcodes[:2]]
+      #print "after:"
+      #print self.fill_store["/Z/TRAIN/Z/mu"].loc[barcodes[:2]]
+      
+      self.fill_store["/Z/TRAIN/Z/mu"] = S
+      #pdb.set_trace()
+      #self.fill_store["/Z/TRAIN/Z/mu"].loc[barcodes] = z_mu
+      #self.fill_store["/Z/TRAIN/Z/var"].loc[barcodes] = z_var
+      #X_mu[self.batch_ids,:] = z_mu
+      #X_var = self.fill_store["/Z/TRAIN/Z/var"].values
+      #X_var[self.batch_ids,:] = z_var
+      #self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
+      #self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )\
       
       # if mode=="TRAIN":
       #   print "some nan ? = ", np.sum( np.isnan(z_mu))
