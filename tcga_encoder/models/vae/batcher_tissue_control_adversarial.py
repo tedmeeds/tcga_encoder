@@ -69,8 +69,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
     #pdb.set_trace()
     #network.GetLayer( "target_prediction_pos" ).SetWeights( sess, network.GetLayer( "target_prediction_neg" ).EvalWeights() )
     #network.GetLayer( "target_prediction_pos" ).SetBiases( sess, network.GetLayer( "target_prediction_neg" ).EvalBiases() )
-    #network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
-    #network.GetLayer( "target_prediction_neg" ).SetBiases( sess, network.GetLayer( "target_prediction_pos" ).EvalBiases() )
+    network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
+    network.GetLayer( "target_prediction_neg" ).SetBiases( sess, network.GetLayer( "target_prediction_pos" ).EvalBiases() )
     
     #self.BatchFillZ(sess,info_dict)
     self.fill_z_input = False
