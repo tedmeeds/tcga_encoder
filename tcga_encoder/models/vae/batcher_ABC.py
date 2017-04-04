@@ -655,9 +655,16 @@ class TCGABatcherABC( object ):
     #
     # self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="TEST" )
     
-    feed_dict   = info_dict[VAL_FEED_DICT]
-    impute_dict = info_dict[VAL_FEED_IMPUTATION]
+    #feed_dict   = info_dict[VAL_FEED_DICT]
+    #impute_dict = info_dict[VAL_FEED_IMPUTATION]
     
+    barcodes = self.validation_barcodes
+    impute_dict = self.FillBatch( barcodes, mode = "VAL" ) #self.NextBatch(batch_ids)
+    #impute_dict[BARCODES] = barcodes
+    self.batch_ids = batch_ids
+    feed_dict={}
+    
+    network.FillFeedDict( feed_dict, impute_dict )
     self.RunFillZ( epoch, sess, feed_dict, impute_dict, mode="VAL" )
     
     # feed_dict   = info_dict[BATCH_FEED_DICT]
@@ -671,7 +678,7 @@ class TCGABatcherABC( object ):
     # val_feed_dict = {}
     # network.FillFeedDict( val_feed_dict, val_feed_imputation )
     
-    self.FillBatch( self.validation_barcodes, mode = "VAL" )
+    #self.FillBatch( self.validation_barcodes, mode = "VAL" )
     for batch_ids in chunks( np.arange(len(self.train_barcodes)), 500 ):
       barcodes = self.train_barcodes[batch_ids]
       impute_dict = self.FillBatch( barcodes, mode = "TRAIN" ) #self.NextBatch(batch_ids)
