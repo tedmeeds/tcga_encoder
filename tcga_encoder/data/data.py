@@ -389,7 +389,7 @@ class MultiSourceData(object):
       print self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum().sort_values(ascending=False)
       channel_idx+=1  
       
-  def AddRNA( self, broad_location, filename, h5store, nbr_genes, method = "max_var_fair", diseases = None ):
+  def AddRNA( self, broad_location, filename, h5store_ga, h5store_hi, nbr_genes, method = "max_var_fair", diseases = None ):
     #genes2keep = None, diseases = None ):
     print "*****************************************"
     print "**                                     **"
@@ -399,6 +399,11 @@ class MultiSourceData(object):
 
     self.InitSource( RNA, broad_location, filename )
     
+    h5store_ga, h5store_hi
+    
+    h5_b = h5store_hi.append(h5store_ga)
+    h5 = h5_b.drop_duplicates( subset=["patient.bcr_patient_barcode"])
+    pdb.set_trace()
     h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
     if diseases is not None:
