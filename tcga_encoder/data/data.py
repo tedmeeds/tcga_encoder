@@ -198,9 +198,10 @@ class MultiSourceData(object):
     
     h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     h5_raw = h5store_raw 
-    
-    h5.append(h5_raw)
+    h5_merge = h5.append(h5_raw)
     pdb.set_trace()
+    #h5.append(h5_raw)
+    
     # if diseases is not None:
     #   n=len(h5)
     #   print "** DNA filtering diseases"
