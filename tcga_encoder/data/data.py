@@ -198,11 +198,11 @@ class MultiSourceData(object):
     
     h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     h5_raw = h5store_raw 
-    h5_merge = h5.append(h5_raw)
+    h5_merge = h5_raw.append(h5)
     
     duplicate_columns = ["Variant_Classification","patient.bcr_patient_barcode","Hugo_Symbol","Start_Position","End_Position"]
     h5_dropped = h5_merge.drop_duplicates(subset=duplicate_columns)
-    pdb.set_trace()
+    #pdb.set_trace()
     #h5.append(h5_raw)
     
     # if diseases is not None:
@@ -228,31 +228,43 @@ class MultiSourceData(object):
     raw_DISEASES = h5_raw["admin.disease_code"].values
     raw_PATIENTS = np.sort(np.unique( raw_DISEASES + "_" + raw_PATIENTS ))
     raw_patient_rows = raw_PATIENTS
-    
+
+    dropped_PATIENTS = h5_dropped["patient.bcr_patient_barcode"].values
+    u_dropped_barcodes = np.sort(np.unique( dropped_PATIENTS ) )
+    dropped_DISEASES = h5_dropped["admin.disease_code"].values
+    dropped_PATIENTS = np.sort(np.unique( dropped_DISEASES + "_" + dropped_PATIENTS ))
+    dropped_patient_rows = dropped_PATIENTS
+        
     print "finding intersection of patients" 
     # find patient in h5 that are also in h5_raw, and remove from h5
     intersect_barcodes = np.intersect1d( u_raw_barcodes, u_barcodes)
+    intersect_barcodesb = np.intersect1d( u_raw_barcodes, u_dropped_barcodes)
+    intersect_barcodesc = np.intersect1d( u_barcodes, u_dropped_barcodes)
     
-    print "found %d barcodes to remove from h5"%(len(intersect_barcodes))
-    # merge h5 and h5_raw
-    
-    for bc in intersect_barcodes:
-      n_h5 = len(h5)
-      #remove_query = np.zeros( (n_h5,1), dtype=bool )
-      remove_query = (h5["patient.bcr_patient_barcode"]==bc).values.reshape((n_h5,1))
-      keep_query = ~remove_query
-      #pdb.set_trace()
-      h5 = h5[keep_query]
-
-    new_PATIENTS = h5["patient.bcr_patient_barcode"].values
-    new_DISEASES = h5["admin.disease_code"].values
-    
-    new_u_barcodes = np.sort(np.unique( new_PATIENTS ) )
-    new_PATIENTS = np.sort(np.unique( new_DISEASES + "_" + new_PATIENTS ))
-    new_patient_rows = new_PATIENTS
-
-    
-    print "finding removing patients from h5" 
+    print "intersect h5 & raw_h5 ", intersect_barcodes.shape
+    print "intersect raw h5 & dropped ", intersect_barcodesb.shape
+    print "intersect h5 & dropped ", intersect_barcodesc.shape
+    pdb.set_trace()
+    # #print "found %d barcodes to remove from h5"%(len(intersect_barcodes))
+    # # merge h5 and h5_raw
+    #
+    # for bc in intersect_barcodes:
+    #   n_h5 = len(h5)
+    #   #remove_query = np.zeros( (n_h5,1), dtype=bool )
+    #   remove_query = (h5["patient.bcr_patient_barcode"]==bc).values.reshape((n_h5,1))
+    #   keep_query = ~remove_query
+    #   #pdb.set_trace()
+    #   h5 = h5[keep_query]
+    #
+    # new_PATIENTS = h5["patient.bcr_patient_barcode"].values
+    # new_DISEASES = h5["admin.disease_code"].values
+    #
+    # new_u_barcodes = np.sort(np.unique( new_PATIENTS ) )
+    # new_PATIENTS = np.sort(np.unique( new_DISEASES + "_" + new_PATIENTS ))
+    # new_patient_rows = new_PATIENTS
+    #
+    #
+    # print "finding removing patients from h5"
     pdb.set_trace()  
     
     self.AddObservedPatients( DNA, patient_rows )
