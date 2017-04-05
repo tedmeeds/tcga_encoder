@@ -209,6 +209,7 @@ class MultiSourceData(object):
     #   self.AddInfo( DNA, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
     
     # figure out patients before filtering out missing genes
+    print "finding unique patients"
     PATIENTS = h5["patient.bcr_patient_barcode"].values
     DISEASES = h5["admin.disease_code"].values
     
@@ -222,16 +223,30 @@ class MultiSourceData(object):
     raw_PATIENTS = np.sort(np.unique( raw_DISEASES + "_" + raw_PATIENTS ))
     raw_patient_rows = raw_PATIENTS
     
+    print "finding intersection of patients" 
     # find patient in h5 that are also in h5_raw, and remove from h5
     intersect_barcodes = np.intersect1d( u_raw_barcodes, u_barcodes)
     
+    print "found %d barcodes to remove from h5"%(len(intersect_barcodes))
     # merge h5 and h5_raw
-    n_h5 = len(h5)
-    remove_query = np.zeros( (n_h5,1), dtype=bool )
-    for bc in intersect_barcodes:
-      remove_query |= (h5["patient.bcr_patient_barcode"]==bc).values.reshape((n_h5,1))
-    keep_query = ~remove_query
     
+    for bc in intersect_barcodes:
+      n_h5 = len(h5)
+      #remove_query = np.zeros( (n_h5,1), dtype=bool )
+      remove_query = (h5["patient.bcr_patient_barcode"]==bc).values.reshape((n_h5,1))
+      keep_query = ~remove_query
+      #pdb.set_trace()
+      h5 = h5[keep_query]
+
+    new_PATIENTS = h5["patient.bcr_patient_barcode"].values
+    new_DISEASES = h5["admin.disease_code"].values
+    
+    new_u_barcodes = np.sort(np.unique( new_PATIENTS ) )
+    new_PATIENTS = np.sort(np.unique( new_DISEASES + "_" + new_PATIENTS ))
+    new_patient_rows = new_PATIENTS
+
+    
+    print "finding removing patients from h5" 
     pdb.set_trace()  
     
     self.AddObservedPatients( DNA, patient_rows )
