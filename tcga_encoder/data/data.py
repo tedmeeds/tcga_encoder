@@ -197,22 +197,41 @@ class MultiSourceData(object):
     self.InitSource( DNA, broad_location, filename )
     
     h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
-    
+    h5_raw = h5store_raw 
     pdb.set_trace()
-    if diseases is not None:
-      n=len(h5)
-      print "** DNA filtering diseases"
-      query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
-      h5 = h5[query]
-      n_after = len(h5)
-      self.AddInfo( DNA, "filtering_step", "disease number%d"%(len(diseases)) )
-      self.AddInfo( DNA, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
+    # if diseases is not None:
+    #   n=len(h5)
+    #   print "** DNA filtering diseases"
+    #   query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
+    #   h5 = h5[query]
+    #   n_after = len(h5)
+    #   self.AddInfo( DNA, "filtering_step", "disease number%d"%(len(diseases)) )
+    #   self.AddInfo( DNA, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
     
     # figure out patients before filtering out missing genes
     PATIENTS = h5["patient.bcr_patient_barcode"].values
     DISEASES = h5["admin.disease_code"].values
+    
+    u_barcodes = np.sort(np.unique( PATIENTS ) )
     PATIENTS = np.sort(np.unique( DISEASES + "_" + PATIENTS ))
     patient_rows = PATIENTS
+    
+    raw_PATIENTS = h5_raw["patient.bcr_patient_barcode"].values
+    u_raw_barcodes = np.sort(np.unique( raw_PATIENTS ) )
+    raw_DISEASES = h5_raw["admin.disease_code"].values
+    raw_PATIENTS = np.sort(np.unique( raw_DISEASES + "_" + raw_PATIENTS ))
+    raw_patient_rows = raw_PATIENTS
+    
+    # find patient in h5 that are also in h5_raw, and remove from h5
+    intersect_barcodes = np.intersect1d( u_raw_barcodes, u_barcodes)
+    
+    # merge h5 and h5_raw
+    keep_query = np.ones( (len(PATIENTS),1), dtype=bool )
+    for bc in intersect_barcodes:
+      keep_query &= PATIENTS==bc
+    
+    pdb.set_trace()  
+    
     self.AddObservedPatients( DNA, patient_rows )
     
     if genes2keep is not None:
