@@ -403,22 +403,22 @@ class MultiSourceData(object):
     h5_b = h5store_hi.append(h5store_ga)
     h5 = h5_b.drop_duplicates( subset=["RNApatient.bcr_patient_barcode"])
     
-    h5_barcodes = h5["patient.bcr_patient_barcode"].values
-    u_h5_barcodes = np.unique(h5_barcodes)
+    # h5_barcodes = h5["patient.bcr_patient_barcode"].values
+    # u_h5_barcodes = np.unique(h5_barcodes)
+    #
+    # counter_ga = Counter(h5store_ga["RNApatient.bcr_patient_barcode"].values)
+    # counter_hi = Counter(h5store_hi["RNApatient.bcr_patient_barcode"].values)
+    #
+    # counts_ga = np.array(counter_ga.values())
+    # I_ga = pp.find( counts_ga > 1 )
+    #
+    # dup_bcs_ga = np.array( counter_ga.keys() )[I_ga]
+    # counts_hi = np.array(counter_hi.values())
+    # I_hi = pp.find( counts_hi > 1 )
+    #
+    # dup_bcs_hi = np.array( counter_hi.keys() )[I_hi]
     
-    counter_ga = Counter(h5store_ga["RNApatient.bcr_patient_barcode"].values)
-    counter_hi = Counter(h5store_hi["RNApatient.bcr_patient_barcode"].values)
-    
-    counts_ga = np.array(counter_ga.values())
-    I_ga = pp.find( counts_ga > 1 )
-    
-    dup_bcs_ga = np.array( counter_ga.keys() )[I_ga]
-    counts_hi = np.array(counter_hi.values())
-    I_hi = pp.find( counts_hi > 1 )
-    
-    dup_bcs_hi = np.array( counter_hi.keys() )[I_hi]
-    
-    pdb.set_trace()
+    #pdb.set_trace()
     #h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
     # if diseases is not None:
@@ -627,7 +627,7 @@ class MultiSourceData(object):
     
     
     #self.meth_h5 = h5
-  def AddmiRNA( self, broad_location, filename, h5store, nbr_hsas, method = "max_var_fair", diseases = None ):
+  def AddmiRNA( self, broad_location, filename, h5store_ga, h5store_hi, nbr_hsas, method = "max_var_fair", diseases = None ):
     #genes2keep = None, diseases = None ):
     print "*****************************************"
     print "**                                     **"
@@ -637,7 +637,9 @@ class MultiSourceData(object):
 
     self.InitSource( miRNA, broad_location, filename )
     
-    h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
+    h5_b = h5store_hi.append(h5store_ga)
+    h5 = h5_b.drop_duplicates( subset=["miRNApatient.bcr_patient_barcode"])
+    #h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
     if diseases is not None:
       n=len(h5)
