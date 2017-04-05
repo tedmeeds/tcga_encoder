@@ -3,7 +3,6 @@ from tcga_encoder.definitions.tcga import *
 from tcga_encoder.definitions.nn import *
 import pdb
 
-
 def load_data_from_dict( y ):      
   y['location'] = os.path.join( os.environ.get('HOME','/'),y['location'])
   y['name_of_store'] = y['name_of_store']
@@ -403,18 +402,29 @@ class MultiSourceData(object):
     
     h5_b = h5store_hi.append(h5store_ga)
     h5 = h5_b.drop_duplicates( subset=["patient.bcr_patient_barcode"])
-    pdb.set_trace()
-    h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
-    if diseases is not None:
-      n=len(h5)
-      print "** RNA filtering diseases"
-      index_array = np.array(h5.index.values)
-      query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
-      h5 = h5[query]
-      n_after = len(h5)
-      self.AddInfo( RNA, "filtering_step", "disease number%d"%(len(diseases)) )
-      self.AddInfo( RNA, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
+    h5_barcodes = h5["patient.bcr_patient_barcode"].values
+    u_h5_barcodes = np.unique(h5_barcodes)
+    
+    counter = Counter(h5_barcodes)
+    
+    counts = np.array(counter.values())
+    I = pp.find( counts > 1 )
+    
+    dup_bcs = np.array( counter.keys() )[I]
+    
+    pdb.set_trace()
+    #h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
+    
+    # if diseases is not None:
+    #   n=len(h5)
+    #   print "** RNA filtering diseases"
+    #   index_array = np.array(h5.index.values)
+    #   query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
+    #   h5 = h5[query]
+    #   n_after = len(h5)
+    #   self.AddInfo( RNA, "filtering_step", "disease number%d"%(len(diseases)) )
+    #   self.AddInfo( RNA, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
     
     #gene_columns = np.sort( np.unique( h5["Hugo_Symbol"].values ) )
     print "** RNA filter for tumor samples only"

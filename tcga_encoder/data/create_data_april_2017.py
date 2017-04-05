@@ -56,7 +56,9 @@ if __name__ == "__main__":
         min_nbr_in_pan = source_spec["min_nbr_in_pan"]
       dataset.AddDNA( broad_location, source_name, dna_h5, dna_h5_raw, mutation_channels=mutation_channels, genes2keep=dna_genes, min_nbr_in_pan=min_nbr_in_pan )
     elif source_name == RNA:
+      print "loading ", source_spec["data_store_ga"]
       rna_h5_ga = ReadH5( os.path.join( broad_location, source_spec["data_store_ga"]) )
+      print "loading ", source_spec["data_store_hi"]
       rna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
       nbr = source_spec["nbr"]
       method = source_spec["method"]
