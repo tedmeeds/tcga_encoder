@@ -54,24 +54,24 @@ if __name__ == "__main__":
       min_nbr_in_pan  = None
       if source_spec.has_key("min_nbr_in_pan"):
         min_nbr_in_pan = source_spec["min_nbr_in_pan"]
-      dataset.AddDNA( broad_location, source_spec["data_store"], dna_h5, dna_h5_raw, mutation_channels=mutation_channels, genes2keep=dna_genes, min_nbr_in_pan=min_nbr_in_pan )
+      dataset.AddDNA( broad_location, source_name, dna_h5, dna_h5_raw, mutation_channels=mutation_channels, genes2keep=dna_genes, min_nbr_in_pan=min_nbr_in_pan )
     elif source_name == RNA:
       rna_h5_ga = ReadH5( os.path.join( broad_location, source_spec["data_store_ga"]) )
       rna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
       nbr = source_spec["nbr"]
       method = source_spec["method"]
-      dataset.AddRNA( broad_location, source_spec["data_store"], rna_h5_ga, rna_h5_hi, nbr, method )
+      dataset.AddRNA( broad_location, source_name, rna_h5_ga, rna_h5_hi, nbr, method )
     elif source_name == miRNA:
       mirna_h5_ga = ReadH5( os.path.join( broad_location, source_spec["data_store_ga"]) )
       mirna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
       nbr = source_spec["nbr"]
       method = source_spec["method"]
-      dataset.AddmiRNA( broad_location, source_spec["data_store"], mirna_h5_ga, mirna_h5_hi, nbr, method )
+      dataset.AddmiRNA( broad_location, source_name, mirna_h5_ga, mirna_h5_hi, nbr, method )
     elif source_name == METH:
       meth_h5 = ReadH5( os.path.join( broad_location, source_spec["data_store"]) )
       nbr = source_spec["nbr"]
       method = source_spec["method"]
-      dataset.AddMeth( broad_location, source_spec["data_store"], meth_h5, nbr, method )
+      dataset.AddMeth( broad_location, source_name, meth_h5, nbr, method )
     elif source_name == CLINICAL:
       pass
     else:
