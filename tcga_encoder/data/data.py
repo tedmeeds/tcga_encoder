@@ -198,7 +198,7 @@ class MultiSourceData(object):
     
     h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     h5_raw = h5store_raw 
-    pdb.set_trace()
+    #pdb.set_trace()
     # if diseases is not None:
     #   n=len(h5)
     #   print "** DNA filtering diseases"
@@ -226,9 +226,11 @@ class MultiSourceData(object):
     intersect_barcodes = np.intersect1d( u_raw_barcodes, u_barcodes)
     
     # merge h5 and h5_raw
-    keep_query = np.ones( (len(PATIENTS),1), dtype=bool )
+    n_h5 = len(h5)
+    remove_query = np.zeros( (n_h5,1), dtype=bool )
     for bc in intersect_barcodes:
-      keep_query &= PATIENTS==bc
+      remove_query |= (h5["patient.bcr_patient_barcode"]==bc).values.reshape((n_h5,1))
+    keep_query = ~remove_query
     
     pdb.set_trace()  
     
