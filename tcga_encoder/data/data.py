@@ -401,13 +401,13 @@ class MultiSourceData(object):
     h5store_ga, h5store_hi
     
     h5_b = h5store_hi.append(h5store_ga)
-    h5 = h5_b.drop_duplicates( subset=["patient.bcr_patient_barcode"])
+    h5 = h5_b.drop_duplicates( subset=["RNApatient.bcr_patient_barcode"])
     
     h5_barcodes = h5["patient.bcr_patient_barcode"].values
     u_h5_barcodes = np.unique(h5_barcodes)
     
-    counter_ga = Counter(h5store_ga["patient.bcr_patient_barcode"].values)
-    counter_hi = Counter(h5store_hi["patient.bcr_patient_barcode"].values)
+    counter_ga = Counter(h5store_ga["RNApatient.bcr_patient_barcode"].values)
+    counter_hi = Counter(h5store_hi["RNApatient.bcr_patient_barcode"].values)
     
     counts_ga = np.array(counter_ga.values())
     I_ga = pp.find( counts_ga > 1 )
