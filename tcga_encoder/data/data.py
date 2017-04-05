@@ -406,12 +406,17 @@ class MultiSourceData(object):
     h5_barcodes = h5["patient.bcr_patient_barcode"].values
     u_h5_barcodes = np.unique(h5_barcodes)
     
-    counter = Counter(h5_barcodes)
+    counter_ga = Counter(h5store_ga["patient.bcr_patient_barcode"].values)
+    counter_hi = Counter(h5store_hi["patient.bcr_patient_barcode"].values)
     
-    counts = np.array(counter.values())
-    I = pp.find( counts > 1 )
+    counts_ga = np.array(counter_ga.values())
+    I_ga = pp.find( counts_ga > 1 )
     
-    dup_bcs = np.array( counter.keys() )[I]
+    dup_bcs_ga = np.array( counter_ga.keys() )[I_ga]
+    counts_hi = np.array(counter_hi.values())
+    I_hi = pp.find( counts_hi > 1 )
+    
+    dup_bcs_hi = np.array( counter_hi.keys() )[I_hi]
     
     pdb.set_trace()
     #h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
