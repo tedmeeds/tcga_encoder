@@ -40,6 +40,10 @@ def add_variables( var_dict, data_dict ):
   var_dict["mirna_dim"]    = data_dict['dataset'].GetDimension("miRNA")
   var_dict["tissue_dim"] = data_dict['dataset'].GetDimension("TISSUE")
   
+  if data_dict.has_key( "dna_genes"):
+    var_dict["dna_dim"]  = len(data_dict["dna_genes"])
+    
+  
 def load_architecture( arch_dict, data_dict ):
   add_variables( arch_dict[VARIABLES], data_dict )
   return arch_dict[NETWORK]( arch_dict, data_dict)

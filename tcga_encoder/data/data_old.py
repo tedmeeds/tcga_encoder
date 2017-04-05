@@ -188,7 +188,7 @@ class MultiSourceData(object):
           assert False, "Problem assigning to tissue"
         #pdb.set_trace()
     
-  def AddDNA( self, broad_location, filename, h5store, h5store_raw, mutation_channels, genes2keep = None, diseases = None, min_nbr_in_pan = None ):
+  def AddDNA( self, broad_location, filename, h5store, mutation_channels, genes2keep = None, diseases = None, min_nbr_in_pan = None ):
     print "*****************************************"
     print "**                                     **"
     print "**          DNA                        **"
@@ -197,8 +197,7 @@ class MultiSourceData(object):
     self.InitSource( DNA, broad_location, filename )
     
     h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
-    
-    pdb.set_trace()
+ 
     if diseases is not None:
       n=len(h5)
       print "** DNA filtering diseases"

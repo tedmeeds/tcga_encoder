@@ -3,6 +3,15 @@ from tcga_encoder.models.vae.batcher_ABC import *
 
   
 class DnaBatcher( TCGABatcherABC ):
+
+  def PostInitInit(self):
+    
+    if self.data_dict.has_key("dna_genes"):
+      self.dna_genes = self.data_dict["dna_genes"]
+      self.dna_store = self.dna_store[self.dna_genes]
+      self.dna_dim = len(self.dna_genes)
+      self.dims_dict[DNA] = self.dna_dim 
+
   
   def CallBack( self, function_name, sess, cb_info ):
     if function_name == "everything":
@@ -54,8 +63,8 @@ class DnaBatcher( TCGABatcherABC ):
    
   def SummarizeData(self):
     print "Running: SummarizeData()"
-    self.dna_mean = self.data_store[self.DNA_keys[0]].loc[self.train_barcodes].mean(0)
-    self.dna_std = self.data_store[self.DNA_keys[0]].loc[self.train_barcodes].std(0)
+    self.dna_mean = self.dna_store.loc[self.train_barcodes].mean(0)
+    self.dna_std = self.dna_store.loc[self.train_barcodes].std(0)
 
     self.dna_order = np.argsort( self.dna_mean.values )
     
@@ -74,11 +83,11 @@ class DnaBatcher( TCGABatcherABC ):
       
       self.tissue_statistics[ tissue ] = {}
       self.tissue_statistics[ tissue ][ DNA ] = {}
-      self.tissue_statistics[ tissue ][ DNA ][ "mean"]   = self.data_store[self.DNA_keys[0]].mean(0).fillna(0)
-      self.tissue_statistics[ tissue ][ DNA ][ "var"]   = self.data_store[self.DNA_keys[0]].var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ DNA ][ "mean"]   = self.dna_store.mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ DNA ][ "var"]   = self.dna_store.var(0).fillna(0)
 
       try:
-        dna=self.data_store[self.DNA_keys[0]].loc[ bcs ]
+        dna=self.dna_store.loc[ bcs ]
         self.tissue_statistics[ tissue ][ DNA ][ "mean"]   = dna.mean(0).fillna(0)
         self.tissue_statistics[ tissue ][ DNA ][ "var"]   = dna.var(0).fillna(0)
       except:
@@ -277,13 +286,9 @@ class DnaBatcher( TCGABatcherABC ):
     
     barcodes = impute_dict[BARCODES]
     batch = self.FillBatch( impute_dict[BARCODES], mode )
-    #not_observed = np.setdiff1d( self.input_sources, inputs2use )
     #pdb.set_trace()     
     dna_expectation_tensor = self.network.GetLayer( "dna_predictions" ).expectation
-    dna_data = np.zeros( (len(barcodes),self.dna_dim) )
-    for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
-      batch_data = self.data_store[DNA_key].loc[ barcodes ].fillna( 0 ).values
-      dna_data += batch_data
+    dna_data = self.dna_store.loc[ barcodes ].fillna( 0 ).values 
     
     dna_data = np.minimum(1.0,dna_data)
       
@@ -322,6 +327,7 @@ class DnaBatcher( TCGABatcherABC ):
     self.WriteRunFillLoglikelihood( epoch, DNA, barcodes[dna_observed_query], self.dna_genes, dna_loglikelihood, mode )
     
     self.WriteAucs( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
+    pdb.set_trace()
 
   def WriteAucs( self, epoch, target, barcodes, columns, obs_query, X, Y, mode ):
     #inputs = inputs2use[0]
@@ -341,17 +347,21 @@ class DnaBatcher( TCGABatcherABC ):
       ok = np.zeros( x_obs.shape[1] )
       for d_idx in xrange( x_obs.shape[1] ):
         
-        if y_obs[:,d_idx].sum()>2:
+        if y_obs[:,d_idx].sum()>0:
           auc[d_idx] = roc_auc_score(y_obs[:,d_idx],x_obs[:,d_idx])
           ok[d_idx] = 1
-        # else:
-        #   auc[d_idx] = 1.0
-      #errors = 1.0-auc
-      #pdb.set_trace()
+        else:
+          auc[d_idx] = 1
+          ok[d_idx] = 1
+
       self.selected_aucs[s] = pp.find(ok) 
       #ok = pp.find(ok)
       auc = auc[ self.selected_aucs[s] ]
-      columns = columns[ self.selected_aucs[s] ]
+      columns = [columns[ idx ] for idx in self.selected_aucs[s] ]
+      
+      I = np.argsort( auc )
+      print [ ["%s  %0.2f"%(columns[i],auc[i]) for i in I]]
+      
       self.fill_store[ s ] = pd.DataFrame( auc.reshape((1,len(auc))), columns = columns )
       #pdb.set_trace()
     

@@ -107,14 +107,15 @@ class TCGABatcherABC( object ):
     self.miRNA_key      = miRNA+"/"+FAIR
     self.METH_key     = METH+"/"+FAIR
     self.DNA_keys     = [DNA+"/"+CHANNEL+"/%d"%i for i in range(self.n_dna_channels)]
-    #self.DNA_keys     = ["/DNA/variant/Missense_Mutation"]
     
     self.n_z            = self.var_dict[N_Z]
     self.z_columns = ["z%d"%z for z in range(self.n_z)]
     
+    self.dna_store = self.data_store[ self.DNA_keys[0] ]
+    
     self.rna_genes = self.data_store[self.RNA_key].columns
     self.mirna_hsas = self.data_store[self.miRNA_key].columns
-    self.dna_genes = self.data_store[self.DNA_keys[0]].columns
+    self.dna_genes = self.dna_store.columns #self.data_store[self.DNA_keys[0]].columns
     self.meth_genes = self.data_store[self.METH_key].columns
     
     self.tissue_names = self.data_store[self.TISSUE_key].columns
@@ -337,8 +338,12 @@ class TCGABatcherABC( object ):
     assert len(np.intersect1d( self.test_barcodes, self.train_barcodes)) == 0, "train and test are not mutually exclusive!!"
     assert len(np.intersect1d( self.test_barcodes, self.validation_barcodes)) == 0, "test and validation are not mutually exclusive!!"
     assert len(np.intersect1d( self.train_barcodes, self.validation_barcodes)) == 0, "train and validation are not mutually exclusive!!"
-      
 
+    self.PostInitInit()      
+
+  def PostInitInit(self):
+    pass 
+  
   def InitializeAnythingYouWant( self, sess, network ):
     pass
     
@@ -356,13 +361,6 @@ class TCGABatcherABC( object ):
         
   def SummarizeData(self):
     print "Running : SummarizeData(self)"
-    #pass
-    # self.OBSERVED_key = CLINICAL+"/"+OBSERVED
-    # self.TISSUE_key   = CLINICAL+"/"+TISSUE
-    # self.RNA_key      = RNA+"/"+FAIR
-    # self.miRNA_key      = miRNA+"/"+FAIR
-    # self.METH_key     = METH+"/"+FAIR
-    # self.DNA_keys     = [DNA+"/"+CHANNEL+"/%d"%i for i in range(self.n_dna_channels)]
     self.rna_mean = self.data_store[self.RNA_key].mean(0)
     self.rna_std = self.data_store[self.RNA_key].std(0)
     self.mirna_mean = self.data_store[self.miRNA_key].mean(0)
@@ -610,7 +608,8 @@ class TCGABatcherABC( object ):
     disease_barcodes = [ "%s_%s"%(dis,barcode) for dis,barcode in zip(diseases,barcodes)]
     
     try:
-      dna = self.data_store[self.DNA_keys[0]].loc[ disease_barcodes ]
+      dna = self.dna_store.loc[ disease_barcodes ]
+      #dna = self.data_store[self.DNA_keys[0]].loc[ disease_barcodes ]
     except:
       print "No DNA for %s"%disease
       print "Not Saving!"
@@ -809,11 +808,7 @@ class TCGABatcherABC( object ):
     
     if use_dna:
       dna_expectation_tensor = self.network.GetLayer( "gen_dna_space" ).expectation
-      dna_data = np.zeros( (len(barcodes),self.dna_dim) )
-      for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
-        batch_data = self.data_store[DNA_key].loc[ barcodes ].fillna( 0 ).values
-        dna_data += batch_data
-      
+      dna_data = self.dna_store.loc[barcodes].fillna(0).values #np.zeros( (len(barcodes),self.dna_dim) )      
       dna_data = np.minimum(1.0,dna_data)
       
     loglikes_data_as_matrix = self.network.loglikes_data_as_matrix
@@ -848,11 +843,6 @@ class TCGABatcherABC( object ):
     mirna_expectation = np.zeros( (len(barcodes), self.dims_dict[miRNA] ), dtype=float )
     mirna_loglikelihood  = np.zeros( (np.sum(mirna_observed_query), self.dims_dict[miRNA] ), dtype=float )
         
-      #drop_likelihoods = np.zeros( rna_dim )
-    # dna_dim = self.dims_dict[DNA] #/self.n_dna_channels
-    # dna_expectation = np.zeros( (len(barcodes),dna_dim), dtype=float )
-    # dna_loglikelihood = np.zeros( (np.sum(dna_observed_query),dna_dim), dtype=float )
-    
     nbr_splits = 50
     tensor2fill = []
     drop_factor = float(nbr_splits)/float(nbr_splits-1)
@@ -938,9 +928,8 @@ class TCGABatcherABC( object ):
         mirna_loglikelihood[:,drop_mirna_ids] = tensor2fill_eval[mirna_ids[1]][:,drop_mirna_ids]
       
       if use_dna:
-        for idx,DNA_key in zip(range(len(self.DNA_keys)-1),self.DNA_keys[:-1]):
-          dna_expectation[:,drop_dna_ids] = tensor2fill_eval[dna_ids[0]][:,drop_dna_ids]
-          dna_loglikelihood[:,drop_dna_ids] = tensor2fill_eval[dna_ids[1]][:,drop_dna_ids]
+        dna_expectation[:,drop_dna_ids] = tensor2fill_eval[dna_ids[0]][:,drop_dna_ids]
+        dna_loglikelihood[:,drop_dna_ids] = tensor2fill_eval[dna_ids[1]][:,drop_dna_ids]
         
       if use_meth:
         meth_expectation[:,drop_meth_ids]   = tensor2fill_eval[meth_ids[0]][:,drop_meth_ids]
@@ -1711,22 +1700,8 @@ class TCGABatcherABC( object ):
         
       elif layer_name == DNA_INPUT or layer_name == DNA_TARGET:
         dna_data = np.zeros( (len(batch_barcodes), self.dna_dim) )
-        #for idx,DNA_key in zip(range(len(self.DNA_keys)-1),self.DNA_keys[:-1]):
-        for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
-          batch_data = self.data_store[DNA_key].loc[ batch_barcodes ].fillna( 0 ).values
-          # if mode == "TEST" or mode == "VAL" or mode == "TRAIN":
-          #   dna_data += batch_data
-          # else:
-          #   if layer_name == DNA_TARGET or layer_name == DNA_INPUT:
-          #   #if layer_name == DNA_TARGET:
-          #     dna_data = self.AddDnaNoise( batch_data, rate = 0.1 )
-          #
-          dna_data = batch_data
-          #dna_data.append(batch_data.fillna( 0 ).values)
-        
-        batch[ layer_name ] = np.minimum(1.0,dna_data)# np.array( dna_data )
-        #pdb.set_trace()
-        #print "DNA batch count: %d"%(batch[ layer_name ].sum())
+        batch_data = self.dna_store.loc[ batch_barcodes ].fillna( 0 ).values
+        batch[ layer_name ] = np.minimum(1.0,dna_data)
         
       elif layer_name == METH_INPUT :
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
@@ -1744,8 +1719,6 @@ class TCGABatcherABC( object ):
         batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
         batch_data_values = batch_data.values
-        # if mode == "BATCH":
-        #   batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.1 )
           
         batch[ layer_name ] = self.NormalizeMethTarget( batch_data_values )
         batch[ layer_name ][nans] = 0
