@@ -28,7 +28,7 @@ sources:
   miRNA:
     #data_store: "METH/gdac.broadinstitute.org_UVM.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
     #gdac.broadinstitute.org_PAN1.Merge_mirnaseq__illuminahiseq_mirnaseq__bcgsc_ca__Level_3__miR_isoform_expression__data.Level_3.2016012800.0.0.h5
-    data_store_ga: "miRNA/gdac.broadinstitute.org_PAN32.Merge_mirnaseq__illuminaga_mirnaseq__bcgsc_ca__Level_3__miR_isoform_expression__data.Level_3.2016012800.0.0.h5"
+    data_store_ga: "miRNA/gdac.broadinstitute.org_PAN12.Merge_mirnaseq__illuminaga_mirnaseq__bcgsc_ca__Level_3__miR_isoform_expression__data.Level_3.2016012800.0.0.h5"
     data_store_hi: "miRNA/gdac.broadinstitute.org_PAN44.Merge_mirnaseq__illuminahiseq_mirnaseq__bcgsc_ca__Level_3__miR_isoform_expression__data.Level_3.2016012800.0.0.h5"
     nbr: 10
     method: "max_var_fair"
