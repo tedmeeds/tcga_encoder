@@ -12,8 +12,8 @@ sources:
   #
   RNA:
     #data_store: "RNA/gdac.broadinstitute.org_ACC.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
-    data_store_ga: "RNA/gdac.broadinstitute.org_PAN3.Merge_rnaseqv2__illuminaga_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
-    data_store_hi: "RNA/gdac.broadinstitute.org_PAN36.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
+    data_store_ga: "RNA_GA/gdac.broadinstitute.org_PAN3.Merge_rnaseqv2__illuminaga_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
+    data_store_hi: "RNA_HI/gdac.broadinstitute.org_PAN36.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
     #data_store: "RNA/gdac.broadinstitute.org_PAN5.Merge_rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.Level_3.2016012800.0.0.h5"
     nbr: 10
     method: "max_var_fair"
