@@ -199,6 +199,9 @@ class MultiSourceData(object):
     h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     h5_raw = h5store_raw 
     h5_merge = h5.append(h5_raw)
+    
+    duplicate_columns = ["Variant_Classification","patient.bcr_patient_barcode","Hugo_Symbol","Start_Position","End_Position"]
+    h5_dropped = h5_merge.drop_duplicates(subset=duplicate_columns)
     pdb.set_trace()
     #h5.append(h5_raw)
     
