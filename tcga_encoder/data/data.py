@@ -244,7 +244,8 @@ class MultiSourceData(object):
     print "intersect h5 & raw_h5 ", intersect_barcodes.shape
     print "intersect raw h5 & dropped ", intersect_barcodesb.shape
     print "intersect h5 & dropped ", intersect_barcodesc.shape
-    pdb.set_trace()
+    
+    #pdb.set_trace()
     # #print "found %d barcodes to remove from h5"%(len(intersect_barcodes))
     # # merge h5 and h5_raw
     #
@@ -265,7 +266,8 @@ class MultiSourceData(object):
     #
     #
     # print "finding removing patients from h5"
-    pdb.set_trace()  
+    #pdb.set_trace()  
+    h5 = h5_dropped
     
     self.AddObservedPatients( DNA, patient_rows )
     
