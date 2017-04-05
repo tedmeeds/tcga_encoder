@@ -269,6 +269,13 @@ class MultiSourceData(object):
     #pdb.set_trace()  
     h5 = h5_dropped
     
+    PATIENTS = h5["patient.bcr_patient_barcode"].values
+    DISEASES = h5["admin.disease_code"].values
+    
+    u_barcodes = np.sort(np.unique( PATIENTS ) )
+    PATIENTS = np.sort(np.unique( DISEASES + "_" + PATIENTS ))
+    patient_rows = PATIENTS
+    
     self.AddObservedPatients( DNA, patient_rows )
     
     if genes2keep is not None:
