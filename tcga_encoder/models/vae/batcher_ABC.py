@@ -373,7 +373,7 @@ class TCGABatcherABC( object ):
     #self.test_barcodes = np.union1d( self.test_full_barcodes, self.test_non_full_barcodes )
     #self.train_barcodes = np.union1d( self.train_full_barcodes, self.train_non_full_barcodes )
 
-    self.MoveValidation2Train( 0.5 )
+    self.MoveValidation2Train( self.var_dict["move2train"] )
     self.RemoveUnwantedTrain()
   
     assert len(np.intersect1d( self.test_barcodes, self.train_barcodes)) == 0, "train and test are not mutually exclusive!!"
