@@ -47,11 +47,8 @@ class DnaBatcher( TCGABatcherABC ):
     for batch_ids in chunks( np.arange(len(self.train_barcodes)), 5000 ):
       barcodes = self.train_barcodes[batch_ids]
       impute_dict = self.FillBatch( barcodes, mode = "TRAIN" ) #self.NextBatch(batch_ids)
-      #impute_dict[BARCODES] = barcodes
       self.batch_ids = batch_ids
-      
-      
-      
+
       train_feed_dict={}
       self.network.FillFeedDict( train_feed_dict, impute_dict )
       #batch = self.FillBatch( impute_dict[BARCODES], mode )
@@ -285,6 +282,7 @@ class DnaBatcher( TCGABatcherABC ):
     use_mirna = True
     
     barcodes = impute_dict[BARCODES]
+    
     batch = self.FillBatch( impute_dict[BARCODES], mode )
     #pdb.set_trace()     
     dna_expectation_tensor = self.network.GetLayer( "dna_predictions" ).expectation
@@ -301,7 +299,7 @@ class DnaBatcher( TCGABatcherABC ):
     self.network.FillFeedDict( feed_dict, impute_dict )
 
     #pdb.set_trace()
-    # rna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[RNA]] == 1
+    rna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[RNA]] == 1
     # meth_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[METH]] == 1
     # mirna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[miRNA]] == 1
     dna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[DNA]] == 1
@@ -314,6 +312,7 @@ class DnaBatcher( TCGABatcherABC ):
     # RUN SESS
     # ---------
     self.network.FillFeedDict( feed_dict, batch )
+    #pdb.set_trace()
     tensor2fill_eval = sess.run( tensor2fill, feed_dict = feed_dict )
 
     # ------
@@ -324,10 +323,10 @@ class DnaBatcher( TCGABatcherABC ):
 
     #pdb.set_trace()
     self.WriteRunFillExpectation( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
-    self.WriteRunFillLoglikelihood( epoch, DNA, barcodes[dna_observed_query], self.dna_genes, dna_loglikelihood, mode )
+    self.WriteRunFillLoglikelihood( epoch, DNA, barcodes[dna_observed_query], self.dna_genes, dna_loglikelihood[dna_observed_query,:], mode )
     
     self.WriteAucs( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
-    pdb.set_trace()
+    #pdb.set_trace()
 
   def WriteAucs( self, epoch, target, barcodes, columns, obs_query, X, Y, mode ):
     #inputs = inputs2use[0]
@@ -360,7 +359,7 @@ class DnaBatcher( TCGABatcherABC ):
       columns = [columns[ idx ] for idx in self.selected_aucs[s] ]
       
       I = np.argsort( auc )
-      print [ ["%s  %0.2f"%(columns[i],auc[i]) for i in I]]
+      print mode, [ ["%s  %0.2f"%(columns[i],auc[i]) for i in I]]
       
       self.fill_store[ s ] = pd.DataFrame( auc.reshape((1,len(auc))), columns = columns )
       #pdb.set_trace()
