@@ -95,7 +95,7 @@ class TCGABatcherABC( object ):
     self.data_store     = self.data_dict[DATASET].store
     self.batch_size     = self.algo_dict[BATCH_SIZE]
     
-    np.random.seed( self.algo_dict['split_seed'] )
+    
     
     self.batch_imputation_dict = {}
     self.batch_feed_dict       = {}
@@ -373,7 +373,10 @@ class TCGABatcherABC( object ):
     #self.test_barcodes = np.union1d( self.test_full_barcodes, self.test_non_full_barcodes )
     #self.train_barcodes = np.union1d( self.train_full_barcodes, self.train_non_full_barcodes )
 
-    self.MoveValidation2Train( self.var_dict["move2train"] )
+    if self.algo_dict.has_key( "xval_fold" ):
+      self.SplitValidationIntoXvalFold( self.algo_dict[ "xval_fold" ], self.algo_dict[ "n_xval_folds" ]  )
+    else:
+      self.MoveValidation2Train( self.var_dict["move2train"] )
     self.RemoveUnwantedTrain()
   
     assert len(np.intersect1d( self.test_barcodes, self.train_barcodes)) == 0, "train and test are not mutually exclusive!!"
@@ -473,9 +476,29 @@ class TCGABatcherABC( object ):
     
     #self.tissue_statistics = pd.DataFrame()
     
+  def SplitValidationIntoXvalFold( self, fold, n_folds  ):
+    #np.random.seed( self.algo_dict['split_seed'] )
+    print "SPLITTING VALIDATION %d of %d"%(fold,n_folds)
+    n = len(self.validation_barcodes)
+    K = n_folds
+    randomize = True
+    seed = self.algo_dict['split_seed']
+
+    train, test = xval_folds( n, K, randomize = randomize, seed = seed )
     
+    for fold_idx in range(n_folds):
+      if fold_idx + 1 == fold:
+        self.train_barcodes = np.hstack((self.train_barcodes,self.validation_barcodes[train[fold_idx]]))
+        self.validation_barcodes = self.validation_barcodes[test[fold_idx]]
+    
+    
+    print self.train_barcodes
+    print self.validation_barcodes    
     
   def MoveValidation2Train( self, percent2move = 0.5  ):
+    print "MOVING %0.2f VALIDATION to TRAIN"%(percent2move)
+    
+    np.random.seed( self.algo_dict['split_seed'] )
     I = np.random.permutation( len( self.validation_barcodes ) )
     n = int(percent2move*len(I))
     

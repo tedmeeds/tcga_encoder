@@ -6,9 +6,33 @@ import scipy as sp
 import pylab as pp
 import pandas as pd
 from sklearn.metrics import roc_auc_score, roc_curve
+from sklearn.model_selection import KFold
 from collections import *
 import itertools
 
+def xval_folds( n, K, randomize = False, seed = None ):
+  if randomize is True:
+    print("XVAL RANDOMLY PERMUTING")
+    if seed is not None:
+      print( "XVAL SETTING SEED = %d"%(seed) )
+      np.random.seed(seed)
+      
+    x = np.random.permutation(n)
+  else:
+    print( "XVAL JUST IN ARANGE ORDER")
+    x = np.arange(n,dtype=int)
+    
+  kf = KFold( K )
+  train = []
+  test = []
+  for train_ids, test_ids in kf.split( x ):
+    #train_ids = np.setdiff1d( x, test_ids )
+    
+    train.append( x[train_ids] )
+    test.append( x[test_ids] )
+  #pdb.set_trace()
+  return train, test
+  
 def chunks(l, n):
   #Yield successive n-sized chunks from l.
   for i in xrange(0, len(l), n):
