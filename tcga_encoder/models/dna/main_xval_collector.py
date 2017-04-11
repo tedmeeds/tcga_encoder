@@ -98,10 +98,12 @@ def plot_weights( w, title, dirname = None, figsize=(12,6), max_nbr = 100 ):
   if dirname is not None:
     f.savefig( dirname + "/w_%d_%s.svg"%(max_nbr,title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
     f.savefig( dirname + "/w_%d_%s.png"%(max_nbr,title), transparent=False, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
-  f,ax = viz_weights_horizontal(w.values, w.index.values)
+  
+  top2use = np.argsort( -np.abs(w.values) )[:500]
+  f,ax = viz_weights_horizontal(w.values[top2use], w.index.values[top2use])
   if dirname is not None:
-    f.savefig( dirname + "/w_all_%s.svg"%(title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
-    f.savefig( dirname + "/w_all_%s.png"%(title), transparent=False, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
+    f.savefig( dirname + "/w_%d_%s.svg"%(500,title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
+    f.savefig( dirname + "/w_%d_%s.png"%(500,title), transparent=False, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
     
 def plot_binary_classification_result( y_true, y_est, title = None, dirname = None, figsize=(12,6) ):
   
