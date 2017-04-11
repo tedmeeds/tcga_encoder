@@ -294,7 +294,10 @@ def main(yaml_file):
   data_store.close()
   #dna_data = data_store[]
   assert len(np.intersect1d( fill_barcodes, loglik_barcodes)) == len(loglik_barcodes), "should be the same"
-  return fill_dna, loglik_dna, dna, results, [weights,mean_weights,std_weights]
+  if len(weights) > 0:
+    return fill_dna, loglik_dna, dna, results, [weights,mean_weights,std_weights]
+  else:
+    return fill_dna, loglik_dna, dna, results, [None,None,None]
   
   
 ######################################################################################################
