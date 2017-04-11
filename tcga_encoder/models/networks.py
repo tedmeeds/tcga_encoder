@@ -626,8 +626,12 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
     self.batch_log_columns.extend(["log p(t|z_copy) +", "log p(t|z_rec) -", "acc T+", "acc T-"])
      
   def CostToMinimize(self):
-    return -self.lower_bound + self.weight_penalty + self.anti_weight*self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
-
+    if self.anti_weight > 0:
+      return -self.lower_bound + self.weight_penalty + self.anti_weight*self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
+    else:
+      return -self.lower_bound + self.weight_penalty - self.log_p_t_given_z_pos
+      
+ 
   def FillFeedDict( self, feed_dict, imputation_dict ):
     # use stuff from imputation_dict to fill feed_dict
     for name, imputed_values in imputation_dict.iteritems():
