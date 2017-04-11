@@ -188,9 +188,10 @@ def main(yaml_file):
     model_store.close()
     fill_store.close()
    
-  weights      = pd.concat(weights,axis=0) 
-  mean_weights = weights.mean(level=0)
-  std_weights  = weights.std(level=0)
+  if len(weights) > 0:
+    weights      = pd.concat(weights,axis=0) 
+    mean_weights = weights.mean(level=0)
+    std_weights  = weights.std(level=0)
   
   fill_dna  = pd.concat( fold_fill_dna ).sort_index()
   loglik_dna = pd.concat( fold_loglik_dna ).sort_index()
@@ -223,7 +224,8 @@ def main(yaml_file):
     
     plot_binary_classification_result( y_true.values, y_est.values, title = gene_name, dirname = summary_location_dir)
 
-    plot_weights( mean_weights[gene], title = gene_name, dirname = summary_location_dir )
+    if len(weights) > 0:
+      plot_weights( mean_weights[gene], title = gene_name, dirname = summary_location_dir )
     
     
     
@@ -272,9 +274,10 @@ def main(yaml_file):
   #
   results = pd.DataFrame( pd.concat([aucs,logliks], axis=1) ) #, columns=["auc","loglik"])
   
-  weights.to_csv( summary_location_dir + "/weights.csv" )
-  mean_weights.to_csv( summary_location_dir + "/weights_means.csv" )
-  std_weights.to_csv( summary_location_dir + "/weights_stds.csv" )
+  if len(weights) > 0:
+    weights.to_csv( summary_location_dir + "/weights.csv" )
+    mean_weights.to_csv( summary_location_dir + "/weights_means.csv" )
+    std_weights.to_csv( summary_location_dir + "/weights_stds.csv" )
   results.to_csv( summary_location_dir + "/summary.csv" )
   fill_dna.to_csv( summary_location_dir + "/predictions.csv" )
   logliks.to_csv( summary_location_dir + "/logliks.csv" )
