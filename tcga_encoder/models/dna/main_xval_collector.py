@@ -97,11 +97,11 @@ def plot_weights( w, title, dirname = None, figsize=(12,6), max_nbr = 100 ):
   f,ax = viz_weights_vertical(w.values[top2use], w.index.values[top2use])
   if dirname is not None:
     f.savefig( dirname + "/w_%d_%s.svg"%(max_nbr,title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
-    f.savefig( dirname + "/w_%d_%s.png"%(max_nbr,title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
+    f.savefig( dirname + "/w_%d_%s.png"%(max_nbr,title), transparent=False, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
   f,ax = viz_weights_horizontal(w.values, w.index.values)
   if dirname is not None:
     f.savefig( dirname + "/w_all_%s.svg"%(title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
-    f.savefig( dirname + "/w_all_%s.png"%(title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
+    f.savefig( dirname + "/w_all_%s.png"%(title), transparent=False, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
     
 def plot_binary_classification_result( y_true, y_est, title = None, dirname = None, figsize=(12,6) ):
   
@@ -125,7 +125,7 @@ def plot_binary_classification_result( y_true, y_est, title = None, dirname = No
     else:
       name = ""
     f.savefig( dirname + "/classification_%s.svg"%(name), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
-    f.savefig( dirname + "/classification_%s.png"%(name), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
+    f.savefig( dirname + "/classification_%s.png"%(name), transparent=False, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
 
 
 def add_variables( var_dict, data_dict ):
@@ -242,7 +242,7 @@ def main(yaml_file):
   auc_mean = aucs.values.mean()
   auc_median = np.median( aucs.values )
   f_auc_curves.savefig( summary_location_dir + "/auc_roc_curves_mean_%0.3f_median_%0.3f.svg"%(auc_mean,auc_median), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
-  f_auc_curves.savefig( summary_location_dir + "/auc_roc_curves_mean_%0.3f_median_%0.3f.png"%(auc_mean,auc_median), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
+  f_auc_curves.savefig( summary_location_dir + "/auc_roc_curves_mean_%0.3f_median_%0.3f.png"%(auc_mean,auc_median), transparent=False, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
   
   logliks = loglik_dna.mean(0)
   logliks.name = "loglik"
