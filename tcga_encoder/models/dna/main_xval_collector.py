@@ -12,6 +12,57 @@ sns.set_context("talk")
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
+#from mutation_variants.helpers import *
+
+
+def viz_weights_vertical( w, names  ):
+  order = np.argsort( -w )
+  
+  d = len(w)
+  
+  #centers = 1+np.arange( n )
+  x_values = np.arange( d )
+  
+  f = pp.figure( figsize=(6,10))
+  
+  ax1 = f.add_subplot(111)
+  w_ordered = w[order]
+  neg = w_ordered<0
+  pos = w_ordered >=0
+  ax1.plot( w_ordered[pos], x_values[pos] , 'bo' )
+  ax1.plot( w_ordered[neg], x_values[neg] , 'ro' )
+  pp.yticks(x_values, names[order], rotation='horizontal', fontsize=6)
+  pp.margins(0.05)
+  pp.subplots_adjust(left=0.15)
+  ax1.grid(color='k', linestyle='--', linewidth=0.5,axis='x',alpha=0.5)
+  return f, ax1
+
+def viz_weights_horizontal( w, names ):
+  
+  #max_w = np.max(np.abs(W))
+  #normed_W = W / max_w 
+  
+  order = np.argsort( -w )
+  
+  d = len(w)
+  
+  #centers = 1+np.arange( n )
+  x_values = np.arange( d )
+  
+  f = pp.figure( figsize=(18,8))
+  
+  ax1 = f.add_subplot(111)
+  w_ordered = w[order]
+  neg = w_ordered<0
+  pos = w_ordered >=0
+  ax1.plot( x_values[pos], w_ordered[pos], 'bo' )
+  ax1.plot( x_values[neg], w_ordered[neg], 'ro' )
+  pp.xticks(x_values, names[order], rotation=90, fontsize=8)
+  #pp.margins(0.05)
+  #pp.subplots_adjust(bottom=0.15)
+  ax1.grid(color='k', linestyle='--', linewidth=0.5,axis='y',alpha=0.5)
+  return f, ax1
+  
 def decifer_weights( model_store, arch_dict, data_dict, weights, fold ):
   layers = arch_dict["layers"]
   for layer in layers:
@@ -39,7 +90,19 @@ def decifer_weights( model_store, arch_dict, data_dict, weights, fold ):
         #pdb.set_trace()
         weights.append(these_weights)
           
-
+def plot_weights( w, title, dirname = None, figsize=(12,6), max_nbr = 100 ):
+  
+  top2use = np.argsort( -np.abs(w.values) )[:max_nbr]
+  
+  f,ax = viz_weights_vertical(w.values[top2use], w.index.values[top2use])
+  if dirname is not None:
+    f.savefig( dirname + "/w_%d_%s.svg"%(max_nbr,title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
+    f.savefig( dirname + "/w_%d_%s.png"%(max_nbr,title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
+  f,ax = viz_weights_horizontal(w.values, w.index.values)
+  if dirname is not None:
+    f.savefig( dirname + "/w_all_%s.svg"%(title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
+    f.savefig( dirname + "/w_all_%s.png"%(title), transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300)
+    
 def plot_binary_classification_result( y_true, y_est, title = None, dirname = None, figsize=(12,6) ):
   
   f = pp.figure(figsize=figsize)
@@ -160,6 +223,7 @@ def main(yaml_file):
     
     plot_binary_classification_result( y_true.values, y_est.values, title = gene_name, dirname = summary_location_dir)
 
+    plot_weights( mean_weights[gene], title = gene_name, dirname = summary_location_dir )
     
     
     
@@ -182,8 +246,30 @@ def main(yaml_file):
   logliks.name = "loglik"
   aucs.name="auc"
   
-  #weight_summary = pd.DataFrame( pd.concat([mean_weights,std_weights], axis=1) ) )
+  #f, ax = plt.subplots(figsize=(12, 9))
+
+  # Draw the heatmap using seaborn
+  #sns.heatmap(corrmat, vmax=.8, square=True)
+
+  # Use matplotlib directly to emphasize known networks
+  # networks = corrmat.columns.get_level_values("network")
+  # for i, network in enumerate(networks):
+  #     if i and network != networks[i - 1]:
+  #         ax.axhline(len(networks) - i, c="w")
+  #         ax.axvline(i, c="w")
+  # f.tight_layout()
   
+  #weight_summary = pd.DataFrame( pd.concat([mean_weights,std_weights], axis=1) ) )
+  # fig_sns, ax_sns = pp.subplots()
+  # g=sns.clustermap(mean_weights,square=False, yticklabels=mean_weights.index.values, xticklabels=mean_weights.columns,col_cluster=False)
+  # pp.setp(g.ax_heatmap.get_yticklabels(), rotation=0, fontsize=7)
+  # pp.setp(g.ax_heatmap.get_xticklabels(), rotation=90, fontsize=7)
+  # fig_sns.tight_layout()
+  # pp.show()
+  # pdb.set_trace()
+  # fig_sns.savefig( summary_location_dir + "/weights.png", transparent=True, bbox_inches = 'tight', pad_inches=0.15, dpi=300 )
+  #
+  #
   results = pd.DataFrame( pd.concat([aucs,logliks], axis=1) ) #, columns=["auc","loglik"])
   
   weights.to_csv( summary_location_dir + "/weights.csv" )
