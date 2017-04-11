@@ -217,7 +217,7 @@ def main(yaml_file):
     
     aucs.append( roc_auc_score( y_true.values, y_est.values ) )
     
-    tpr,fpr,thresholds = roc_curve( y_true.values, y_est.values )
+    fpr,tpr,thresholds = roc_curve( y_true.values, y_est.values )
     
     gene_name = "%s auc=%0.3f"%(gene,aucs[-1])
     ax_auc_curves.plot( fpr, tpr, label = gene_name )
