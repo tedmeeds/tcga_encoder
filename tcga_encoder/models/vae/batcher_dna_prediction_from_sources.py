@@ -346,8 +346,12 @@ class DnaBatcher( TCGABatcherABC ):
       ok = np.zeros( x_obs.shape[1] )
       for d_idx in xrange( x_obs.shape[1] ):
         
-        if y_obs[:,d_idx].sum()>0:
-          auc[d_idx] = roc_auc_score(y_obs[:,d_idx],x_obs[:,d_idx])
+        if y_obs[:,d_idx].sum()>0 and y_obs[:,d_idx].sum() ~= 0:
+          try:
+            auc[d_idx] = roc_auc_score(y_obs[:,d_idx],x_obs[:,d_idx])
+          except:
+            auc[d_idx] = 1.0
+            
           ok[d_idx] = 1
         else:
           auc[d_idx] = 1
