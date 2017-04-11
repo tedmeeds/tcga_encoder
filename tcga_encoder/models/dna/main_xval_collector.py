@@ -235,7 +235,7 @@ def main(yaml_file):
   
   #pp.figure(f_auc_curves)
   if len(fill_dna.columns)<20:
-    ax_auc_curves.legend()
+    ax_auc_curves.legend(loc='lower right')
   ax_auc_curves.set_ylabel("True Positive Rate")
   ax_auc_curves.set_xlabel("False Positive Rate")
   
