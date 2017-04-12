@@ -2026,4 +2026,18 @@ class SoftmaxModelLayer(HiddenLayer):
     else:
      return self.loglik   
 
+class EntropySoftmaxModelLayer(SoftmaxModelLayer):
+  def LogLikelihood( self, X, as_matrix = False, boolean_mask = None ):
+    if boolean_mask is None:
+      self.loglik_matrix = self.p_of_c * self.log_p_of_c
+    else:
+      self.loglik_matrix = tf.boolean_mask( self.p_of_c, boolean_mask ) * tf.boolean_mask( self.log_p_of_c, boolean_mask ) 
+
+    self.loglik = tf.reduce_sum( self.loglik_matrix, name = self.name+"_loglik" )
+
+    if as_matrix is True:
+     return self.loglik_matrix
+    else:
+     return self.loglik  
+     
       
