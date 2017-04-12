@@ -653,7 +653,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
   #
   #   layer = layer_class( shape, model, name=name )
         
-  elif layer_class == SoftmaxModelLayer:
+  elif layer_class == SoftmaxModelLayer or layer_class==EntropySoftmaxModelLayer:
     shape           = layer_specs[SHAPE]
     has_biases = True
     if layer_specs.has_key("biases"):
