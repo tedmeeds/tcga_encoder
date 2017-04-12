@@ -105,7 +105,7 @@ if __name__ == "__main__":
   Z_train = fill["/Z/TRAIN/Z/mu"].loc[ batcher.train_barcodes]
   Z_val = fill["/Z/VAL/Z/mu"].loc[ batcher.validation_barcodes]
   
-  print Z_train
+  #print Z_train
   fill.close()
 
   
