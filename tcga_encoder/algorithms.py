@@ -134,7 +134,7 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
     # TRAIN STEP                                         #
     # -------------------------------------------------- #
     train_op_eval = sess.run( train_op, feed_dict = batch_feed_dict )
-
+    batcher.DoWhatYouWantAtEpoch( sess, epoch, network,cb_info )
     # -------------------------------------------------- #
     # CALLBACKS                                          #
     # -------------------------------------------------- #
@@ -145,3 +145,4 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
         current_learning_rate = min(current_learning_rate,algo_dict[MIN_LEARNING_RATE])
       else:
         batcher.CallBack( call_backs[cb_idx], sess, cb_info )
+    
