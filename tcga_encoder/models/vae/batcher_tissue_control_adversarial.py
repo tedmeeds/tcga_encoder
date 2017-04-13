@@ -543,6 +543,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     #ax_neg_pred_no_bias.imshow(neg_predictions_no_bias, aspect='auto',interpolation='nearest')
     ax_pos_pred_no_bias.grid('off')
     f.savefig( self.viz_tissue_predictions + "_%d.png"%(info_dict["epoch"]))
+    f.savefig( self.viz_tissue_predictions + ".png")
     pp.close()
     #pdb.set_trace()
     
