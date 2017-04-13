@@ -23,6 +23,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.viz_filename_log_pdf_sources_per_gene_fill_all = os.path.join( self.savedir, "log_pdf_sources_z_per_gene_fill_all.png" )
     self.viz_filename_error_sources_per_gene_fill_all = os.path.join( self.savedir, "errors_sources_z_per_gene_fill_all.png" )
     self.viz_scaled_weights = os.path.join( self.savedir, "weights_scaled_inputs.png" )
+    self.viz_tissue_predictions = os.path.join( self.savedir, "tissue_predictions" )
 
   def FillDerivedPlaceholder( self, batch, layer_name, mode ):
     
@@ -468,8 +469,83 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     self.PlotFillError(main_sources,prior_sources)
     
+    self.PlotTissuePrediction(sess, info_dict)
+    
     self.epoch_store.close()
     pp.close('all')
+   
+  def PlotTissuePrediction(self,sess, info_dict):
+    self.fill_store.open()
+    mode = "VAL"
+    target_pos = "TISSUE+"
+    target_neg = "TISSUE-"
+    target_pos_no_bias = TISSUE+"no_bias+"
+    target_neg_no_bias = TISSUE+"no_bias-"
+    s_pos = "/Fill/%s/%s/"%(mode,target_pos )
+    s_neg = "/Fill/%s/%s/"%(mode,target_neg )
+    s_pos_no_bias = "/Fill/%s/%s/"%(mode,target_pos_no_bias )
+    s_neg_no_bias = "/Fill/%s/%s/"%(mode,target_neg_no_bias )
+    
+    pos_pred         = self.fill_store[s_pos]
+    pos_pred_no_bias = self.fill_store[s_pos_no_bias]
+    neg_pred         = self.fill_store[s_neg]
+    neg_pred_no_bias     = self.fill_store[s_neg_no_bias]
+    
+    #pdb.set_trace()
+    pos_predicted = np.argmax( pos_pred.values, 1 )
+    neg_predicted = np.argmax( neg_pred.values, 1 )
+    pos_predicted_no_bias = np.argmax( pos_pred_no_bias.values, 1 )
+    neg_predicted_no_bias = np.argmax( neg_pred_no_bias.values, 1 )
+    
+    pos_predictions = np.zeros(pos_pred.shape,dtype=int)
+    neg_predictions = np.zeros(neg_pred.shape,dtype=int)
+    
+    pos_predictions_no_bias = np.zeros(pos_pred.shape,dtype=int)
+    neg_predictions_no_bias = np.zeros(neg_pred.shape,dtype=int)
+    
+    for idx in range(len(pos_predicted)):
+      pos_predictions[idx, pos_predicted[idx]] = 1
+      neg_predictions[idx, neg_predicted[idx]] = 1
+      pos_predictions_no_bias[idx, pos_predicted_no_bias[idx]] = 1
+      neg_predictions_no_bias[idx, neg_predicted_no_bias[idx]] = 1
+      
+    data = self.data_store[self.TISSUE_key].loc[pos_pred.index]
+    
+    order = np.argsort( np.argmax(data.values,1) )
+    
+    f = pp.figure( figsize=(14,6))
+    
+    ax_data=f.add_subplot(2,4,1)
+    ax_pos             =f.add_subplot(2,4,5)
+    ax_pos_pred        =f.add_subplot(2,4,6)
+    ax_pos_no_bias     =f.add_subplot(2,4,7)
+    ax_pos_pred_no_bias=f.add_subplot(2,4,8)
+    
+    #ax_neg             =f.add_subplot(3,4,9)
+    #ax_neg_pred        =f.add_subplot(3,4,10)
+    #ax_neg_no_bias     =f.add_subplot(3,4,11)
+    #ax_neg_pred_no_bias=f.add_subplot(3,4,12)
+    
+    ax_data.imshow(data, aspect='auto',interpolation='nearest',cmap='hot')
+    ax_data.grid('off')
+    
+    ax_pos.imshow(pos_pred, aspect='auto',interpolation='nearest',cmap='hot')
+    ax_pos.grid('off')
+    #ax_neg.imshow(neg_pred, aspect='auto',interpolation='nearest')
+    ax_pos_pred.imshow(pos_predictions, aspect='auto',interpolation='nearest',cmap='hot')
+    ax_pos_pred.grid('off')
+    #ax_neg_pred.imshow(neg_predictions, aspect='auto',interpolation='nearest')
+    
+    ax_pos_no_bias.imshow(pos_pred_no_bias, aspect='auto',interpolation='nearest',cmap='hot')
+    ax_pos_no_bias.grid('off')
+    #ax_neg_no_bias.imshow(neg_pred_no_bias, aspect='auto',interpolation='nearest')
+    ax_pos_pred_no_bias.imshow(pos_predictions_no_bias, aspect='auto',interpolation='nearest',cmap='hot')
+    #ax_neg_pred_no_bias.imshow(neg_predictions_no_bias, aspect='auto',interpolation='nearest')
+    ax_pos_pred_no_bias.grid('off')
+    f.savefig( self.viz_tissue_predictions + "_%d.png"%(info_dict["epoch"]))
+    pp.close()
+    #pdb.set_trace()
+    
       
   def RunFill2( self, epoch, sess, feed_dict, impute_dict, mode ):
     print "COMPUTE Z-SPACE"
@@ -477,7 +553,9 @@ class TCGABatcherAdversarial( TCGABatcher ):
     use_rna = True
     use_meth = True
     use_mirna = True
-          
+    use_tissue = True
+    use_z = True
+    
     barcodes = impute_dict[BARCODES]
     batch = self.FillBatch( impute_dict[BARCODES], mode )
     #not_observed = np.setdiff1d( self.input_sources, inputs2use )
@@ -495,6 +573,11 @@ class TCGABatcherAdversarial( TCGABatcher ):
     rna_basic_expectation_tensor = self.network.GetLayer( "gen_rna_space_basic" ).expectation
     mirna_basic_expectation_tensor = self.network.GetLayer( "gen_mirna_space_basic" ).expectation
     meth_basic_expectation_tensor = self.network.GetLayer( "gen_meth_space_basic" ).expectation
+    
+    positive_tissue_prediction_tensor = self.network.GetLayer( "target_prediction_pos" ).expectation
+    negative_tissue_prediction_tensor = self.network.GetLayer( "target_prediction_neg" ).expectation
+    no_bias_positive_tissue_prediction_tensor = self.network.GetLayer( "target_prediction_pos" ).expectation_no_bias
+    no_bias_negative_tissue_prediction_tensor = self.network.GetLayer( "target_prediction_neg" ).expectation_no_bias
     
     if use_dna:
       dna_expectation_tensor = self.network.GetLayer( "gen_dna_space" ).expectation
@@ -514,13 +597,14 @@ class TCGABatcherAdversarial( TCGABatcher ):
     tensors.extend(meth_rec_z_space_tensors)
     tensors.extend([rna_expectation_tensor,mirna_expectation_tensor,meth_expectation_tensor])
     tensors.extend([rna_basic_expectation_tensor,mirna_basic_expectation_tensor,meth_basic_expectation_tensor])
-  
+    tensors.extend([positive_tissue_prediction_tensor,negative_tissue_prediction_tensor])
     tensor_names = ["z_mu","z_var",\
                     "z_mu_rna","z_var_rna",\
                     "z_mu_mirna","z_var_mirna",\
                     "z_mu_meth","z_var_meth",\
                     "rna_expecation","mirna_expectation","meth_expectation",\
-                    "rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation"]
+                    "rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation",\
+                    "target_prediction_pos","target_prediction_neg"]
   
     assert len(tensor_names)==len(tensors), "should be same number"
     self.network.FillFeedDict( feed_dict, impute_dict )
@@ -529,6 +613,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     rna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[RNA]] == 1
     meth_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[METH]] == 1
     mirna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[miRNA]] == 1
+    tissue_observed_query = np.ones( (len(barcodes),), dtype=bool)
         
     rna_expectation                  = np.zeros( (len(barcodes), self.dims_dict[RNA] ), dtype=float )
     rna_basic_expectation            = np.zeros( (len(barcodes), self.dims_dict[RNA] ), dtype=float )
@@ -542,6 +627,11 @@ class TCGABatcherAdversarial( TCGABatcher ):
     mirna_loglikelihood              = np.zeros( (np.sum(mirna_observed_query), self.dims_dict[miRNA] ), dtype=float )
     mirna_basic_expectation          = np.zeros( (len(barcodes), self.dims_dict[miRNA] ), dtype=float )
     mirna_basic_loglikelihood        = np.zeros( (np.sum(mirna_observed_query), self.dims_dict[miRNA] ), dtype=float )
+
+    pos_tissue_expectation          = np.zeros( (len(barcodes), self.dims_dict[TISSUE] ), dtype=float )
+    neg_tissue_expectation          = np.zeros( (len(barcodes), self.dims_dict[TISSUE] ), dtype=float )
+    pos_tissue_expectation_no_bias          = np.zeros( (len(barcodes), self.dims_dict[TISSUE] ), dtype=float )
+    neg_tissue_expectation_no_bias          = np.zeros( (len(barcodes), self.dims_dict[TISSUE] ), dtype=float )
         
       #drop_likelihoods = np.zeros( rna_dim )
     # dna_dim = self.dims_dict[DNA] #/self.n_dna_channels
@@ -558,6 +648,13 @@ class TCGABatcherAdversarial( TCGABatcher ):
       
       
       id_start = 0
+      
+      if use_z:
+        #z_mu = tensor2fill_eval[0]
+        tensor2fill.extend( rec_z_space_tensors )
+        z_ids = [id_start,id_start+1]
+        id_start+=2
+        
       # ------
       # RNA
       # -----
@@ -613,7 +710,12 @@ class TCGABatcherAdversarial( TCGABatcher ):
         id_start+=4
       # columns = self.meth_genes
       # observations = self.data_store[self.METH_key].loc[ barcodes ].values
-        
+      
+      if use_tissue:
+        # ADD TISUSE PREDICTIONS
+        tensor2fill.extend([negative_tissue_prediction_tensor,no_bias_negative_tissue_prediction_tensor])
+        tissue_ids = [id_start,id_start+1]
+        id_start+=2
       
       # ---------
       # RUN SESS
@@ -646,6 +748,24 @@ class TCGABatcherAdversarial( TCGABatcher ):
         meth_basic_expectation[:,drop_meth_ids]   = tensor2fill_eval[meth_ids[1]][:,drop_meth_ids]
         meth_loglikelihood[:,drop_meth_ids]       = tensor2fill_eval[meth_ids[2]][:,drop_meth_ids]
         meth_basic_loglikelihood[:,drop_meth_ids] = tensor2fill_eval[meth_ids[3]][:,drop_meth_ids]
+        
+      if use_tissue:
+        tissue_data = batch["TISSUE_input"]
+        neg_tissue_expectation = tensor2fill_eval[tissue_ids[0]]
+        neg_tissue_expectation_no_bias = tensor2fill_eval[tissue_ids[1]]
+        
+        
+        z_mu = tensor2fill_eval[z_ids[0]]
+        z_var = tensor2fill_eval[z_ids[1]]
+        
+        feed_dict[self.network.GetLayer( "Z_rec_input" ).tensor] = z_mu + np.sqrt(z_var)*batch["u_z"]
+        
+        evals = sess.run( [positive_tissue_prediction_tensor,no_bias_positive_tissue_prediction_tensor], feed_dict = feed_dict )
+        pos_tissue_expectation = evals[0]
+        pos_tissue_expectation_no_bias = evals[1]
+        #pos_tissue_expectation = tensor2fill_eval[tissue_ids[0]]
+        #pdb.set_trace()
+        
     
     #pdb.set_trace()   
     if use_rna:   
@@ -674,7 +794,14 @@ class TCGABatcherAdversarial( TCGABatcher ):
     if use_dna:
       self.WriteRunFillExpectation( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
       self.WriteRunFillLoglikelihood( epoch, DNA, barcodes[dna_observed_query], self.dna_genes, dna_loglikelihood, mode )
- 
+
+    if use_tissue:
+      self.WriteRunFillExpectation( epoch, TISSUE+"+", barcodes, self.tissue_names, tissue_observed_query, pos_tissue_expectation, tissue_data, mode )
+      self.WriteRunFillExpectation( epoch, TISSUE+"-", barcodes, self.tissue_names, tissue_observed_query, neg_tissue_expectation, tissue_data, mode )
+      self.WriteRunFillExpectation( epoch, TISSUE+"no_bias+", barcodes, self.tissue_names, tissue_observed_query, pos_tissue_expectation_no_bias, tissue_data, mode )
+      self.WriteRunFillExpectation( epoch, TISSUE+"no_bias-", barcodes, self.tissue_names, tissue_observed_query, neg_tissue_expectation_no_bias, tissue_data, mode )
+      
+       
   def VizWeightsGeneric( self, sess, info_dict ):    
     print "  -> Generic Viz" 
     self.model_store.open()

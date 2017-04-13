@@ -9,7 +9,7 @@ from tcga_encoder.models.analyses import *
 from tcga_encoder.utils.helpers import *
 
 import seaborn as sns
-sns.set_style("whitegrid")
+#sns.set_style("whitegrid")
 sns.set_context("talk")
 
 import pandas as pd

@@ -667,9 +667,13 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       
     a, a_input          = ForwardPropagate( input_layers, weights, biases, \
                                                      transfer_function=tf.nn.softmax, name=name )
+    # the unbiases parts
+    un_b, un_b_input          = ForwardPropagate( input_layers, weights, None, \
+                                                     transfer_function=tf.nn.softmax, name=name )
                                                      
 
     model     = dict(prob=a,   \
+                     prob_no_bias = un_b,\
                      weights=weights, \
                      biases=biases, \
                      shape=shape )
@@ -2000,12 +2004,15 @@ class SoftmaxModelLayer(HiddenLayer):
     else:
       self.gen_epsilon = 0.01
     # the output is prob(c=1|x)
+    self.p_of_c_no_bias = self.model["prob_no_bias"]
     self.p_of_c = self.model["prob"]
     self.p_of_c_not = 1.0 - self.p_of_c
     self.name              = name
     self.tensor            = self.p_of_c
     self.expectation       = self.p_of_c
+    self.expectation_no_bias       = self.p_of_c_no_bias
     
+    self.log_p_of_c_no_bias     = tf.log( self.p_of_c_no_bias + 1e-12 )
     self.log_p_of_c     = tf.log( self.p_of_c + 1e-12 )
     self.log_p_of_c_not = tf.log( self.p_of_c_not + 1e-12 )
     
@@ -2029,10 +2036,11 @@ class SoftmaxModelLayer(HiddenLayer):
 class EntropySoftmaxModelLayer(SoftmaxModelLayer):
   def LogLikelihood( self, X, as_matrix = False, boolean_mask = None ):
     if boolean_mask is None:
-      self.loglik_matrix = self.p_of_c * self.log_p_of_c
+      self.loglik_matrix = self.p_of_c_no_bias * self.log_p_of_c_no_bias
+      #self.loglik_matrix = self.p_of_c * self.log_p_of_c
     else:
-      self.loglik_matrix = tf.boolean_mask( self.p_of_c, boolean_mask ) * tf.boolean_mask( self.log_p_of_c, boolean_mask ) 
-
+      self.loglik_matrix = self.p_of_c_no_bias * self.log_p_of_c_no_bias
+      #self.loglik_matrix = self.p_of_c * self.log_p_of_c
     self.loglik = tf.reduce_sum( self.loglik_matrix, name = self.name+"_loglik" )
 
     if as_matrix is True:

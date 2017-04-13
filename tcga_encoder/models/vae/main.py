@@ -6,7 +6,7 @@ from tcga_encoder.definitions.locations import *
 from tcga_encoder.algorithms import *
 import seaborn as sns
 
-sns.set_style("whitegrid")
+#sns.set_style("whitegrid")
 sns.set_context("talk")
 
 pd.set_option('display.max_columns', 500)
