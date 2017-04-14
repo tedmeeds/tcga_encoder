@@ -630,7 +630,7 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
       print "ANTI WEIGHT = ",self.anti_weight
       return -self.lower_bound + self.weight_penalty + self.anti_weight*self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
     else:
-      return -self.lower_bound + self.weight_penalty - self.log_p_t_given_z_pos
+      return -self.lower_bound + self.weight_penalty + self.anti_weight*self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
       
  
   def FillFeedDict( self, feed_dict, imputation_dict ):
