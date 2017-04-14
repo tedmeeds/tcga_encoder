@@ -515,33 +515,48 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     f = pp.figure( figsize=(14,6))
     
-    ax_data=f.add_subplot(2,4,1)
-    ax_pos             =f.add_subplot(2,4,5)
-    ax_pos_pred        =f.add_subplot(2,4,6)
-    ax_pos_no_bias     =f.add_subplot(2,4,7)
-    ax_pos_pred_no_bias=f.add_subplot(2,4,8)
-    
+    ax_data=f.add_subplot(2,5,1)
+    ax_pos             =f.add_subplot(2,5,2)
+    ax_pos_pred        =f.add_subplot(2,5,3)
+    ax_pos_no_bias     =f.add_subplot(2,5,4)
+    ax_pos_pred_no_bias=f.add_subplot(2,5,5)
+
+    ax_data2=f.add_subplot(2,5,6)
+    ax_pos2             =f.add_subplot(2,5,7)
+    ax_pos_pred2        =f.add_subplot(2,5,8)
+    ax_pos_no_bias2     =f.add_subplot(2,5,9)
+    ax_pos_pred_no_bias2=f.add_subplot(2,5,10)
+        
     #ax_neg             =f.add_subplot(3,4,9)
     #ax_neg_pred        =f.add_subplot(3,4,10)
     #ax_neg_no_bias     =f.add_subplot(3,4,11)
     #ax_neg_pred_no_bias=f.add_subplot(3,4,12)
     
     ax_data.imshow(data, aspect='auto',interpolation='nearest',cmap='hot')
+    ax_data2.plot(data.values.mean(0))
     ax_data.grid('off')
     
     ax_pos.imshow(pos_pred, aspect='auto',interpolation='nearest',cmap='hot')
     ax_pos.grid('off')
+    ax_pos2.plot(pos_pred.values.mean(0))
+    
     #ax_neg.imshow(neg_pred, aspect='auto',interpolation='nearest')
     ax_pos_pred.imshow(pos_predictions, aspect='auto',interpolation='nearest',cmap='hot')
     ax_pos_pred.grid('off')
+    ax_pos_pred2.plot(pos_predictions.mean(0))
     #ax_neg_pred.imshow(neg_predictions, aspect='auto',interpolation='nearest')
     
     ax_pos_no_bias.imshow(pos_pred_no_bias, aspect='auto',interpolation='nearest',cmap='hot')
     ax_pos_no_bias.grid('off')
+    ax_pos_no_bias2.plot(pos_pred_no_bias.values.mean(0))
+    
     #ax_neg_no_bias.imshow(neg_pred_no_bias, aspect='auto',interpolation='nearest')
     ax_pos_pred_no_bias.imshow(pos_predictions_no_bias, aspect='auto',interpolation='nearest',cmap='hot')
+    ax_pos_pred_no_bias2.plot(pos_predictions_no_bias.mean(0))
     #ax_neg_pred_no_bias.imshow(neg_predictions_no_bias, aspect='auto',interpolation='nearest')
     ax_pos_pred_no_bias.grid('off')
+    
+    
     f.savefig( self.viz_tissue_predictions + "_%d.png"%(info_dict["epoch"]))
     f.savefig( self.viz_tissue_predictions + ".png")
     pp.close()

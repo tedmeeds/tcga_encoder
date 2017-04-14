@@ -653,7 +653,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
   #
   #   layer = layer_class( shape, model, name=name )
         
-  elif layer_class == SoftmaxModelLayer or layer_class==EntropySoftmaxModelLayer:
+  elif layer_class == SoftmaxModelLayer or layer_class==EntropySoftmaxModelLayer or layer_class==EntropySoftmaxModelLayer2:
     shape           = layer_specs[SHAPE]
     has_biases = True
     if layer_specs.has_key("biases"):
@@ -2047,5 +2047,20 @@ class EntropySoftmaxModelLayer(SoftmaxModelLayer):
      return self.loglik_matrix
     else:
      return self.loglik  
-     
+
+class EntropySoftmaxModelLayer2(SoftmaxModelLayer):
+  def LogLikelihood( self, X, as_matrix = False, boolean_mask = None ):
+    if boolean_mask is None:
+      self.loglik_matrix = tf.square( self.p_of_c_no_bias - 1.0/33 )
+      #self.loglik_matrix = self.p_of_c * self.log_p_of_c
+    else:
+      self.loglik_matrix = tf.square( self.p_of_c_no_bias - 1.0/33 )
+      #self.loglik_matrix = self.p_of_c * self.log_p_of_c
+    self.loglik = tf.reduce_sum( self.loglik_matrix, name = self.name+"_loglik" )
+
+    if as_matrix is True:
+     return self.loglik_matrix
+    else:
+     return self.loglik  
+          
       
