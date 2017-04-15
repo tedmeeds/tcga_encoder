@@ -47,7 +47,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
         n,d = batch_data_mu.values.shape
         if mode == "BATCH":
           #pdb.set_trace()
-          batch_data_values = batch_data_mu.values + np.sqrt(batch_data_var.values)*batch['u_z']
+          batch_data_values = batch_data_mu.values #+ np.sqrt(batch_data_var.values)*batch['u_z']
         else:
           batch_data_values = batch_data_mu.values
           
@@ -538,6 +538,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     ax_pos.imshow(pos_pred, aspect='auto',interpolation='nearest',cmap='hot')
     ax_pos.grid('off')
+    ax_pos2.plot(pos_pred.values.T, 'k.-', lw=0.5, alpha=0.5 )
     ax_pos2.plot(pos_pred.values.mean(0))
     
     #ax_neg.imshow(neg_pred, aspect='auto',interpolation='nearest')
@@ -548,6 +549,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     ax_pos_no_bias.imshow(pos_pred_no_bias, aspect='auto',interpolation='nearest',cmap='hot')
     ax_pos_no_bias.grid('off')
+    ax_pos_no_bias2.plot(pos_pred_no_bias.values.T, 'k.-', lw=0.5, alpha=0.5 )
     ax_pos_no_bias2.plot(pos_pred_no_bias.values.mean(0))
     
     #ax_neg_no_bias.imshow(neg_pred_no_bias, aspect='auto',interpolation='nearest')
@@ -774,7 +776,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
         z_mu = tensor2fill_eval[z_ids[0]]
         z_var = tensor2fill_eval[z_ids[1]]
         
-        feed_dict[self.network.GetLayer( "Z_rec_input" ).tensor] = z_mu + np.sqrt(z_var)*batch["u_z"]
+        feed_dict[self.network.GetLayer( "Z_rec_input" ).tensor] = z_mu #+ np.sqrt(z_var)*batch["u_z"]
         
         evals = sess.run( [positive_tissue_prediction_tensor,no_bias_positive_tissue_prediction_tensor], feed_dict = feed_dict )
         pos_tissue_expectation = evals[0]
