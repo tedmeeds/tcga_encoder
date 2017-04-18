@@ -198,10 +198,6 @@ class DnaBatcher( TCGABatcherABC ):
     pp.savefig( self.viz_filename_lower_bound, dpi = 300, fmt="png", bbox_inches = "tight")
     pp.close(f)
 
-  def FillDerivedPlaceholder( self, batch, layer_name, mode ):
-    pass
-
-
 
   def PlotFillError(self,main_sources):
     f = pp.figure(figsize=(12,10))
@@ -529,7 +525,10 @@ class DnaBatcher( TCGABatcherABC ):
         n,d = batch_data_mu.values.shape
         if mode == "BATCH":
           #pdb.set_trace()
-          batch_data_values = batch_data_mu.values #+ np.sqrt(batch_data_var.values)*batch['u_z']
+          if self.algo_dict["add_z_noise"] is True:
+            batch_data_values = batch_data_mu.values + np.sqrt(batch_data_var.values)*batch['u_z']
+          else:
+            batch_data_values = batch_data_mu.values #+ np.sqrt(batch_data_var.values)*batch['u_z']
         else:
           batch_data_values = batch_data_mu.values
           
