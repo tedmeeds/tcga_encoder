@@ -451,6 +451,7 @@ class DnaBatcher( TCGABatcherABC ):
     
     old_layer = ""
     needs_closing=False
+    w_idx = 1
     for k in keys:
       dum,layer_name, W_or_b, W_or_b_id = k.split("/")
       if W_or_b == "b":
@@ -468,8 +469,9 @@ class DnaBatcher( TCGABatcherABC ):
         if W_or_b == "W":
           #print "  new figure"
           fig_ = pp.figure()
-          ax1_ = fig_.add_subplot(121)
-          ax2_ = fig_.add_subplot(122)
+          ax1_ = fig_.add_subplot(2,2,w_idx)
+          ax2_ = fig_.add_subplot(2,2,w_idx+1)
+          w_idx+=2
           needs_closing = True
 
       if W_or_b == "W":
