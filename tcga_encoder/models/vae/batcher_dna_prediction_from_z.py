@@ -473,7 +473,7 @@ class DnaBatcher( TCGABatcherABC ):
           ax2_ = fig_.add_subplot(2,2,w_idx+1)
           w_idx+=2
           needs_closing = True
-
+ 
       if W_or_b == "W":
         #print "  adding weights, ",layer_name
         W = np.squeeze( self.model_store[k].values ).flatten()
