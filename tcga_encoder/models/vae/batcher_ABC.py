@@ -129,37 +129,8 @@ class TCGABatcherABC( object ):
     for source, idx in zip(self.observed_order,range(len(self.observed_order)) ):
       self.observed_source2idx[source] = idx
     
-    #self.input_sources = self.arch_dict[INPUT_SOURCES]
-    #self.target_sources = self.arch_dict[TARGET_SOURCES]
     self.required_sources = self.arch_dict["required_sources"]
     self.optional_sources = self.arch_dict["optional_sources"]
-    
-    
-          
-
-        
-    # self.observation_source_indices = []
-    # for source in self.arch_dict["sources"]:
-    #   self.observation_source_indices.append( self.observed_source2idx[source] )
-
-    # self.observation_source_indices_input = []
-    # for source in self.arch_dict[INPUT_SOURCES]:
-    #   self.observation_source_indices_input.append( self.observed_source2idx[source] )
-    #
-    # self.observation_source_indices_target = []
-    # for source in self.arch_dict[TARGET_SOURCES]:
-    #   try:
-    #     self.observation_source_indices_target.append( self.observed_source2idx[source] )
-    #   except:
-    #     print "skipping ", source            
-
-    # self.observed_batch_order = OrderedDict()
-    # self.observed_product_sources = []
-    # source_idx = 0
-    # for source in self.arch_dict["product_sources"]:
-    #   self.observed_product_sources.append( self.observed_source2idx[source] )
-    #   self.observed_batch_order[ source ] = source_idx
-    #   source_idx+=1
        
     self.MakeBarcodes()
     
@@ -289,89 +260,11 @@ class TCGABatcherABC( object ):
     
     #pdb.set_trace()
     self.validation_barcodes = self.data_store[self.OBSERVED_key][self.validation_obs_query].index
-    
-    # for bc in self.validation_barcodes:
-    #   found = False
-    #   for tissue in self.validation_tissues:
-    #     if bc.split("_")[0] == tissue:
-    #       found = True
-    #       break
-    #   assert found is True, "could not find " + bc
-    # # must have more than just tissue observed (ie one of dna, rna, meth, etc)
-    
     self.usable_observed_query = self.usable_query*self.not_validation_query
-    #self.usable_observed = self.data_store[self.OBSERVED_key][self.usable_observed_query]
-    #self.usable_barcodes = self.data_store[self.OBSERVED_key][self.usable_observed_query].index
     self.train_barcodes = self.data_store[self.OBSERVED_key][self.usable_observed_query].index
     self.test_barcodes = []
     #pdb.set_trace()
     assert len(np.intersect1d( self.train_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
-  
-    #self.n_usable = len(self.usable_barcodes)
-  
-    # # find cases where RNA and DNA are observed (some have no METH -- COAD, READ, LAML more)
-    # # make fully observed having tissue, dna, rna, meth just so all the experiments get the same patients for test
-    # self.fully_observed_query = self.not_validation_query*self.usable_observed_query*(self.data_store[self.OBSERVED_key].values.sum(1)==len(self.observed_order))
-    #
-    # self.fully_observed = self.data_store[self.OBSERVED_key][self.fully_observed_query]
-    # self.fully_barcodes = self.fully_observed.index
-    #
-    # assert len(np.intersect1d( self.fully_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
-    #
-    #
-    # self.full_observed_ids = pp.find( self.fully_observed_query )
-    # self.n_fully_observed = self.fully_observed_query.sum()
-    # self.n_full_train = self.n_fully_observed
-    # self.train_full_id_query = np.zeros( len(self.data_store[self.OBSERVED_key]), dtype=bool)
-    #
-    #
-    # self.train_full_ids = np.random.permutation( self.n_fully_observed )[:self.n_full_train]
-    # self.train_full_id_query[ self.full_observed_ids[self.train_full_ids] ] = 1
-    #
-    # self.test_full_id_query = (self.not_validation_query*self.fully_observed_query*(1-self.train_full_id_query).astype(np.bool) ).astype(np.bool)
-    #
-    # # all the usable, but not fully observed data
-    # self.non_full_observed_query = self.not_validation_query*self.usable_query*(1-self.fully_observed_query).astype(np.bool)
-    #
-    # self.non_full_observed_ids = pp.find( self.non_full_observed_query )
-    # self.n_non_fully_observed = self.non_full_observed_query.sum()
-    #
-    # #if self.n_non_fully_observed <= self.n_non_full_train:
-    # #  print "==> setting test set from %d to %d"%(self.n_non_full_train,self.n_non_fully_observed)
-    # self.n_non_full_train = self.n_non_fully_observed
-    #
-    # self.train_non_full_id_query = np.zeros( len(self.data_store[self.OBSERVED_key]), dtype=bool)
-    # self.train_non_full_ids = np.random.permutation( self.n_non_fully_observed )[:self.n_non_full_train]
-    # self.train_non_full_id_query[ self.non_full_observed_ids[self.train_non_full_ids] ] = 1
-    #
-    # self.test_non_full_id_query = (self.not_validation_query*self.non_full_observed_query*(1-self.train_non_full_id_query).astype(np.bool) ).astype(np.bool)
-    #
-    # self.train_full_barcodes     = self.data_store[self.OBSERVED_key][self.train_full_id_query].index
-    # assert len(np.intersect1d( self.train_full_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
-    #
-    # self.train_non_full_barcodes = self.data_store[self.OBSERVED_key][self.train_non_full_id_query].index
-    # assert len(np.intersect1d( self.train_non_full_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
-    #
-    # self.test_full_barcodes      = self.data_store[self.OBSERVED_key][self.test_full_id_query].index
-    # assert len(np.intersect1d( self.test_full_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
-    #
-    # self.test_non_full_barcodes  = self.data_store[self.OBSERVED_key][self.test_non_full_id_query].index
-    # assert len(np.intersect1d( self.test_non_full_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
-    #
-    # print "** n_train_full     ", len(self.train_full_barcodes)
-    # print "** n_train_non_full ", len(self.train_non_full_barcodes)
-    # print "** n_test_full      ", len(self.test_full_barcodes)
-    # print "** n_test_non_full  ", len(self.test_non_full_barcodes)
-    #
-    # assert len( np.intersect1d( self.train_full_barcodes,self.train_non_full_barcodes ) ) == 0, "problem"
-    # assert len( np.intersect1d( self.train_full_barcodes,self.test_full_barcodes)) == 0, "problem"
-    # assert len( np.intersect1d( self.train_full_barcodes,self.test_non_full_barcodes)) == 0, "problem"
-    # assert len( np.intersect1d( self.train_non_full_barcodes,self.test_full_barcodes)) == 0, "problem"
-    # assert len( np.intersect1d( self.train_non_full_barcodes,self.test_non_full_barcodes)) == 0, "problem"
-    # assert len( np.intersect1d( self.test_full_barcodes,self.test_non_full_barcodes)) == 0, "problem"
-    
-    #self.test_barcodes = np.union1d( self.test_full_barcodes, self.test_non_full_barcodes )
-    #self.train_barcodes = np.union1d( self.train_full_barcodes, self.train_non_full_barcodes )
 
     if self.algo_dict.has_key( "xval_fold" ):
       self.SplitValidationIntoXvalFold( self.algo_dict[ "xval_fold" ], self.algo_dict[ "n_xval_folds" ]  )

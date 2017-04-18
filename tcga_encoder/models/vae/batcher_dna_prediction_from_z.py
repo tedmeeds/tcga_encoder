@@ -11,7 +11,8 @@ class DnaBatcher( TCGABatcherABC ):
       self.dna_store = self.dna_store[self.dna_genes]
       self.dna_dim = len(self.dna_genes)
       self.dims_dict[DNA] = self.dna_dim 
-        
+
+  
   def CallBack( self, function_name, sess, cb_info ):
     if function_name == "everything":
       self.FillDna( sess, cb_info )
@@ -46,11 +47,8 @@ class DnaBatcher( TCGABatcherABC ):
     for batch_ids in chunks( np.arange(len(self.train_barcodes)), 5000 ):
       barcodes = self.train_barcodes[batch_ids]
       impute_dict = self.FillBatch( barcodes, mode = "TRAIN" ) #self.NextBatch(batch_ids)
-      #impute_dict[BARCODES] = barcodes
       self.batch_ids = batch_ids
-      
-      
-      
+
       train_feed_dict={}
       self.network.FillFeedDict( train_feed_dict, impute_dict )
       #batch = self.FillBatch( impute_dict[BARCODES], mode )
@@ -62,8 +60,8 @@ class DnaBatcher( TCGABatcherABC ):
    
   def SummarizeData(self):
     print "Running: SummarizeData()"
-    self.dna_mean = self.data_store[self.DNA_keys[0]].loc[self.train_barcodes].mean(0)
-    self.dna_std = self.data_store[self.DNA_keys[0]].loc[self.train_barcodes].std(0)
+    self.dna_mean = self.dna_store.loc[self.train_barcodes].mean(0)
+    self.dna_std = self.dna_store.loc[self.train_barcodes].std(0)
 
     self.dna_order = np.argsort( self.dna_mean.values )
     
@@ -82,39 +80,23 @@ class DnaBatcher( TCGABatcherABC ):
       
       self.tissue_statistics[ tissue ] = {}
       self.tissue_statistics[ tissue ][ DNA ] = {}
-      self.tissue_statistics[ tissue ][ DNA ][ "mean"]   = self.data_store[self.DNA_keys[0]].mean(0).fillna(0)
-      self.tissue_statistics[ tissue ][ DNA ][ "var"]   = self.data_store[self.DNA_keys[0]].var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ DNA ][ "mean"]   = self.dna_store.mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ DNA ][ "var"]   = self.dna_store.var(0).fillna(0)
 
       try:
-        dna=self.data_store[self.DNA_keys[0]].loc[ bcs ]
+        dna=self.dna_store.loc[ bcs ]
         self.tissue_statistics[ tissue ][ DNA ][ "mean"]   = dna.mean(0).fillna(0)
         self.tissue_statistics[ tissue ][ DNA ][ "var"]   = dna.var(0).fillna(0)
       except:
         print "No DNA for %s"%(tissue)   
   
   # def MakeBarcodes(self):
-  #   self.fill_source_store.open()
-  #   #z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
-  #   #self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
-  #   #self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
-  #
-  #   #pdb.set_trace()
-  #
-  #   self.train_barcodes = self.fill_source_store["Z/TRAIN/Z/mu"].index.values
-  #   self.validation_barcodes = self.fill_source_store["Z/VAL/Z/mu"].index.values
-  #   self.test_barcodes = [] #self.fill_source_store["Z/TEST/Z/mu"].index.values
-  #
   #   obs_dna = self.data_store["/CLINICAL/observed"]["DNA"][ self.data_store["/CLINICAL/observed"]["DNA"] ==1 ]
   #   dna_barcodes = obs_dna.index.values
   #
   #   self.train_barcodes      = np.intersect1d( self.train_barcodes, dna_barcodes)
   #   self.validation_barcodes = np.intersect1d( self.validation_barcodes, dna_barcodes)
   #
-  #   self.fill_source_store.close()
-    
-  def InitFillStore(self):
-    pass
-  
     
   def InitializeAnythingYouWant(self, sess, network ):
     print "Running : InitializeAnythingYouWant"
@@ -170,38 +152,26 @@ class DnaBatcher( TCGABatcherABC ):
               network.GetLayer( layer_name ).SetBiases( sess, [beta_0])
             except:
               print "could not init bias biases"
-         
-  def StoreNames(self):
-    #self.latent_store_name = self.network_name + "_" + LATENT
-    #self.latent_store = OpenHdfStore(self.savedir, self.latent_store_name, mode=self.default_store_mode )
-    self.model_store_name = self.network_name + "_DNA_" + MODEL
-    #self.survival_store_name = self.network_name + "_" + SURVIVAL
-    
-    # open in "a" mode
-    self.model_store = OpenHdfStore(self.savedir, self.model_store_name, mode="a" )
-    
-    self.epoch_store_name = self.network_name + "_DNA_" + EPOCH
-    self.epoch_store = OpenHdfStore(self.savedir, self.epoch_store_name, mode=self.default_store_mode )
-    
-    self.fill_store_name = self.network_name + "_DNA_" + FILL
-    self.fill_store = OpenHdfStore(self.savedir, self.fill_store_name, mode="a")
-    
-    self.fill_source_store_name = self.network_name + "_" +  FILL
-    self.fill_source_store = OpenHdfStore(self.savedir, self.fill_source_store_name, mode="r")
-
-    
-    self.fill_source_store.close()
-    
-    self.fill_store.close()
-    #self.latent_store.close()
-    self.model_store.close()
-    self.epoch_store.close()
+  #
+  # def StoreNames(self):
+  #   self.model_store_name = self.network_name + "_DNA_" + MODEL
+  #   self.model_store = OpenHdfStore(self.savedir, self.model_store_name, mode="a" )
+  #
+  #   self.epoch_store_name = self.network_name + "_DNA_" + EPOCH
+  #   self.epoch_store = OpenHdfStore(self.savedir, self.epoch_store_name, mode=self.default_store_mode )
+  #
+  #   self.fill_store_dna_name = self.network_name + "_DNA_" + FILL
+  #   self.fill_store_dna = OpenHdfStore(self.savedir, self.fill_store_name, mode="a")
+  #
+  #   self.fill_store_dna.close()
+  #   self.model_store.close()
+  #   self.epoch_store.close()
   
-  def CloseAll(self):
-    self.data_store.close()
-    self.fill_source_store.close()
-    self.model_store.close()
-    self.epoch_store.close()
+  # def CloseAll(self):
+  #   self.data_store.close()
+  #   self.fill_store_dna.close()
+  #   self.model_store.close()
+  #   self.epoch_store.close()
       
   def MakeVizFilenames(self):
     self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
@@ -229,200 +199,8 @@ class DnaBatcher( TCGABatcherABC ):
     pp.close(f)
 
   def FillDerivedPlaceholder( self, batch, layer_name, mode ):
-    
-    if layer_name == "Z_input":
-      self.fill_source_store.open()
-      if mode == "BATCH" or mode == "TRAIN":
-        #pdb.set_trace()
-        batch_data_mu = self.fill_source_store["/Z/TRAIN/Z/mu"].loc[ batch["barcodes"] ]
-        batch_data_var = self.fill_source_store["/Z/TRAIN/Z/var"].loc[ batch["barcodes"] ]
-        
-        n,d = batch_data_mu.values.shape
-        batch_data_values = batch_data_mu.values #+ np.sqrt(batch_data_var.values)*np.random.randn(n,d)
-        #batch_data = self.fill_source_store["/Z/TRAIN/Z/mu"].loc[ batch["barcodes"] ]
-        batch_data = pd.DataFrame(batch_data_values, index=batch_data_mu.index, columns=batch_data_mu.columns)
-      else:
-        #pdb.set_trace()
-        batch_data = self.fill_source_store["/Z/VAL/Z/mu"].loc[ batch["barcodes"] ]
-        
-        
-      nans = np.isnan( batch_data.values )
-      batch_data_values = batch_data.values
-      # if mode == "BATCH":
-      #  batch_data_values = self.AddmiRnaNoise( batch_data.values, rate = 0.1 )
-      #   
-      # batch[ layer_name ] = self.NormalizemiRnaInput( batch_data_values )
-      batch[ layer_name ] = batch_data
-      batch[ layer_name ][nans] = 0
-      self.fill_source_store.close()
-      
-    
-  # def PlotLogPdf(self, main_sources, prior_sources ):
-  #   f = pp.figure()
-  #   legends  = []
-  #   colours = "bgr"
-  #   fill_colours = ["lightblue","lightgreen","lightred"]
-  #   n_sources = len(main_sources)
-  #   for idx,target_source, prior_source in zip( range(n_sources),main_sources,prior_sources):
-  #     s = f.add_subplot(1,n_sources,idx+1)
-  #     pp.plot( self.epoch_store[BATCH_SOURCE_LOGPDF]["Epoch"].values,
-  #              self.epoch_store[BATCH_SOURCE_LOGPDF][target_source]/self.dims_dict[target_source], 's--', \
-  #              color=self.source2mediumcolor[target_source], \
-  #              mec=self.source2darkcolor[target_source], mew=1, \
-  #              mfc=self.source2lightcolor[target_source], lw=1, \
-  #              ms = 5, \
-  #              alpha=0.75, \
-  #              label="Batch (%0.4f)"%(self.epoch_store[BATCH_SOURCE_LOGPDF][prior_source].values[-1]/self.dims_dict[target_source]) )
-  #     pp.plot( self.epoch_store[BATCH_SOURCE_LOGPDF]["Epoch"].values,
-  #              self.epoch_store[BATCH_SOURCE_LOGPDF][prior_source]/self.dims_dict[prior_source], 's--', \
-  #              color=self.source2mediumcolor[prior_source], \
-  #              mec=self.source2darkcolor[prior_source], mew=1, \
-  #              mfc=self.source2lightcolor[prior_source], lw=1, \
-  #              ms = 5, \
-  #              alpha=0.75, \
-  #              label="Batch prior (%0.4f)"%(self.epoch_store[BATCH_SOURCE_LOGPDF][prior_source].values[-1]/self.dims_dict[prior_source]) )
-  #
-  #     if self.n_test > 0:
-  #       pp.plot( self.epoch_store[TEST_SOURCE_LOGPDF]["Epoch"].values, \
-  #              self.epoch_store[TEST_SOURCE_LOGPDF][target_source]/self.dims_dict[target_source], 'o-', \
-  #              color=self.source2mediumcolor[target_source],\
-  #              mec=self.source2darkcolor[target_source], mew=2, \
-  #              mfc=self.source2lightcolor[target_source], lw=3, \
-  #              ms = 8, \
-  #              label="Test  (%0.4f)"%(self.epoch_store[TEST_SOURCE_LOGPDF][target_source].values[-1]/self.dims_dict[target_source])  )
-  #       pp.plot( self.epoch_store[TEST_SOURCE_LOGPDF]["Epoch"].values, \
-  #              self.epoch_store[TEST_SOURCE_LOGPDF][prior_source]/self.dims_dict[prior_source], 'o-', \
-  #              color=self.source2mediumcolor[prior_source],\
-  #              mec=self.source2darkcolor[prior_source], mew=2, \
-  #              mfc=self.source2lightcolor[prior_source], lw=3, \
-  #              ms = 8, \
-  #              label="Test prior (%0.4f)"%(self.epoch_store[TEST_SOURCE_LOGPDF][prior_source].values[-1]/self.dims_dict[prior_source])  )
-  #
-  #
-  #     if self.n_val > 0:
-  #       pp.plot( self.epoch_store[VAL_SOURCE_LOGPDF]["Epoch"].values, \
-  #              self.epoch_store[VAL_SOURCE_LOGPDF][target_source]/self.dims_dict[target_source], 'v-', \
-  #              color=self.source2darkcolor[target_source],\
-  #              mec=self.source2darkcolor[target_source], mew=2, \
-  #              mfc=self.source2lightcolor[target_source], lw=3, \
-  #              ms = 8, \
-  #              label="Val  (%0.4f)"%(self.epoch_store[VAL_SOURCE_LOGPDF][target_source].values[-1]/self.dims_dict[target_source])  )
-  #       pp.plot( self.epoch_store[VAL_SOURCE_LOGPDF]["Epoch"].values, \
-  #              self.epoch_store[VAL_SOURCE_LOGPDF][prior_source]/self.dims_dict[prior_source], 'v-', \
-  #              color=self.source2darkcolor[prior_source],\
-  #              mec=self.source2darkcolor[prior_source], mew=2, \
-  #              mfc=self.source2lightcolor[prior_source], lw=3, \
-  #              ms = 8, \
-  #              label="Val prior (%0.4f)"%(self.epoch_store[VAL_SOURCE_LOGPDF][prior_source].values[-1]/self.dims_dict[prior_source])  )
-  #
-  #
-  #     if idx==0:
-  #       pp.ylabel("log p(x|z)") #%(target_source))
-  #     pp.legend(loc="lower right")
-  #     pp.title( "%s"%(target_source))
-  #     pp.xlabel("Epoch")
-  #
-  #   pp.grid('on')
-  #   #pdb.set_trace()
-  #
-  #   pp.savefig( self.viz_filename_log_pdf_sources_per_gene, dpi = 300, fmt="png", bbox_inches = "tight")
-  #   pp.close(f)
+    pass
 
-
-  # def PlotFillLogPdf(self,main_sources,prior_sources):
-  #   f = pp.figure()
-  #   legends  = []
-  #   colours = "bgr"
-  #   fill_colours = ["lightblue","lightgreen","lightred"]
-  #   n_sources = len(main_sources)
-  #   for idx,target_source, prior_source in zip( range(n_sources),main_sources,prior_sources):
-  #     s = f.add_subplot(1,n_sources,idx+1)
-  #     pp.plot( self.epoch_store[BATCH_SOURCE_LOGPDF]["Epoch"].values,
-  #              self.epoch_store[BATCH_SOURCE_LOGPDF][target_source]/self.dims_dict[target_source], 's--', \
-  #              color=self.source2mediumcolor[target_source], \
-  #              mec=self.source2darkcolor[target_source], mew=1, \
-  #              mfc=self.source2lightcolor[target_source], lw=1, \
-  #              ms = 5, \
-  #              alpha=0.75, \
-  #              label="Batch (%0.4f)"%(self.epoch_store[BATCH_SOURCE_LOGPDF][target_source].values[-1]/self.dims_dict[target_source]) )
-  #     pp.plot( self.epoch_store[BATCH_SOURCE_LOGPDF]["Epoch"].values,
-  #              self.epoch_store[BATCH_SOURCE_LOGPDF][prior_source]/self.dims_dict[prior_source], 's--', \
-  #              color=self.source2mediumcolor[prior_source], \
-  #              mec=self.source2darkcolor[prior_source], mew=1, \
-  #              mfc=self.source2lightcolor[prior_source], lw=1, \
-  #              ms = 5, \
-  #              alpha=0.75, \
-  #              label="Batch prior (%0.4f)"%(self.epoch_store[BATCH_SOURCE_LOGPDF][prior_source].values[-1]/self.dims_dict[prior_source]) )
-  #
-  #     if self.n_test > 0:
-  #       query1 = self.epoch_store[TEST_FILL_LOGLIK]["Target"] == target_source
-  #       query2 = self.epoch_store[TEST_FILL_LOGLIK]["Target"] == prior_source
-  #       query = query1#&query2
-  #       loglik_df = self.epoch_store[TEST_FILL_LOGLIK][query]
-  #       epochs = loglik_df["Epoch"].values
-  #       loglik = loglik_df["LogLik"].values
-  #       if len(loglik) == 0:
-  #         continue
-  #       pp.plot( epochs, loglik, 'o-', \
-  #              color=self.source2darkcolor[target_source],\
-  #              mec=self.source2darkcolor[target_source], mew=1, \
-  #              mfc=self.source2lightcolor[target_source], lw=2, \
-  #              ms = 8, \
-  #              label="Test (%0.4f)"%(loglik[-1]) )
-  #
-  #       query = query2#&query2
-  #       loglik_df = self.epoch_store[TEST_FILL_LOGLIK][query]
-  #       epochs = loglik_df["Epoch"].values
-  #       loglik = loglik_df["LogLik"].values
-  #       if len(loglik) == 0:
-  #         continue
-  #       pp.plot( epochs, loglik, 'o-', \
-  #              color=self.source2darkcolor[prior_source],\
-  #              mec=self.source2darkcolor[prior_source], mew=1, \
-  #              mfc=self.source2lightcolor[prior_source], lw=2, \
-  #              ms = 8, \
-  #              label="Test prior (%0.4f)"%(loglik[-1]) )
-  #
-  #     if self.n_val > 0:
-  #       query1 = self.epoch_store[VAL_FILL_LOGLIK]["Target"] == target_source
-  #       query2 = self.epoch_store[VAL_FILL_LOGLIK]["Target"] == prior_source
-  #       query = query1#&query2
-  #       loglik_df = self.epoch_store[VAL_FILL_LOGLIK][query]
-  #       epochs = loglik_df["Epoch"].values
-  #       loglik = loglik_df["LogLik"].values
-  #       if len(loglik) == 0:
-  #         continue
-  #
-  #       pp.plot( epochs, loglik, 'v-', \
-  #              color=self.source2mediumcolor[target_source],\
-  #              mec=self.source2lightcolor[target_source], mew=1, \
-  #              mfc=self.source2darkcolor[target_source], lw=2, \
-  #              ms = 8, \
-  #              label="Val (%0.4f)"%(loglik[-1]) )
-  #       query = query2#&query2
-  #       loglik_df = self.epoch_store[VAL_FILL_LOGLIK][query]
-  #       epochs = loglik_df["Epoch"].values
-  #       loglik = loglik_df["LogLik"].values
-  #       if len(loglik) == 0:
-  #         continue
-  #
-  #       pp.plot( epochs, loglik, 'v-', \
-  #              color=self.source2mediumcolor[prior_source],\
-  #              mec=self.source2lightcolor[prior_source], mew=1, \
-  #              mfc=self.source2darkcolor[prior_source], lw=2, \
-  #              ms = 8, \
-  #              label="Val prior (%0.4f)"%(loglik[-1]) )
-  #
-  #
-  #     if idx==0:
-  #       pp.ylabel("log p(x|z)") #%(target_source))
-  #     pp.legend(loc="lower right")
-  #     pp.title( "%s"%(target_source))
-  #     pp.xlabel("Epoch")
-  #
-  #   pp.grid('on')
-  #   pp.savefig( self.viz_filename_log_pdf_sources_per_gene_fill, dpi = 300, fmt="png", bbox_inches = "tight")
-  #   pp.close(f)
 
 
   def PlotFillError(self,main_sources):
@@ -431,21 +209,7 @@ class DnaBatcher( TCGABatcherABC ):
     n_sources = len(main_sources)
     for idx,target_source in zip( range(n_sources),main_sources):
       s = f.add_subplot(1,n_sources,idx+1)
-      inputs = "RNA+DNA+METH"
-      # query1 = self.epoch_store[BATCH_FILL_ERROR]["Target"] == target_source
-      # query = query1#&query2
-      # df = self.epoch_store[BATCH_FILL_ERROR][query]
-      # epochs = df["Epoch"].values
-      # loglik = df["Error"].values
-      # if len(loglik) == 0:
-      #   continue
-      # pp.plot( epochs, loglik, 'o-', \
-      #          color=self.source2lightcolor[target_source],\
-      #          mec=self.source2mediumcolor[target_source], mew=1, \
-      #          mfc=self.source2lightcolor[target_source], lw=2, \
-      #          ms = 8, \
-      #          label="Batch (%0.6f)"%(loglik[-1]) )
-      
+      inputs = "RNA+DNA+METH"      
       
       if self.n_test > 0:
         query1 = self.epoch_store[TEST_FILL_ERROR]["Target"] == target_source
@@ -512,21 +276,18 @@ class DnaBatcher( TCGABatcherABC ):
       
   def RunFillDna( self, epoch, sess, feed_dict, impute_dict, mode ):
     print "COMPUTE Z-SPACE"
-    use_dna = False
-    use_rna = True
-    use_meth = True
-    use_mirna = True
+    #use_dna = False
+    #use_rna = True
+    #use_meth = True
+    #use_mirna = True
     
     barcodes = impute_dict[BARCODES]
+    
     batch = self.FillBatch( impute_dict[BARCODES], mode )
-    #not_observed = np.setdiff1d( self.input_sources, inputs2use )
     #pdb.set_trace()     
     dna_expectation_tensor = self.network.GetLayer( "dna_predictions" ).expectation
-    dna_data = np.zeros( (len(barcodes),self.dna_dim) )
-    for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
-      batch_data = self.data_store[DNA_key].loc[ barcodes ].fillna( 0 ).values
-      dna_data += batch_data
-    
+    dna_data = self.dna_store.loc[ barcodes ].fillna( 0 ).values 
+    dna_observed_query = np.ones( (len(barcodes),), dtype=bool )
     dna_data = np.minimum(1.0,dna_data)
       
     loglikes_data_as_matrix = self.network.loglikes_data_as_matrix
@@ -538,10 +299,10 @@ class DnaBatcher( TCGABatcherABC ):
     self.network.FillFeedDict( feed_dict, impute_dict )
 
     #pdb.set_trace()
-    # rna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[RNA]] == 1
+    #rna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[RNA]] == 1
     # meth_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[METH]] == 1
     # mirna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[miRNA]] == 1
-    dna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[DNA]] == 1
+    #dna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[DNA]] == 1
     
     tensor2fill = []
     tensor2fill.extend( [dna_expectation_tensor, loglikes_data_as_matrix["dna_predictions"] ] )
@@ -551,6 +312,7 @@ class DnaBatcher( TCGABatcherABC ):
     # RUN SESS
     # ---------
     self.network.FillFeedDict( feed_dict, batch )
+    #pdb.set_trace()
     tensor2fill_eval = sess.run( tensor2fill, feed_dict = feed_dict )
 
     # ------
@@ -561,9 +323,10 @@ class DnaBatcher( TCGABatcherABC ):
 
     #pdb.set_trace()
     self.WriteRunFillExpectation( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
-    self.WriteRunFillLoglikelihood( epoch, DNA, barcodes[dna_observed_query], self.dna_genes, dna_loglikelihood, mode )
+    self.WriteRunFillLoglikelihood( epoch, DNA, barcodes, self.dna_genes, dna_loglikelihood, mode )
     
     self.WriteAucs( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
+    #pdb.set_trace()
 
   def WriteAucs( self, epoch, target, barcodes, columns, obs_query, X, Y, mode ):
     #inputs = inputs2use[0]
@@ -583,17 +346,25 @@ class DnaBatcher( TCGABatcherABC ):
       ok = np.zeros( x_obs.shape[1] )
       for d_idx in xrange( x_obs.shape[1] ):
         
-        if y_obs[:,d_idx].sum()>2:
-          auc[d_idx] = roc_auc_score(y_obs[:,d_idx],x_obs[:,d_idx])
+        if y_obs[:,d_idx].sum()>0 and y_obs[:,d_idx].sum() != 0:
+          try:
+            auc[d_idx] = roc_auc_score(y_obs[:,d_idx],x_obs[:,d_idx])
+          except:
+            auc[d_idx] = 1.0
+            
           ok[d_idx] = 1
-        # else:
-        #   auc[d_idx] = 1.0
-      #errors = 1.0-auc
-      #pdb.set_trace()
+        else:
+          auc[d_idx] = 1
+          ok[d_idx] = 1
+
       self.selected_aucs[s] = pp.find(ok) 
       #ok = pp.find(ok)
       auc = auc[ self.selected_aucs[s] ]
-      columns = columns[ self.selected_aucs[s] ]
+      columns = [columns[ idx ] for idx in self.selected_aucs[s] ]
+      
+      I = np.argsort( auc )
+      print mode, [ ["%s  %0.2f"%(columns[i],auc[i]) for i in I]]
+      
       self.fill_store[ s ] = pd.DataFrame( auc.reshape((1,len(auc))), columns = columns )
       #pdb.set_trace()
     
@@ -736,7 +507,50 @@ class DnaBatcher( TCGABatcherABC ):
     pp.close('all')
    
 
-      
+  def FillDerivedPlaceholder( self, batch, layer_name, mode ):
+    
+    if layer_name == "Z_input": # and self.fill_z_input is True:
+      #print "Getting Z for batch for ids ", batch["barcodes"][:5]
+      self.fill_store.open()
+      if mode == "BATCH" or mode == "TRAIN":
+        # #pdb.set_trace()
+        # try:
+        #   batch_data_mu = self.fill_store["/Z/BATCH/Z/mu"].loc[ batch["barcodes"] ]
+        #   batch_data_var = self.fill_store["/Z/BATCH/Z/var"].loc[ batch["barcodes"] ]
+        # except:
+        #   print "getting from train..."
+        batch_data_mu = self.fill_store["/Z/TRAIN/Z/mu"].loc[ batch["barcodes"] ]
+        batch_data_var = self.fill_store["/Z/TRAIN/Z/var"].loc[ batch["barcodes"] ]
+        #pdb.set_trace()
+        #batch_data_mu = self.fill_store["/Z/BATCH/Z/mu"].loc[ batch["barcodes"] ]
+        
+        #batch_data_var = self.fill_store["/Z/BATCH/Z/var"].loc[ batch["barcodes"] ]
+        
+        n,d = batch_data_mu.values.shape
+        if mode == "BATCH":
+          #pdb.set_trace()
+          batch_data_values = batch_data_mu.values #+ np.sqrt(batch_data_var.values)*batch['u_z']
+        else:
+          batch_data_values = batch_data_mu.values
+          
+        #batch_data = self.fill_source_store["/Z/TRAIN/Z/mu"].loc[ batch["barcodes"] ]
+        batch_data = pd.DataFrame(batch_data_values, index=batch_data_mu.index, columns=batch_data_mu.columns)
+      else:
+        #pdb.set_trace()
+        batch_data = self.fill_store["/Z/VAL/Z/mu"].loc[ batch["barcodes"] ]
+        
+        
+      nans = np.isnan( batch_data.values )
+      batch_data_values = batch_data.values
+      # if mode == "BATCH":
+      #  batch_data_values = self.AddmiRnaNoise( batch_data.values, rate = 0.1 )
+      #   
+      # batch[ layer_name ] = self.NormalizemiRnaInput( batch_data_values )
+      batch[ layer_name ] = batch_data
+      batch[ layer_name ][nans] = 0
+      #pdb.set_trace()
+      self.fill_store.close()
+          
   def VizModel( self, sess, info_dict ): 
     print "** VIZ Model"    
     self.VizWeightsGeneric(sess, info_dict )
