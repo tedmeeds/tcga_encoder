@@ -526,7 +526,7 @@ class DnaBatcher( TCGABatcherABC ):
         if mode == "BATCH":
           #pdb.set_trace()
           if self.algo_dict["add_z_noise"] is True:
-            batch_data_values = batch_data_mu.values + np.sqrt(batch_data_var.values)*batch['u_z']
+            batch_data_values = batch_data_mu.values + np.sqrt(batch_data_var.values)*np.random.randn( n,d )
           else:
             batch_data_values = batch_data_mu.values #+ np.sqrt(batch_data_var.values)*batch['u_z']
         else:
