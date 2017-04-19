@@ -24,7 +24,7 @@ def keep_only( bcs, list_of_tissues ):
   return bcs[ query ]
   
 if __name__ == "__main__":
-  auc_threshold = 0.7
+  auc_threshold = 0.65
   #data_location =  os.path.join( HOME_DIR,  "data/broad_processed_april_2017/20160128/pan_small_rna_dna_set_dna100"  )
   data_location =  os.path.join( HOME_DIR,  "data/broad_processed_april_2017/20160128/pan_medium_multi_set_dna100"  )
   
