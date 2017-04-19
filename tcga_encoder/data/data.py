@@ -324,7 +324,7 @@ class MultiSourceData(object):
     #alt_h5 = h5[alt_query]
     h5 = h5[query]
     
-    self.store[ DNA + "/" + MUTATIONS ] = h5
+    #self.store[ DNA + "/" + MUTATIONS ] = h5
     
     print "** DNA making channel matrices"
     # sparse matrices
