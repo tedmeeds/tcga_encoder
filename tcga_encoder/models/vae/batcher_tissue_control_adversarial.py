@@ -903,9 +903,11 @@ class TCGABatcherAdversarial( TCGABatcher ):
     for input_source in input_sources:
       # try and find...
       #pdb.set_trace()
-      w_mean = self.model_store[ input_source + post_fix + "/W/w0"].values
-      w_scale = self.model_store[ input_source + post_fix + "/W/w1"].values
-      
+      try:
+        w_mean = self.model_store[ input_source + post_fix + "/W/w0"].values
+        w_scale = self.model_store[ input_source + post_fix + "/W/w1"].values
+      except:
+        continue
       log_alpha = w_mean
       log_beta = w_scale
       
