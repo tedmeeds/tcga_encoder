@@ -588,9 +588,10 @@ class TCGABatcherAdversarial( TCGABatcher ):
     mirna_expectation_tensor = self.network.GetLayer( "gen_mirna_space" ).expectation
     meth_expectation_tensor = self.network.GetLayer( "gen_meth_space" ).expectation
     
-    rna_basic_expectation_tensor = self.network.GetLayer( "gen_rna_space_basic" ).expectation
-    mirna_basic_expectation_tensor = self.network.GetLayer( "gen_mirna_space_basic" ).expectation
-    meth_basic_expectation_tensor = self.network.GetLayer( "gen_meth_space_basic" ).expectation
+    if self.network.HasLayer("gen_rna_space_basic"):
+      rna_basic_expectation_tensor = self.network.GetLayer( "gen_rna_space_basic" ).expectation
+      mirna_basic_expectation_tensor = self.network.GetLayer( "gen_mirna_space_basic" ).expectation
+      meth_basic_expectation_tensor = self.network.GetLayer( "gen_meth_space_basic" ).expectation
     
     positive_tissue_prediction_tensor = self.network.GetLayer( "target_prediction_pos" ).expectation
     negative_tissue_prediction_tensor = self.network.GetLayer( "target_prediction_neg" ).expectation
@@ -614,15 +615,25 @@ class TCGABatcherAdversarial( TCGABatcher ):
     tensors.extend(mirna_rec_z_space_tensors)
     tensors.extend(meth_rec_z_space_tensors)
     tensors.extend([rna_expectation_tensor,mirna_expectation_tensor,meth_expectation_tensor])
-    tensors.extend([rna_basic_expectation_tensor,mirna_basic_expectation_tensor,meth_basic_expectation_tensor])
+    if self.network.HasLayer("gen_rna_space_basic"):
+      tensors.extend([rna_basic_expectation_tensor,mirna_basic_expectation_tensor,meth_basic_expectation_tensor])
     tensors.extend([positive_tissue_prediction_tensor,negative_tissue_prediction_tensor])
-    tensor_names = ["z_mu","z_var",\
+    if self.network.HasLayer("gen_rna_space_basic"):
+      tensor_names = ["z_mu","z_var",\
                     "z_mu_rna","z_var_rna",\
                     "z_mu_mirna","z_var_mirna",\
                     "z_mu_meth","z_var_meth",\
                     "rna_expecation","mirna_expectation","meth_expectation",\
                     "rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation",\
                     "target_prediction_pos","target_prediction_neg"]
+    else:
+      tensor_names = ["z_mu","z_var",\
+                    "z_mu_rna","z_var_rna",\
+                    "z_mu_mirna","z_var_mirna",\
+                    "z_mu_meth","z_var_meth",\
+                    "rna_expecation","mirna_expectation","meth_expectation",\
+                    "target_prediction_pos","target_prediction_neg"]
+                    
   
     assert len(tensor_names)==len(tensors), "should be same number"
     self.network.FillFeedDict( feed_dict, impute_dict )
@@ -974,6 +985,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       
       #sess.run( tf.assign(layer.weights[0][0], log_alpha) )
       #sess.run( tf.assign(layer.weights[1][0], log_beta) )
-      network.GetLayer( layer_name ).SetWeights( sess, [log_alpha, log_beta ])
+      if network.HasLayer(layer_name ):
+        network.GetLayer( layer_name ).SetWeights( sess, [log_alpha, log_beta ])
       #pdb.set_trace()
     

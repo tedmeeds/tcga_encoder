@@ -274,7 +274,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
           pdb.set_trace()
           #weights = shared_weights.weights
           #biases  = shared_weights.biases
-      
+    #pdb.set_trace() 
     activation, activation_input  = ForwardPropagate( input_layers, weights, biases, transfer_function, name )
 
     model = {ACTIVATION:activation, ACTIVATION_INPUT:activation_input, WEIGHTS:weights,BIASES:biases}
@@ -288,7 +288,13 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       transfer = layer_specs[TRANSFER]
       
     layer = layer_class( layer_specs[SHAPE], input_layers, name, transfer )
-   
+
+  elif layer_class == SymmetricLogLayer:
+    assert len(input_layers) == 1, "must provide 1 inputs"
+    transfer = None
+      
+    layer = layer_class( input_layers[0], layer_specs[SHAPE], name )
+       
   elif layer_class == WeibullModelLayer:
      assert len(input_layers) == 2, "must provide 2 inputs"
      layer = layer_class( input_layers[0], input_layers[1], name )
@@ -726,6 +732,23 @@ class MaskLayer(object):
   def EvalBiases(self):
     return []
 
+class SymmetricLogLayer(object):
+  def __init__( self, input_layer, shape, name = ""):
+    self.log_input = tf.log(input_layer.tensor + 1e-12)
+    self.log_flip_input = tf.log(1.0-input_layer.tensor + 1e-12)
+    #pdb.set_trace()
+    self.tensor = tf.concat_v2( [self.log_input, self.log_flip_input],1)
+    self.name = name
+    self.shape = [2*shape[0]] # hack
+    self.batch_shape = MakeBatchShape(self.shape)
+    #pdb.set_trace()
+
+  def EvalWeights(self):
+    return []
+    
+  def EvalBiases(self):
+    return []
+        
 class WeightedMultiplyLayer(object):
   def __init__( self, shape, input_layers, name = "", transfer = None ):
     print "WARNING: WeightedMultiplyLayer assuming specific shapes"
