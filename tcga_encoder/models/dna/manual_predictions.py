@@ -48,7 +48,7 @@ if __name__ == "__main__":
   
   train_bcs = np.intersect1d( fill_store["/Z/TRAIN/Z/mu"].index.values, bcs )
   
-  #train_bcs = keep_only( train_bcs, ["coad", "read"] )
+  train_bcs = keep_only( train_bcs, ["coad", "read"] )
   
   val_bcs   = np.intersect1d( fill_store["/Z/VAL/Z/mu"].index.values, bcs )
   
