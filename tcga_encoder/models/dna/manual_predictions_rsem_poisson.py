@@ -24,7 +24,7 @@ def keep_only( bcs, list_of_tissues ):
   return bcs[ query ]
   
 if __name__ == "__main__":
-  auc_threshold = 0.65
+  auc_threshold = 0.6
   data_location =  os.path.join( HOME_DIR,  "data/broad_processed_april_2017/20160128/pan_small_rna_dna_set_dna100"  )
   #data_location =  os.path.join( HOME_DIR,  "data/broad_processed_april_2017/20160128/pan_medium_multi_set_dna100"  )
   
@@ -57,12 +57,15 @@ if __name__ == "__main__":
   Z_mu_val    = fill_store["/Z/VAL/Z/mu"].loc[ val_bcs ]
   Z_var_val   = fill_store["/Z/VAL/Z/var"].loc[ val_bcs ]
   
-  dna2use = ["APC"] #,"BRAF","TP53", "PTEN"]
+  n_z = len(Z_mu_train.columns)
+  dna2use = ["APC","BRAF","TP53", "PTEN"]
   rna2use = R.columns #
-  rna2use = ["MUC2","DES","PFN2","MMP1","MYH11"]
+  #rna2use = ["MUC2","DES","PFN2","MMP1","MYH11"]
   
   R_train = np.log2( 2.0 + R.loc[train_bcs][ rna2use ] ) - 1.0
   R_val   = np.log2( 2.0 + R.loc[val_bcs][ rna2use ] ) - 1.0
+  #R_train = R.loc[train_bcs][ rna2use ]
+  #R_val   = R.loc[val_bcs][ rna2use ]
   for dna_gene in dna2use:
     dna_train = D[dna_gene].loc[ train_bcs ]
     dna_val   = D[dna_gene].loc[ val_bcs ]
@@ -90,7 +93,7 @@ if __name__ == "__main__":
     var_1 = Z_mu_train.loc[train_1_bcs].var()
     var_0 = Z_mu_train.loc[train_0_bcs].var()
     
-    cov = Z_mu_train.cov()
+    cov = Z_mu_train.cov()+0.1*np.eye(n_z)
     icov = np.linalg.inv(cov)
     #cov_1 = Z_mu_train.loc[train_1_bcs].cov()
     #cov_0 = Z_mu_train.loc[train_0_bcs].cov()
@@ -137,40 +140,44 @@ if __name__ == "__main__":
     #
     #   #print "Z%d -> %s --- auc train = %0.3f  val %0.3f"%(z_idx,dna_gene,auc_train_z,auc_val_z)
     # #print "======================"
-    assert False
-    pdb.set_trace()  
+    #assert False
+    #pdb.set_trace()  
     r_mu_1 = R_train.loc[train_1_bcs].mean()
     r_mu_0 = R_train.loc[train_0_bcs].mean()
     r_var_1 = R_train.loc[train_1_bcs].var()
     r_var_0 = R_train.loc[train_0_bcs].var()
     
-    alpha_1 = r_mu_1*( r_mu_1*(1-r_mu_1)/r_var_1 - 1.0 )
-    alpha_0 = r_mu_0*( r_mu_0*(1-r_mu_0)/r_var_0 - 1.0 )
+    #prob_success_1 = (r_var_1 - r_mu_1)/r_var_1
+    #prob_success_0 = (r_var_0 - r_mu_0)/r_var_0
+    #prob_success_1 = r_mu_1/r_var_1
+    #prob_success_0 = r_mu_0/r_var_0
     
-    beta_1 = (1.0-r_mu_1)*( r_mu_1*(1-r_mu_1)/r_var_1 - 1.0 )
-    beta_0 = (1.0-r_mu_0)*( r_mu_0*(1-r_mu_0)/r_var_0 - 1.0 )
+    # failure_1 = r_mu_1*r_mu_1/(r_var_1 - r_mu_1)
+    # failure_0 = r_mu_0*r_mu_0/(r_var_0 - r_mu_0)
+    #
+    # alpha_1 = r_mu_1*( r_mu_1*(1-r_mu_1)/r_var_1 - 1.0 )
+    # alpha_0 = r_mu_0*( r_mu_0*(1-r_mu_0)/r_var_0 - 1.0 )
+    #
+    # beta_1 = (1.0-r_mu_1)*( r_mu_1*(1-r_mu_1)/r_var_1 - 1.0 )
+    # beta_0 = (1.0-r_mu_0)*( r_mu_0*(1-r_mu_0)/r_var_0 - 1.0 )
     
     aucs_val = []; aucs_train = []
     activations_train_mean = np.zeros(len(R_train))
     activations_val_mean = np.zeros(len(R_val))
     nbr_ok = 1
     for rna_gene in rna2use:
-      a_0 = alpha_0.loc[rna_gene]; a_1 = alpha_1.loc[rna_gene]
-      b_0 = beta_0.loc[rna_gene];  b_1 = beta_1.loc[rna_gene]
+      rate_0 = r_mu_0.loc[rna_gene]; rate_1 = r_mu_1.loc[rna_gene]
       
-      w = np.array([ a_1 - a_0,
-                     b_1 - b_0 ])
+      w = np.array([ np.log(rate_1) - np.log(rate_0)])
                      
-      b = - special.gammaln( a_0+b_0 ) \
-          + special.gammaln( a_1+b_1 ) \
-          + special.gammaln( a_0 ) + special.gammaln( b_0 ) \
-          - special.gammaln( a_1 ) - special.gammaln( b_1 )
                     
-      z_train = np.vstack( ( np.log( R_train[rna_gene].values + 1e-12 ), np.log( 1.0-R_train[rna_gene].values + 1e-12 ) ) ).T
-      z_val   = np.vstack( ( np.log( R_val[rna_gene].values + 1e-12 ), np.log( 1.0-R_val[rna_gene].values + 1e-12 ) ) ).T
+      z_train = R_train[rna_gene].values 
+      z_val   = R_val[rna_gene].values 
+
+      b = rate_0 - rate_1
       
-      activations_train = np.dot( z_train, w ) + b
-      activations_val   = np.dot( z_val, w ) + b
+      activations_train = z_train*w + b 
+      activations_val   = z_val*w + b 
       
       
       predictions_train = 1.0 / (1.0 + np.exp(-activations_train-common_b) )

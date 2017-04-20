@@ -579,9 +579,10 @@ class TCGABatcherAdversarial( TCGABatcher ):
     #not_observed = np.setdiff1d( self.input_sources, inputs2use )
         
     rec_z_space_tensors       = self.network.GetTensor( "rec_z_space" )
-    rna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_rna" )
-    mirna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_mirna" )
-    meth_rec_z_space_tensors  = self.network.GetTensor( "rec_z_space_meth" )
+    if self.network.HasLayer( "rec_z_space_rna" ):
+      rna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_rna" )
+      mirna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_mirna" )
+      meth_rec_z_space_tensors  = self.network.GetTensor( "rec_z_space_meth" )
     
   
     rna_expectation_tensor = self.network.GetLayer( "gen_rna_space" ).expectation
@@ -611,26 +612,39 @@ class TCGABatcherAdversarial( TCGABatcher ):
   
     tensors = []
     tensors.extend(rec_z_space_tensors)
-    tensors.extend(rna_rec_z_space_tensors)
-    tensors.extend(mirna_rec_z_space_tensors)
-    tensors.extend(meth_rec_z_space_tensors)
+    if self.network.HasLayer( "rec_z_space_rna" ):
+      tensors.extend(rna_rec_z_space_tensors)
+      tensors.extend(mirna_rec_z_space_tensors)
+      tensors.extend(meth_rec_z_space_tensors)
     tensors.extend([rna_expectation_tensor,mirna_expectation_tensor,meth_expectation_tensor])
     if self.network.HasLayer("gen_rna_space_basic"):
       tensors.extend([rna_basic_expectation_tensor,mirna_basic_expectation_tensor,meth_basic_expectation_tensor])
     tensors.extend([positive_tissue_prediction_tensor,negative_tissue_prediction_tensor])
     if self.network.HasLayer("gen_rna_space_basic"):
-      tensor_names = ["z_mu","z_var",\
+      if self.network.HasLayer( "rec_z_space_rna" ):
+        tensor_names = ["z_mu","z_var",\
                     "z_mu_rna","z_var_rna",\
                     "z_mu_mirna","z_var_mirna",\
                     "z_mu_meth","z_var_meth",\
                     "rna_expecation","mirna_expectation","meth_expectation",\
                     "rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation",\
                     "target_prediction_pos","target_prediction_neg"]
+      else:
+        tensor_names = ["z_mu","z_var",\
+                    "rna_expecation","mirna_expectation","meth_expectation",\
+                    "rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation",\
+                    "target_prediction_pos","target_prediction_neg"]
+        
     else:
-      tensor_names = ["z_mu","z_var",\
+      if self.network.HasLayer( "rec_z_space_rna" ):
+        tensor_names = ["z_mu","z_var",\
                     "z_mu_rna","z_var_rna",\
                     "z_mu_mirna","z_var_mirna",\
                     "z_mu_meth","z_var_meth",\
+                    "rna_expecation","mirna_expectation","meth_expectation",\
+                    "target_prediction_pos","target_prediction_neg"]
+      else:
+        tensor_names = ["z_mu","z_var",\
                     "rna_expecation","mirna_expectation","meth_expectation",\
                     "target_prediction_pos","target_prediction_neg"]
                     
