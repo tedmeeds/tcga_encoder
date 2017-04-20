@@ -734,8 +734,8 @@ class MaskLayer(object):
 
 class SymmetricLogLayer(object):
   def __init__( self, input_layer, shape, name = ""):
-    self.log_input = tf.log(input_layer.tensor + 1e-12)
-    self.log_flip_input = tf.log(1.0-input_layer.tensor + 1e-12)
+    self.log_input = tf.log( tf.maximum( input_layer.tensor, 0.01 ) )
+    self.log_flip_input = tf.log( tf.maximum( 1.0-input_layer.tensor, 0.01 ) )
     #pdb.set_trace()
     self.tensor = tf.concat_v2( [self.log_input, self.log_flip_input],1)
     self.name = name
