@@ -152,13 +152,10 @@ def main(yaml_file):
   y = load_yaml( yaml_file)
   
   logging_dict = {}
-  arch_dict = {}
-  
   #print "Loading data"
   load_data_from_dict( y[DATA] )
   algo_dict = y[ALGORITHM]
-  if y.has_key(ARCHITECTURE):
-    arch_dict = y[ARCHITECTURE]
+  #arch_dict = y[ARCHITECTURE]
   data_dict = y[DATA] #{N_TRAIN:4000}
   logging_dict = y[LOGGING]
   
@@ -182,8 +179,8 @@ def main(yaml_file):
     #print fold_location_dir
     fill_store = pd.HDFStore( os.path.join( fold_location_dir, "full_vae_fill.h5" ), "r" )   
     model_store = pd.HDFStore( os.path.join( fold_location_dir, "full_vae_model.h5" ), "r" )   
-    print model_store
-    #fill_store = pd.HDFOpenStore( os.path.join( fold_location_dir, "full_vae_fill.h5" ), "r" )
+    #print model_store
+    fill_store = pd.HDFOpenStore( os.path.join( fold_location_dir, "full_vae_fill.h5" ), "r" )
     
     decifer_weights( model_store, arch_dict, data_dict, weights, fold )
     #print fill_store

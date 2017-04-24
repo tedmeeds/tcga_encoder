@@ -30,12 +30,16 @@ if __name__ == "__main__":
   template_yaml = load_yaml( yaml_template_file )
   n_xval_folds = template_yaml["algorithm"]["n_xval_folds"]
   
+  if template_yaml["algorithm"].has_key("runner"):
+    runner = template_yaml["algorithm"]["runner"]
+  else:
+    runner = runner.main
   for fold in range(n_xval_folds):
     print "Running XVAL = %d"%(fold)
     
     yaml_file = replace_template( yaml_template_file, fold+1 )
     if run is True:
-      runner.main( yaml_file )
+      runner( yaml_file )
     else:
       print "Run is OFF by default, pass argument 1 to turn on"
     

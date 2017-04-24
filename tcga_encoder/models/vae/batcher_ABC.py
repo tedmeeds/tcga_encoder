@@ -174,15 +174,7 @@ class TCGABatcherABC( object ):
     print self.train_tissue.sum()[ self.train_tissue.sum()>0 ]
     print "VAL: " 
     print self.val_tissue.sum()[ self.val_tissue.sum()>0 ]
-    #pdb.set_trace()
-    
-    self.InitFillStore()
-    # self.fill_store.open()
-    # z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
-    # self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
-    # self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
-    # self.fill_store.close()
-    
+
     self.n_train = len(self.train_barcodes)
     self.n_test  = len(self.test_barcodes)
     self.n_val   = len(self.validation_barcodes)
@@ -190,7 +182,9 @@ class TCGABatcherABC( object ):
     self.MakeVizFilenames()
     self.batch_size     = min( self.batch_size, self.n_train )
     
+    self.InitFillStore()
     self.SummarizeData()
+    
     #assert False, "todo"
     # make classfier to tissue
     # used filled tissue for validation without tissue in train
@@ -279,14 +273,26 @@ class TCGABatcherABC( object ):
     self.PostInitInit()      
 
   def PostInitInit(self):
-    pass 
+    
+    if self.data_dict.has_key("dna_genes"):
+      self.dna_genes = self.data_dict["dna_genes"]
+      self.dna_store = self.dna_store[self.dna_genes]
+      self.dna_dim = len(self.dna_genes)
+      self.dims_dict[DNA] = self.dna_dim 
+
   
   def InitializeAnythingYouWant( self, sess, network ):
     pass
+
+  def PreStepDoWhatYouWant( sess, epoch, network, cb_info, train_op ):
+    return train_op
     
-  def DoWhatYouWantAtEpoch( self, sess, epoch, network, info_dict):
-    pass
+  def PostStepDoWhatYouWant( sess, epoch, network, cb_info, train_ops_evals ):
+    return None
     
+  # def DoWhatYouWantAtEpoch( self, sess, epoch, network, info_dict):
+  #   pass
+  #
   def InitFillStore(self):
     self.fill_store.open()
     z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
@@ -421,9 +427,9 @@ class TCGABatcherABC( object ):
     self.viz_filename_z_rec_scatter          =  os.path.join( self.savedir, "z_rec_scatter.png" )
     self.viz_filename_z_rec_on_z_gen         =  os.path.join( self.savedir, "z_rec_on_z_gen.png" )
     self.viz_filename_rna_prediction_scatter =  os.path.join( self.savedir, "rna_prediction_scatter.png" )
-    # self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
-    # self.viz_filename_dna_batch_predict      =  os.path.join( self.savedir, "dna_batch_predict" )
-    # self.viz_filename_dna_aucs               =  os.path.join( self.savedir, "dna_aucs.png" )
+    self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
+    self.viz_filename_dna_batch_predict      =  os.path.join( self.savedir, "dna_batch_predict" )
+    self.viz_filename_dna_aucs               =  os.path.join( self.savedir, "dna_aucs" )
     self.viz_filename_weights        =  os.path.join( self.savedir, "weights_" )
     self.viz_filename_lower_bound            =  os.path.join( self.savedir, "lower_bound.png" )
     self.viz_filename_log_pdf_sources        = os.path.join( self.savedir, "log_pdf_sources_z.png" )
@@ -520,7 +526,7 @@ class TCGABatcherABC( object ):
     elif function_name == TEST_FILL:
       self.TestFill2( sess, cb_info )
       self.TestFillZ( sess, cb_info )
-      self.TrainFillZ( sess, cb_info )
+      #self.TrainFillZ( sess, cb_info )
       
     elif function_name == "beta":
       if self.algo_dict["beta_growth"] < 0:
@@ -649,7 +655,28 @@ class TCGABatcherABC( object ):
       self.RunFillZ( epoch, sess, train_feed_dict, impute_dict, mode="TRAIN" )
     self.fill_store.open()
     #pdb.set_trace()
+
+  def TrainFill2( self, sess, info_dict ):
+    epoch       = info_dict[EPOCH]
+    # val_feed_imputation = batcher.ValBatch()
+    # val_feed_dict = {}
+    # network.FillFeedDict( val_feed_dict, val_feed_imputation )
     
+    #self.FillBatch( self.validation_barcodes, mode = "VAL" )
+    for batch_ids in chunks( np.arange(len(self.train_barcodes)), 500 ):
+      barcodes = self.train_barcodes[batch_ids]
+      impute_dict = self.FillBatch( barcodes, mode = "TRAIN" ) #self.NextBatch(batch_ids)
+      #impute_dict[BARCODES] = barcodes
+      #self.batch_ids = batch_ids
+      
+      
+      
+      train_feed_dict={}
+      self.network.FillFeedDict( train_feed_dict, impute_dict )
+      #batch = self.FillBatch( impute_dict[BARCODES], mode )
+      self.RunFill2( epoch, sess, train_feed_dict, impute_dict, mode="TRAIN" )
+    self.fill_store.open()
+        
   def BatchFillZ( self, sess, info_dict ):
     epoch       = info_dict[EPOCH]
     feed_dict   = info_dict[BATCH_FEED_DICT]
@@ -667,17 +694,17 @@ class TCGABatcherABC( object ):
         
     rec_z_space_tensors       = self.network.GetTensor( "rec_z_space" )
     
-    if self.network.HasLayer( "rec_z_space_rna" ):
-      rna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_rna" )
-      mirna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_mirna" )
-      meth_rec_z_space_tensors  = self.network.GetTensor( "rec_z_space_meth" )
+    # if self.network.HasLayer( "rec_z_space_rna" ):
+    #   rna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_rna" )
+    #   mirna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_mirna" )
+    #   meth_rec_z_space_tensors  = self.network.GetTensor( "rec_z_space_meth" )
   
     tensors = []
     tensors.extend(rec_z_space_tensors)
-    if self.network.HasLayer( "rec_z_space_rna" ):
-      tensors.extend(rna_rec_z_space_tensors)
-      tensors.extend(meth_rec_z_space_tensors)
-      tensors.extend(mirna_rec_z_space_tensors)
+    # if self.network.HasLayer( "rec_z_space_rna" ):
+    #   tensors.extend(rna_rec_z_space_tensors)
+    #   tensors.extend(meth_rec_z_space_tensors)
+    #   tensors.extend(mirna_rec_z_space_tensors)
 
     self.network.FillFeedDict( feed_dict, impute_dict )
     
@@ -685,10 +712,10 @@ class TCGABatcherABC( object ):
 
           
     self.WriteRunFillZ( epoch, "Z", barcodes, self.z_columns, z_eval[0],z_eval[1], mode )      
-    if self.network.HasLayer( "rec_z_space_rna" ):
-      self.WriteRunFillZ( epoch, RNA, barcodes, self.z_columns, z_eval[2],z_eval[3], mode )
-      self.WriteRunFillZ( epoch, METH, barcodes, self.z_columns, z_eval[4],z_eval[5], mode )
-      self.WriteRunFillZ( epoch, miRNA, barcodes, self.z_columns, z_eval[6],z_eval[7], mode )
+    # if self.network.HasLayer( "rec_z_space_rna" ):
+    #   self.WriteRunFillZ( epoch, RNA, barcodes, self.z_columns, z_eval[2],z_eval[3], mode )
+    #   self.WriteRunFillZ( epoch, METH, barcodes, self.z_columns, z_eval[4],z_eval[5], mode )
+    #   self.WriteRunFillZ( epoch, miRNA, barcodes, self.z_columns, z_eval[6],z_eval[7], mode )
 
   def WriteRunFillZ( self, epoch, target, barcodes, columns, z_mu, z_var, mode ):
     #inputs = inputs2use[0]
@@ -700,35 +727,8 @@ class TCGABatcherABC( object ):
     if (mode == "TRAIN" or mode == "BATCH") and target == "Z":
       #pdb.set_trace()
       S = self.fill_store["/Z/TRAIN/Z/mu"]
-      #print "before: "
-      #print S.loc[barcodes[:2]]
-      #print "before:"
-      #print self.fill_store["/Z/TRAIN/Z/mu"].loc[barcodes[:2]]
-      #prev = S.loc[barcodes[:2]]
-      
-      #print "Filling batch for ids ", barcodes[:5]
-      #X_mu = self.fill_store["/Z/TRAIN/Z/mu"].values
-      
       S.loc[ barcodes ] = z_mu 
-      #self.fill_store["/Z/TRAIN/Z/mu"].loc[ barcodes ] = z_mu
-      #print "after:"
-      #print S.loc[barcodes[:2]]
-      #print "after:"
-      #print self.fill_store["/Z/TRAIN/Z/mu"].loc[barcodes[:2]]
-      
       self.fill_store["/Z/TRAIN/Z/mu"] = S
-      #pdb.set_trace()
-      #self.fill_store["/Z/TRAIN/Z/mu"].loc[barcodes] = z_mu
-      #self.fill_store["/Z/TRAIN/Z/var"].loc[barcodes] = z_var
-      #X_mu[self.batch_ids,:] = z_mu
-      #X_var = self.fill_store["/Z/TRAIN/Z/var"].values
-      #X_var[self.batch_ids,:] = z_var
-      #self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( X_mu, index = self.train_barcodes, columns = columns )
-      #self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( X_var, index = self.train_barcodes, columns = columns )\
-      
-      # if mode=="TRAIN":
-      #   print "some nan ? = ", np.sum( np.isnan(z_mu))
-      #   #pdb.set_trace()
     else:
       
       self.fill_store["Z/%s/%s/mu"%(mode,target)]  = pd.DataFrame( z_mu, index = barcodes, columns = columns )
@@ -749,7 +749,8 @@ class TCGABatcherABC( object ):
     use_rna = True
     use_meth = True
     use_mirna = True
-          
+    
+      
     barcodes = impute_dict[BARCODES]
     batch = self.FillBatch( impute_dict[BARCODES], mode )
     #not_observed = np.setdiff1d( self.input_sources, inputs2use )
@@ -921,7 +922,7 @@ class TCGABatcherABC( object ):
     self.fill_store.open()
     if target == DNA:
       #for channel in range(self.n_dna_channels):
-      s = "/Fill/%s/%s/"%(mode,target )
+      s = "/Fill/%s/%s"%(mode,target )
       self.fill_store[ s ] = pd.DataFrame( X, index = barcodes, columns = columns )
       x = X[obs_query,:].flatten()
       y = Y[obs_query,:].flatten()
@@ -1251,167 +1252,170 @@ class TCGABatcherABC( object ):
     pp.close('all')
       
   def SaveTestLatent( self, sess, info_dict ):
-    print "** SAVE Latent"
-    self.latent_store.open() # = OpenHdfStore(self.savedir, self.store_name, mode="a" )
-    
-    feed_dict          = info_dict[ VAL_FEED_DICT ]
-    feed_imputation    = info_dict[ VAL_FEED_IMPUTATION ]
-    barcodes           = feed_imputation[BARCODES]
-    
-    z_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE).tensor
-    #z_dna_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_dna" ).tensor
-    if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
-      z_rna_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_rna" ).tensor
-      z_meth_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_meth" ).tensor
-      z_mirna_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_mirna" ).tensor
-    
-    z_gen_space_tensor = self.network.GetLayer( GEN_Z_SPACE ).tensor
-
-
-    #z_rec_space_dna        = sess.run( z_dna_rec_space_tensor, feed_dict = feed_dict )
-    if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
-      z_rec_space_rna        = sess.run( z_rna_rec_space_tensor, feed_dict = feed_dict )
-      z_rec_space_meth        = sess.run( z_meth_rec_space_tensor, feed_dict = feed_dict )
-      z_rec_space_mirna        = sess.run( z_mirna_rec_space_tensor, feed_dict = feed_dict )
-    
-    z_rec_space        = sess.run( z_rec_space_tensor, feed_dict = feed_dict )
-    z_gen_space        = sess.run( z_gen_space_tensor, feed_dict = feed_dict )
-    
-    
-    for idx, z_s in zip( range(len(z_rec_space)),z_rec_space ):
-      #self.latent_store[ REC_Z_SPACE +"_dna" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_dna[idx], index = barcodes, columns=self.z_columns)
-      if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
-        self.latent_store[ REC_Z_SPACE +"_rna" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_rna[idx], index = barcodes, columns=self.z_columns)
-        self.latent_store[ REC_Z_SPACE +"_meth" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_meth[idx], index = barcodes, columns=self.z_columns)
-        self.latent_store[ REC_Z_SPACE +"_mirna" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_mirna[idx], index = barcodes, columns=self.z_columns)
-      self.latent_store[ REC_Z_SPACE + "/s%d/"%(idx)] = pd.DataFrame( z_s, index = barcodes, columns=self.z_columns)
-
-    for idx, z_s in zip( range(len(z_gen_space)),z_gen_space ):
-      self.latent_store[ GEN_Z_SPACE + "/s%d/"%(idx)] = pd.DataFrame( z_s, index = barcodes, columns=self.z_columns)
-
-    self.latent_store.close()
+    pass
+    # print "** SAVE Latent"
+    # self.latent_store.open() # = OpenHdfStore(self.savedir, self.store_name, mode="a" )
+    #
+    # feed_dict          = info_dict[ VAL_FEED_DICT ]
+    # feed_imputation    = info_dict[ VAL_FEED_IMPUTATION ]
+    # barcodes           = feed_imputation[BARCODES]
+    #
+    # z_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE).tensor
+    # #z_dna_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_dna" ).tensor
+    # if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
+    #   z_rna_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_rna" ).tensor
+    #   z_meth_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_meth" ).tensor
+    #   z_mirna_rec_space_tensor = self.network.GetLayer( REC_Z_SPACE+"_mirna" ).tensor
+    #
+    # z_gen_space_tensor = self.network.GetLayer( GEN_Z_SPACE ).tensor
+    #
+    #
+    # #z_rec_space_dna        = sess.run( z_dna_rec_space_tensor, feed_dict = feed_dict )
+    # if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
+    #   z_rec_space_rna        = sess.run( z_rna_rec_space_tensor, feed_dict = feed_dict )
+    #   z_rec_space_meth        = sess.run( z_meth_rec_space_tensor, feed_dict = feed_dict )
+    #   z_rec_space_mirna        = sess.run( z_mirna_rec_space_tensor, feed_dict = feed_dict )
+    #
+    # z_rec_space        = sess.run( z_rec_space_tensor, feed_dict = feed_dict )
+    # z_gen_space        = sess.run( z_gen_space_tensor, feed_dict = feed_dict )
+    #
+    #
+    # for idx, z_s in zip( range(len(z_rec_space)),z_rec_space ):
+    #   #self.latent_store[ REC_Z_SPACE +"_dna" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_dna[idx], index = barcodes, columns=self.z_columns)
+    #   if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
+    #     self.latent_store[ REC_Z_SPACE +"_rna" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_rna[idx], index = barcodes, columns=self.z_columns)
+    #     self.latent_store[ REC_Z_SPACE +"_meth" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_meth[idx], index = barcodes, columns=self.z_columns)
+    #     self.latent_store[ REC_Z_SPACE +"_mirna" + "/s%d/"%(idx)] = pd.DataFrame( z_rec_space_mirna[idx], index = barcodes, columns=self.z_columns)
+    #   self.latent_store[ REC_Z_SPACE + "/s%d/"%(idx)] = pd.DataFrame( z_s, index = barcodes, columns=self.z_columns)
+    #
+    # for idx, z_s in zip( range(len(z_gen_space)),z_gen_space ):
+    #   self.latent_store[ GEN_Z_SPACE + "/s%d/"%(idx)] = pd.DataFrame( z_s, index = barcodes, columns=self.z_columns)
+    #
+    # self.latent_store.close()
     
   def VizLatent( self, sess, info_dict ): 
-    print "** VIZ Latent"
-    self.latent_store.open()
-  
-    if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
-      rec_z_rna = self.latent_store[ REC_Z_SPACE + "_rna" + "/s%d/"%(0)]
-      rec_z_meth = self.latent_store[ REC_Z_SPACE + "_meth" + "/s%d/"%(0)]
-      rec_z_mirna = self.latent_store[ REC_Z_SPACE + "_mirna" + "/s%d/"%(0)]
-    rec_z = self.latent_store[ REC_Z_SPACE + "/s%d/"%(0)]
-    mean_gen_z = self.latent_store[ GEN_Z_SPACE + "/s%d/"%(0)]
-
-    obs = info_dict['val_feed_imputation']['observed_sources']
-    #dna_obs = info_dict['test_feed_imputation'][DNA_OBSERVATIONS]
+    pass
     
-    dna_obs = obs[:,self.observed_source2idx[DNA]].astype(bool)
-    rna_obs = obs[:,self.observed_source2idx[RNA]].astype(bool)
-    meth_obs = obs[:,self.observed_source2idx[METH]].astype(bool)
-    mirna_obs = obs[:,self.observed_source2idx[miRNA]].astype(bool)
-    
-    mean_rec_z      = rec_z.mean().values
-    std_rec_z      = rec_z.std().values
-    #mean_rec_z_dna  = rec_z_dna.mean().values
-    if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
-      mean_rec_z_rna  = rec_z_rna.mean().values
-      mean_rec_z_meth = rec_z_meth.mean().values
-      mean_rec_z_mirna = rec_z_mirna.mean().values
-
-      std_rec_z_rna  = rec_z_rna.std().values
-      std_rec_z_meth = rec_z_meth.std().values
-      std_rec_z_mirna = rec_z_mirna.std().values
-    
-    mean_gen_z_mean = mean_gen_z.mean().values
-    mean_gen_z_std  = mean_gen_z.std().values
-    
-    #pdb.set_trace()
-    f = pp.figure()
-    pp.plot( mean_gen_z_mean, "ko", lw=1 )
-    pp.plot( mean_gen_z_mean + 2*mean_gen_z_std, "k-", lw=0.5 )
-    pp.plot( mean_gen_z_mean - 2*mean_gen_z_std, "k-", lw=0.5 )
-    pp.fill_between( np.arange(len(mean_gen_z_mean)), mean_gen_z_mean - 2*mean_gen_z_std, mean_gen_z_mean + 2*mean_gen_z_std, color="k", alpha=0.5 )
-    sns.violinplot( x=None, y=None, data=mean_rec_z)
-    pp.grid('on')
-    pp.savefig( self.viz_filename_z_rec_on_z_gen, dpi = 300, fmt="png", bbox_inches = "tight")
-    pp.close(f)
-    
-    if self.n_z == 2:
-      sp_a = 1
-      sp_b = 2
-    elif self.n_z < 10:
-      sp_a = 3
-      sp_b = 3
-    elif self.n_z == 10:
-      sp_a = 2
-      sp_b = 5
-    elif self.n_z <=16:
-      sp_a = 4
-      sp_b = 4
-    elif self.n_z <= 25:
-      sp_a = 5
-      sp_b = 5
-    elif self.n_z <= 36:
-      sp_a = 6
-      sp_b = 6
-    elif self.n_z <= 80:
-      sp_a = 8
-      sp_b = 10
-    else:
-      sp_a = int( np.sqrt( self.n_z ) + 1 )
-      sp_b = int( np.ceil( float(self.n_z) / sp_a  ) )
-    max_figs = sp_a*sp_b
-    
-    f = pp.figure(figsize=(14,12))
-    for z_idx in range( min(max_figs,self.n_z) ):
-      #z_idx = 0
-      I = np.argsort( rec_z.values[:,z_idx] )
-      x = np.arange(len(I))
-      pp.subplot(sp_a,sp_b,z_idx+1)
-      if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
-        pp.plot( x[mirna_obs[I]], rec_z_mirna.values[I,z_idx][mirna_obs[I]], 'o', \
-                 color=self.source2mediumcolor[miRNA],\
-                 mec=self.source2darkcolor[miRNA], mew=0.5, \
-                 mfc=self.source2lightcolor[miRNA], lw=2, \
-                 ms = 4, \
-                 alpha=0.5,\
-                 label="z-miRNA" )
-        pp.plot( x[rna_obs[I]], rec_z_rna.values[I,z_idx][rna_obs[I]], 'o', \
-                 color=self.source2mediumcolor[RNA],\
-                 mec=self.source2darkcolor[RNA], mew=0.5, \
-                 mfc=self.source2lightcolor[RNA], lw=2, \
-                 ms = 4, \
-                 alpha=0.5,\
-                 label="z-RNA" )
-        pp.plot( x[meth_obs[I]], rec_z_meth.values[I,z_idx][meth_obs[I]], 'o', \
-                 color=self.source2mediumcolor[METH],\
-                 mec=self.source2darkcolor[METH], mew=0.5, \
-                 mfc=self.source2lightcolor[METH], lw=2, \
-                 ms = 4, \
-                 alpha=0.5,\
-                 label="z-METH" )
-      # pp.plot( x[dna_obs[I]], rec_z_dna.values[I,z_idx][dna_obs[I]], 'o', \
-      #          color=self.source2mediumcolor[DNA],\
-      #          mec=self.source2darkcolor[DNA], mew=0.5, \
-      #          mfc=self.source2lightcolor[DNA], lw=2, \
-      #          ms = 4, \
-      #          alpha=0.5,\
-      #          label="z-DNA" )
-      pp.plot( rec_z.values[I,z_idx], '.', \
-               color='k',\
-               mec='k', mew=0.5, \
-               mfc='w', lw=2, \
-               ms = 4, \
-               alpha=0.5,\
-               label="z" )
-    
-    pp.savefig( self.viz_filename_z_rec_scatter, dpi = 300, fmt="png", bbox_inches = "tight")
-    pp.close()
-    
-    pp.close('all')
-
-      
-    self.latent_store.close()
+    # print "** VIZ Latent"
+    # self.latent_store.open()
+    #
+    # if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
+    #   rec_z_rna = self.latent_store[ REC_Z_SPACE + "_rna" + "/s%d/"%(0)]
+    #   rec_z_meth = self.latent_store[ REC_Z_SPACE + "_meth" + "/s%d/"%(0)]
+    #   rec_z_mirna = self.latent_store[ REC_Z_SPACE + "_mirna" + "/s%d/"%(0)]
+    # rec_z = self.latent_store[ REC_Z_SPACE + "/s%d/"%(0)]
+    # mean_gen_z = self.latent_store[ GEN_Z_SPACE + "/s%d/"%(0)]
+    #
+    # obs = info_dict['val_feed_imputation']['observed_sources']
+    # #dna_obs = info_dict['test_feed_imputation'][DNA_OBSERVATIONS]
+    #
+    # dna_obs = obs[:,self.observed_source2idx[DNA]].astype(bool)
+    # rna_obs = obs[:,self.observed_source2idx[RNA]].astype(bool)
+    # meth_obs = obs[:,self.observed_source2idx[METH]].astype(bool)
+    # mirna_obs = obs[:,self.observed_source2idx[miRNA]].astype(bool)
+    #
+    # mean_rec_z      = rec_z.mean().values
+    # std_rec_z      = rec_z.std().values
+    # #mean_rec_z_dna  = rec_z_dna.mean().values
+    # if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
+    #   mean_rec_z_rna  = rec_z_rna.mean().values
+    #   mean_rec_z_meth = rec_z_meth.mean().values
+    #   mean_rec_z_mirna = rec_z_mirna.mean().values
+    #
+    #   std_rec_z_rna  = rec_z_rna.std().values
+    #   std_rec_z_meth = rec_z_meth.std().values
+    #   std_rec_z_mirna = rec_z_mirna.std().values
+    #
+    # mean_gen_z_mean = mean_gen_z.mean().values
+    # mean_gen_z_std  = mean_gen_z.std().values
+    #
+    # #pdb.set_trace()
+    # f = pp.figure()
+    # pp.plot( mean_gen_z_mean, "ko", lw=1 )
+    # pp.plot( mean_gen_z_mean + 2*mean_gen_z_std, "k-", lw=0.5 )
+    # pp.plot( mean_gen_z_mean - 2*mean_gen_z_std, "k-", lw=0.5 )
+    # pp.fill_between( np.arange(len(mean_gen_z_mean)), mean_gen_z_mean - 2*mean_gen_z_std, mean_gen_z_mean + 2*mean_gen_z_std, color="k", alpha=0.5 )
+    # sns.violinplot( x=None, y=None, data=mean_rec_z)
+    # pp.grid('on')
+    # pp.savefig( self.viz_filename_z_rec_on_z_gen, dpi = 300, fmt="png", bbox_inches = "tight")
+    # pp.close(f)
+    #
+    # if self.n_z == 2:
+    #   sp_a = 1
+    #   sp_b = 2
+    # elif self.n_z < 10:
+    #   sp_a = 3
+    #   sp_b = 3
+    # elif self.n_z == 10:
+    #   sp_a = 2
+    #   sp_b = 5
+    # elif self.n_z <=16:
+    #   sp_a = 4
+    #   sp_b = 4
+    # elif self.n_z <= 25:
+    #   sp_a = 5
+    #   sp_b = 5
+    # elif self.n_z <= 36:
+    #   sp_a = 6
+    #   sp_b = 6
+    # elif self.n_z <= 80:
+    #   sp_a = 8
+    #   sp_b = 10
+    # else:
+    #   sp_a = int( np.sqrt( self.n_z ) + 1 )
+    #   sp_b = int( np.ceil( float(self.n_z) / sp_a  ) )
+    # max_figs = sp_a*sp_b
+    #
+    # f = pp.figure(figsize=(14,12))
+    # for z_idx in range( min(max_figs,self.n_z) ):
+    #   #z_idx = 0
+    #   I = np.argsort( rec_z.values[:,z_idx] )
+    #   x = np.arange(len(I))
+    #   pp.subplot(sp_a,sp_b,z_idx+1)
+    #   if self.network.HasLayer( REC_Z_SPACE+"_rna" ):
+    #     pp.plot( x[mirna_obs[I]], rec_z_mirna.values[I,z_idx][mirna_obs[I]], 'o', \
+    #              color=self.source2mediumcolor[miRNA],\
+    #              mec=self.source2darkcolor[miRNA], mew=0.5, \
+    #              mfc=self.source2lightcolor[miRNA], lw=2, \
+    #              ms = 4, \
+    #              alpha=0.5,\
+    #              label="z-miRNA" )
+    #     pp.plot( x[rna_obs[I]], rec_z_rna.values[I,z_idx][rna_obs[I]], 'o', \
+    #              color=self.source2mediumcolor[RNA],\
+    #              mec=self.source2darkcolor[RNA], mew=0.5, \
+    #              mfc=self.source2lightcolor[RNA], lw=2, \
+    #              ms = 4, \
+    #              alpha=0.5,\
+    #              label="z-RNA" )
+    #     pp.plot( x[meth_obs[I]], rec_z_meth.values[I,z_idx][meth_obs[I]], 'o', \
+    #              color=self.source2mediumcolor[METH],\
+    #              mec=self.source2darkcolor[METH], mew=0.5, \
+    #              mfc=self.source2lightcolor[METH], lw=2, \
+    #              ms = 4, \
+    #              alpha=0.5,\
+    #              label="z-METH" )
+    #   # pp.plot( x[dna_obs[I]], rec_z_dna.values[I,z_idx][dna_obs[I]], 'o', \
+    #   #          color=self.source2mediumcolor[DNA],\
+    #   #          mec=self.source2darkcolor[DNA], mew=0.5, \
+    #   #          mfc=self.source2lightcolor[DNA], lw=2, \
+    #   #          ms = 4, \
+    #   #          alpha=0.5,\
+    #   #          label="z-DNA" )
+    #   pp.plot( rec_z.values[I,z_idx], '.', \
+    #            color='k',\
+    #            mec='k', mew=0.5, \
+    #            mfc='w', lw=2, \
+    #            ms = 4, \
+    #            alpha=0.5,\
+    #            label="z" )
+    #
+    # pp.savefig( self.viz_filename_z_rec_scatter, dpi = 300, fmt="png", bbox_inches = "tight")
+    # pp.close()
+    #
+    # pp.close('all')
+    #
+    #
+    # self.latent_store.close()
     
   # ---------------------------------- #
   # ------- other functions

@@ -57,9 +57,9 @@ class NeuralNetwork(object):
       shape.append( self.GetFromVarDict( s, s, var_dict ) )
     return shape
 
-  def BuildLayerSpecs( self, layer_dict, var_dict )  :
-    layer_specs = {}
-    for key,value in layer_dict.iteritems():
+  def BuildLayerSpecs( self, layer_specs, var_dict )  :
+    #layer_specs = {}
+    for key,value in layer_specs.iteritems():
       if key == SHAPE:
         #shape: ["n_z"] => shape = [10]
         shape = []
@@ -103,7 +103,7 @@ class NeuralNetwork(object):
       else:
         #elif key == OUTPUT:
         layer_specs[key] = value
-        print "WARNING: skipping layer specs for KEY=%s"%(key)
+        print "WARNING: ADDING layer specs for KEY=%s"%(key)
         
     return layer_specs
           
@@ -150,23 +150,36 @@ class NeuralNetwork(object):
     
   def GetInputLayers( self, layer_dict, data_dict, var_dict ):
     inputs = []
+    tensor_ids = {}
     input_list = []
     if layer_dict.has_key(INPUTS):
       if layer_dict[INPUTS].__class__ == list:
         for name in layer_dict[INPUTS]:
           if self.HasLayer(name):
             inputs.append( self.GetLayer(name) )
+            #tensor_ids.append( None )
             input_list.append(name)
           else:
             print "Could not find %s, so... looking for input_template"%(name)
-            assert layer_dict.has_key( "input_template" ), "need a template if layer does not exist."
-            input_list = []
-            name_template = layer_dict["input_template"] # how to sub in name
-            assert name_template.has_key( name ), "cannot find %s in template"%(name)
+            if layer_dict.has_key( "input_template" ):
+              assert layer_dict.has_key( "input_template" ), "need a template if layer does not exist."
+              input_list = []
+              name_template = layer_dict["input_template"] # how to sub in name
+              assert name_template.has_key( name ), "cannot find %s in template"%(name)
             
-            for templ_name in data_dict[name]:
-              input_list.append( name_template[name].replace("?",templ_name) )
-              inputs.append(  self.GetLayer( input_list[-1] ) )
+              for templ_name in data_dict[name]:
+                input_list.append( name_template[name].replace("?",templ_name) )
+                inputs.append(  self.GetLayer( input_list[-1] ) )
+                #tensor_ids.append( None )
+            else:
+              # 
+              s_name,tensor_idx = name.split("/")
+              if self.HasLayer(s_name):
+                print "Found %s for %s"%(s_name,name)
+                tensor_idx = int(tensor_idx)
+                inputs.append( self.GetLayer(s_name) )
+                input_list.append(name)
+                tensor_ids[ s_name] =  tensor_idx
       else:
         # assume is key to data_dict names
         input_list = []
@@ -175,11 +188,13 @@ class NeuralNetwork(object):
         for name in data_dict[layer_dict[INPUTS]]:
           input_list.append( name_template.replace("?",name) )
           inputs.append(  self.GetLayer( input_list[-1] ) )
+          #tensor_ids.append( None )
         
         #pdb.set_trace()
     else:
       print "** no inputs for ",layer_dict[NAME]
     layer_dict[INPUTS] = input_list
+    layer_dict["tensor_ids"] = tensor_ids
     return inputs
 
   def BuildDataLayers( self, specs_list, data_dict, var_dict ):

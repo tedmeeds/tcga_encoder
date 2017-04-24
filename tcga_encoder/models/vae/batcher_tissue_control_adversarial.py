@@ -68,38 +68,79 @@ class TCGABatcherAdversarial( TCGABatcher ):
       batch[ layer_name ][nans] = 0
       #pdb.set_trace()
       self.fill_store.close()
+    elif layer_name == "Z_rec_input":
+      pdb.set_trace()
 
+
+  def PreStepDoWhatYouWant( self, sess, epoch, network, cb_info, train_op ):
+    train_ops = [train_op]
     
-  def DoWhatYouWantAtEpoch( self, sess, epoch, network,info_dict ):
-    # pass weights from 
-    #pdb.set_trace()
-    #network.GetLayer( "target_prediction_pos" ).SetWeights( sess, network.GetLayer( "target_prediction_neg" ).EvalWeights() )
-    #network.GetLayer( "target_prediction_pos" ).SetBiases( sess, network.GetLayer( "target_prediction_neg" ).EvalBiases() )
+    if network.HasLayer( "Z_rec_input") or network.HasLayer( "Z_input"):
+      # get the mean z space is wanted
+      train_ops.extend( network.GetLayer( "rec_z_space" ).tensor )
+      
+    if network.HasLayer("gen_dna_space"):
+      # get the predicted DNA
+      train_ops.append( network.GetLayer("gen_dna_space").expectation )
+    
+    # self.fill_z_input = False
+    # self.TestFillZ(sess,info_dict)
+    #
+    # self.BatchFillZ(sess,info_dict)
+    # self.fill_z_input = True
+    
+    return train_ops
+    
+  def PostStepDoWhatYouWant( self, sess, epoch, network, cb_info, train_ops_evals ):
     network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
     network.GetLayer( "target_prediction_neg" ).SetBiases( sess, network.GetLayer( "target_prediction_pos" ).EvalBiases() )
     
-    #self.BatchFillZ(sess,info_dict)
-    self.fill_z_input = False
-    self.TestFillZ(sess,info_dict)
-    
-    #impute_dict = self.FillBatch( self.validation_barcodes, mode = "VAL" )
-     #
-    # barcodes = self.validation_barcodes
-    # impute_dict = self.FillBatch( barcodes, mode = "VAL" ) #self.NextBatch(batch_ids)
-    # #impute_dict[BARCODES] = barcodes
-    # self.batch_ids = batch_ids
-    #
-    #
-    #
-    # val_feed_dict={}
-    # network.FillFeedDict( train_feed_dict, impute_dict )
-    # #batch = self.FillBatch( impute_dict[BARCODES], mode )
-    # self.RunFillZ( epoch, sess, train_feed_dict, impute_dict, mode="TRAIN" )
-    
-    self.BatchFillZ(sess,info_dict)
-    self.fill_z_input = True
-    #pass
+    self.fill_store.open()
     #pdb.set_trace()
+    barcodes = cb_info[BATCH_FEED_IMPUTATION]["barcodes"]
+    eval_idx = 1
+    if network.HasLayer( "Z_rec_input") or network.HasLayer( "Z_input"):
+      z_mu  = train_ops_evals[eval_idx]; eval_idx+=1
+      z_var = train_ops_evals[eval_idx]; eval_idx+=1
+      
+      
+      z_columns = ["z%d"%zidx for zidx in range(self.n_z)] 
+      S = self.fill_store["/Z/TRAIN/Z/mu"]
+      S.loc[ barcodes ] = z_mu 
+      self.fill_store["/Z/TRAIN/Z/mu"] = S
+      
+
+      S = self.fill_store["/Z/TRAIN/Z/var"]
+      S.loc[ barcodes ] = z_var
+      self.fill_store["/Z/TRAIN/Z/var"] = S
+    
+      #pdb.set_trace()
+      
+    if network.HasLayer("gen_dna_space"):
+      # get the predicted DNA
+      p_of_dna = train_ops_evals[eval_idx]; eval_idx+=1
+      S = self.fill_store["Fill/TRAIN/DNA"]
+      S.loc[ barcodes ] = p_of_dna
+      self.fill_store["Fill/TRAIN/DNA"] = S 
+      #.loc[ barcodes ] = p_of_dna
+    
+    self.fill_store.close()
+      
+    
+  # def DoWhatYouWantAtEpoch( self, sess, epoch, network, info_dict):
+  #   pass
+  #
+  def InitFillStore(self):
+    self.fill_store.open()
+    z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
+    self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z)) , index = self.train_barcodes, columns = z_columns )
+    self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.ones( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
+    self.fill_store["Z/VAL/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.validation_barcodes),self.n_z)) , index = self.validation_barcodes, columns = z_columns )
+    self.fill_store["Z/VAL/Z/var"] = pd.DataFrame( np.ones( (len(self.validation_barcodes),self.n_z) ), index = self.validation_barcodes, columns = z_columns )
+    self.fill_store["Fill/TRAIN/DNA"] = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.dna_dim) ), index = self.train_barcodes, columns = self.dna_genes )
+    self.fill_store["Fill/VAL/DNA"] = pd.DataFrame( np.zeros( (len(self.validation_barcodes),self.dna_dim) ), index = self.validation_barcodes, columns = self.dna_genes )
+    self.fill_store.close()
+
     
   def Epoch( self, epoch_key, sess, info_dict, epoch, feed_dict, impute_dict, mode ):  
     barcodes = impute_dict[BARCODES]
@@ -225,8 +266,9 @@ class TCGABatcherAdversarial( TCGABatcher ):
                mfc=self.source2lightcolor[target_source], lw=1, \
                ms = 5, \
                alpha=0.75, \
-               label="Batch (%0.4f)"%(self.epoch_store[BATCH_SOURCE_LOGPDF][prior_source].values[-1]/self.dims_dict[target_source]) )
-      pp.plot( self.epoch_store[BATCH_SOURCE_LOGPDF]["Epoch"].values, 
+               label="Batch (%0.4f)"%(self.epoch_store[BATCH_SOURCE_LOGPDF][target_source].values[-1]/self.dims_dict[target_source]) )
+      if prior_source is not None:
+          pp.plot( self.epoch_store[BATCH_SOURCE_LOGPDF]["Epoch"].values, 
                self.epoch_store[BATCH_SOURCE_LOGPDF][prior_source]/self.dims_dict[prior_source], 's--', \
                color=self.source2mediumcolor[prior_source], \
                mec=self.source2darkcolor[prior_source], mew=1, \
@@ -243,7 +285,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
                mfc=self.source2lightcolor[target_source], lw=3, \
                ms = 8, \
                label="Test  (%0.4f)"%(self.epoch_store[TEST_SOURCE_LOGPDF][target_source].values[-1]/self.dims_dict[target_source])  )
-        pp.plot( self.epoch_store[TEST_SOURCE_LOGPDF]["Epoch"].values, \
+        if prior_source is not None:
+          pp.plot( self.epoch_store[TEST_SOURCE_LOGPDF]["Epoch"].values, \
                self.epoch_store[TEST_SOURCE_LOGPDF][prior_source]/self.dims_dict[prior_source], 'o-', \
                color=self.source2mediumcolor[prior_source],\
                mec=self.source2darkcolor[prior_source], mew=2, \
@@ -260,7 +303,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
                mfc=self.source2lightcolor[target_source], lw=3, \
                ms = 8, \
                label="Val  (%0.4f)"%(self.epoch_store[VAL_SOURCE_LOGPDF][target_source].values[-1]/self.dims_dict[target_source])  )
-        pp.plot( self.epoch_store[VAL_SOURCE_LOGPDF]["Epoch"].values, \
+        if prior_source is not None:
+          pp.plot( self.epoch_store[VAL_SOURCE_LOGPDF]["Epoch"].values, \
                self.epoch_store[VAL_SOURCE_LOGPDF][prior_source]/self.dims_dict[prior_source], 'v-', \
                color=self.source2darkcolor[prior_source],\
                mec=self.source2darkcolor[prior_source], mew=2, \
@@ -298,7 +342,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
                ms = 5, \
                alpha=0.75, \
                label="Batch (%0.4f)"%(self.epoch_store[BATCH_SOURCE_LOGPDF][target_source].values[-1]/self.dims_dict[target_source]) )
-      pp.plot( self.epoch_store[BATCH_SOURCE_LOGPDF]["Epoch"].values, 
+      if prior_source is not None:
+        pp.plot( self.epoch_store[BATCH_SOURCE_LOGPDF]["Epoch"].values, 
                self.epoch_store[BATCH_SOURCE_LOGPDF][prior_source]/self.dims_dict[prior_source], 's--', \
                color=self.source2mediumcolor[prior_source], \
                mec=self.source2darkcolor[prior_source], mew=1, \
@@ -329,7 +374,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
         loglik = loglik_df["LogLik"].values
         if len(loglik) == 0:
           continue
-        pp.plot( epochs, loglik, 'o-', \
+        if prior_source is not None:
+          pp.plot( epochs, loglik, 'o-', \
                color=self.source2darkcolor[prior_source],\
                mec=self.source2darkcolor[prior_source], mew=1, \
                mfc=self.source2lightcolor[prior_source], lw=2, \
@@ -359,7 +405,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
         if len(loglik) == 0:
           continue
         
-        pp.plot( epochs, loglik, 'v-', \
+        if prior_source is not None:
+          pp.plot( epochs, loglik, 'v-', \
                color=self.source2mediumcolor[prior_source],\
                mec=self.source2lightcolor[prior_source], mew=1, \
                mfc=self.source2darkcolor[prior_source], lw=2, \
@@ -406,7 +453,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
         loglik = df["Error"].values
         if len(loglik) == 0:
           continue
-        pp.plot( epochs, loglik, 'o-', \
+        if prior_source is not None:
+          pp.plot( epochs, loglik, 'o-', \
                  color=self.source2darkcolor[prior_source],\
                  mec=self.source2darkcolor[prior_source], mew=1, \
                  mfc=self.source2lightcolor[prior_source], lw=2, \
@@ -434,7 +482,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
         loglik = df["Error"].values
         if len(loglik) == 0:
           continue
-        pp.plot( epochs, loglik, 'v-', \
+        if prior_source is not None:
+          pp.plot( epochs, loglik, 'v-', \
                  color=self.source2mediumcolor[prior_source],\
                  mec=self.source2darkcolor[prior_source], mew=1, \
                  mfc=self.source2lightcolor[prior_source], lw=2, \
@@ -459,6 +508,10 @@ class TCGABatcherAdversarial( TCGABatcher ):
     main_sources = [miRNA, RNA, METH]
     prior_sources = [miRNA+"_b", RNA+"_b", METH+"_b"]
 
+    if self.network.HasLayer("gen_dna_space"):
+      main_sources.append( DNA )
+      prior_sources.append(None)
+      
     self.epoch_store.open()
   
     self.PlotLowerBound()
@@ -471,9 +524,77 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     self.PlotTissuePrediction(sess, info_dict)
     
+    if self.network.HasLayer("gen_dna_space"):
+      self.PrintAndPlotDnaPredictions(sess, info_dict)
+      
     self.epoch_store.close()
     pp.close('all')
-   
+  
+  
+  def  PrintAndPlotDnaPredictions(self,sess, info_dict):
+    self.fill_store.open()
+    
+    #self.TrainFillDna(sess, info_dict)
+    
+    dna_observed_query = self.data_store["/CLINICAL/observed"][DNA] == 1
+    dna_observed_train = dna_observed_query.loc[self.train_barcodes]
+    dna_observed_val   = dna_observed_query.loc[self.validation_barcodes]
+    
+    dna_observed_train_barcodes = dna_observed_train[dna_observed_train.values].index.values
+    dna_observed_val_barcodes   = dna_observed_val[dna_observed_val.values].index.values
+    
+    #pdb.set_trace()
+    val_predictions   = self.fill_store["/Fill/VAL/DNA"].loc[dna_observed_val_barcodes]
+    train_predictions = self.fill_store["/Fill/TRAIN/DNA"].loc[dna_observed_train_barcodes]
+    
+    val_targets   = self.dna_store.loc[dna_observed_val_barcodes]
+    train_targets = self.dna_store.loc[dna_observed_train_barcodes]
+    #pdb.set_trace()
+    aucs = []
+    groups1 = []
+    groups0 = []
+    for dna_gene in self.dna_genes:
+      val_auc = 1.0
+      if np.sum(val_targets[dna_gene].values)>0:
+        val_auc = roc_auc_score( val_targets[dna_gene].values, val_predictions[dna_gene].values )
+        groups1.append(dna_gene)
+      else:
+        groups0.append(dna_gene)
+      if np.sum(train_targets[dna_gene].values)>0:
+        train_auc = roc_auc_score( train_targets[dna_gene].values, train_predictions[dna_gene].values )
+      aucs.append([train_auc,val_auc])
+    aucs = np.array(aucs)
+    
+    self.dna_aucs = pd.DataFrame( aucs.T, index = ["Train","Val"], columns = self.dna_genes )
+    
+    val_auc = roc_auc_score( val_targets.values.flatten(), val_predictions.values.flatten() )
+    train_auc = roc_auc_score( train_targets.values.flatten(), train_predictions.values.flatten() )
+    
+    self.dna_aucs["ALL"] = pd.Series( [train_auc,val_auc], index = ["Train","Val"])  
+    print self.dna_aucs.T
+    #pdb.set_trace()
+    
+    f=pp.figure()
+    ax=f.add_subplot(111)
+    ax.plot( [0.0,1.0], [0,1], 'k--')
+    self.dna_aucs[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Blue', s=50, alpha=0.75, edgecolors='k')
+    self.dna_aucs[groups0].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="s", color='Green',s=50, alpha=0.75, edgecolors='k')
+    self.dna_aucs[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=100, alpha=0.75, edgecolors='k')
+    
+    if self.data_dict.has_key("highlight_genes"):
+      highlight_genes = self.data_dict[ "highlight_genes"]
+      X = self.dna_aucs[highlight_genes]
+      X.T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='White', s=50, alpha=0.75, edgecolors='k', linewidths=2)
+      for x,y,t in zip( X.T.values[:,0], X.T.values[:,1], highlight_genes ):
+        ax.text( x,y,t, fontsize=8 )
+    #pp.plot( [self.dna_aucs["ALL"].values[0]], [self.dna_aucs["ALL"].values[1]], 'ro' )
+    pp.xlim(0.0,1)
+    pp.ylim(0.0,1)
+    f.savefig( self.viz_filename_dna_aucs, dpi=300,  )
+    #pdb.set_trace()
+    pp.close('all')
+    self.fill_store.close()
+    
   def PlotTissuePrediction(self,sess, info_dict):
     self.fill_store.open()
     mode = "VAL"
@@ -574,6 +695,10 @@ class TCGABatcherAdversarial( TCGABatcher ):
     use_tissue = True
     use_z = True
     
+    if self.network.HasLayer( "gen_dna_space"):
+      use_dna = True
+    
+    
     barcodes = impute_dict[BARCODES]
     batch = self.FillBatch( impute_dict[BARCODES], mode )
     #not_observed = np.setdiff1d( self.input_sources, inputs2use )
@@ -601,52 +726,60 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     if use_dna:
       dna_expectation_tensor = self.network.GetLayer( "gen_dna_space" ).expectation
-      dna_data = np.zeros( (len(barcodes),self.dna_dim) )
-      for idx,DNA_key in zip(range(len(self.DNA_keys)),self.DNA_keys):
-        batch_data = self.data_store[DNA_key].loc[ barcodes ].fillna( 0 ).values
-        dna_data += batch_data
-      
-      dna_data = np.minimum(1.0,dna_data)
+      dna_data = np.minimum( 1.0, self.dna_store.loc[ barcodes ].fillna( 0 ).values )
+      dna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[DNA]] == 1
       
     loglikes_data_as_matrix = self.network.loglikes_data_as_matrix
   
-    tensors = []
-    tensors.extend(rec_z_space_tensors)
+    tensors = []; tensor_names=[]
+    tensors.extend(rec_z_space_tensors); tensor_names.extend(["z_mu","z_var"])
+    
     if self.network.HasLayer( "rec_z_space_rna" ):
-      tensors.extend(rna_rec_z_space_tensors)
-      tensors.extend(mirna_rec_z_space_tensors)
-      tensors.extend(meth_rec_z_space_tensors)
-    tensors.extend([rna_expectation_tensor,mirna_expectation_tensor,meth_expectation_tensor])
+      tensors.extend(rna_rec_z_space_tensors); tensor_names.extend(["z_mu_rna","z_var_rna"])
+      tensors.extend(mirna_rec_z_space_tensors); tensor_names.extend(["z_mu_mirna","z_var_mirna"])
+      tensors.extend(meth_rec_z_space_tensors); tensor_names.extend(["z_mu_meth","z_var_meth"])
+    
+    tensors.extend([rna_expectation_tensor,\
+                    mirna_expectation_tensor,\
+                    meth_expectation_tensor])
+    tensor_names.extend(["rna_expecation","mirna_expectation","meth_expectation"])
+                      
     if self.network.HasLayer("gen_rna_space_basic"):
-      tensors.extend([rna_basic_expectation_tensor,mirna_basic_expectation_tensor,meth_basic_expectation_tensor])
+      tensors.extend([rna_basic_expectation_tensor,\
+                      mirna_basic_expectation_tensor,\
+                      meth_basic_expectation_tensor])
+      tensor_names.extend(["rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation"])
+      
     tensors.extend([positive_tissue_prediction_tensor,negative_tissue_prediction_tensor])
-    if self.network.HasLayer("gen_rna_space_basic"):
-      if self.network.HasLayer( "rec_z_space_rna" ):
-        tensor_names = ["z_mu","z_var",\
-                    "z_mu_rna","z_var_rna",\
-                    "z_mu_mirna","z_var_mirna",\
-                    "z_mu_meth","z_var_meth",\
-                    "rna_expecation","mirna_expectation","meth_expectation",\
-                    "rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation",\
-                    "target_prediction_pos","target_prediction_neg"]
-      else:
-        tensor_names = ["z_mu","z_var",\
-                    "rna_expecation","mirna_expectation","meth_expectation",\
-                    "rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation",\
-                    "target_prediction_pos","target_prediction_neg"]
-        
-    else:
-      if self.network.HasLayer( "rec_z_space_rna" ):
-        tensor_names = ["z_mu","z_var",\
-                    "z_mu_rna","z_var_rna",\
-                    "z_mu_mirna","z_var_mirna",\
-                    "z_mu_meth","z_var_meth",\
-                    "rna_expecation","mirna_expectation","meth_expectation",\
-                    "target_prediction_pos","target_prediction_neg"]
-      else:
-        tensor_names = ["z_mu","z_var",\
-                    "rna_expecation","mirna_expectation","meth_expectation",\
-                    "target_prediction_pos","target_prediction_neg"]
+    tensor_names.extend(["target_prediction_pos","target_prediction_neg"])
+    
+    # if self.network.HasLayer("gen_rna_space_basic"):
+    #   if self.network.HasLayer( "rec_z_space_rna" ):
+    #     tensor_names = ["z_mu","z_var",\
+    #                 "z_mu_rna","z_var_rna",\
+    #                 "z_mu_mirna","z_var_mirna",\
+    #                 "z_mu_meth","z_var_meth",\
+    #                 "rna_expecation","mirna_expectation","meth_expectation",\
+    #                 "rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation",\
+    #                 "target_prediction_pos","target_prediction_neg"]
+    #   else:
+    #     tensor_names = ["z_mu","z_var",\
+    #                 "rna_expecation","mirna_expectation","meth_expectation",\
+    #                 "rna_basic_expecation","mirna_basic_expectation","meth_basic_expectation",\
+    #                 "target_prediction_pos","target_prediction_neg"]
+    #
+    # else:
+    #   if self.network.HasLayer( "rec_z_space_rna" ):
+    #     tensor_names = ["z_mu","z_var",\
+    #                 "z_mu_rna","z_var_rna",\
+    #                 "z_mu_mirna","z_var_mirna",\
+    #                 "z_mu_meth","z_var_meth",\
+    #                 "rna_expecation","mirna_expectation","meth_expectation",\
+    #                 "target_prediction_pos","target_prediction_neg"]
+    #   else:
+    #     tensor_names = ["z_mu","z_var",\
+    #                 "rna_expecation","mirna_expectation","meth_expectation",\
+    #                 "target_prediction_pos","target_prediction_neg"]
                     
   
     assert len(tensor_names)==len(tensors), "should be same number"
@@ -677,19 +810,16 @@ class TCGABatcherAdversarial( TCGABatcher ):
     neg_tissue_expectation_no_bias          = np.zeros( (len(barcodes), self.dims_dict[TISSUE] ), dtype=float )
         
       #drop_likelihoods = np.zeros( rna_dim )
-    # dna_dim = self.dims_dict[DNA] #/self.n_dna_channels
-    # dna_expectation = np.zeros( (len(barcodes),dna_dim), dtype=float )
-    # dna_loglikelihood = np.zeros( (np.sum(dna_observed_query),dna_dim), dtype=float )
+    if use_dna:
+      dna_dim = self.dims_dict[DNA] #/self.n_dna_channels
+      dna_expectation = np.zeros( (len(barcodes),dna_dim), dtype=float )
+      dna_loglikelihood = np.zeros( (np.sum(dna_observed_query),dna_dim), dtype=float )
     
     nbr_splits = 50
     tensor2fill = []
     drop_factor = 1.0 #float(nbr_splits)/float(nbr_splits-1)
     for drop_idx in range(nbr_splits):
-      
-      
-      
-      
-      
+    
       id_start = 0
       
       if use_z:
@@ -782,9 +912,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
         mirna_basic_loglikelihood[:,drop_mirna_ids] = tensor2fill_eval[mirna_ids[3]][:,drop_mirna_ids]
       
       if use_dna:
-        for idx,DNA_key in zip(range(len(self.DNA_keys)-1),self.DNA_keys[:-1]):
-          dna_expectation[:,drop_dna_ids] = tensor2fill_eval[dna_ids[0]][:,drop_dna_ids]
-          dna_loglikelihood[:,drop_dna_ids] = tensor2fill_eval[dna_ids[1]][:,drop_dna_ids]
+        dna_expectation[:,drop_dna_ids] = tensor2fill_eval[dna_ids[0]][:,drop_dna_ids]
+        dna_loglikelihood[:,drop_dna_ids] = tensor2fill_eval[dna_ids[1]][:,drop_dna_ids]
         
       if use_meth:
         meth_expectation[:,drop_meth_ids]         = tensor2fill_eval[meth_ids[0]][:,drop_meth_ids]
@@ -843,7 +972,117 @@ class TCGABatcherAdversarial( TCGABatcher ):
       self.WriteRunFillExpectation( epoch, TISSUE+"-", barcodes, self.tissue_names, tissue_observed_query, neg_tissue_expectation, tissue_data, mode )
       self.WriteRunFillExpectation( epoch, TISSUE+"no_bias+", barcodes, self.tissue_names, tissue_observed_query, pos_tissue_expectation_no_bias, tissue_data, mode )
       self.WriteRunFillExpectation( epoch, TISSUE+"no_bias-", barcodes, self.tissue_names, tissue_observed_query, neg_tissue_expectation_no_bias, tissue_data, mode )
+
+  def RunFillDna( self, epoch, sess, feed_dict, impute_dict, mode ):
+    print "COMPUTE Z-SPACE"
+    use_dna = False
+    use_rna = True
+    use_meth = True
+    use_mirna = True
+    use_tissue = True
+    use_z = True
+    
+    if self.network.HasLayer( "gen_dna_space"):
+      use_dna = True
+    
+    
+    barcodes = impute_dict[BARCODES]
+    batch = self.FillBatch( impute_dict[BARCODES], mode )
+    
+    rec_z_space_tensors       = self.network.GetTensor( "rec_z_space" )
+    
+    dna_expectation_tensor = self.network.GetLayer( "gen_dna_space" ).expectation
+    
+    
+    dna_data = np.minimum( 1.0, self.dna_store.loc[ barcodes ].fillna( 0 ).values )
+    dna_observed_query = batch[ INPUT_OBSERVATIONS ][:,self.observed_batch_order[DNA]] == 1
+
+                    
+    self.network.FillFeedDict( feed_dict, impute_dict )
+
+
+    dna_dim = self.dims_dict[DNA] #/self.n_dna_channels
+    dna_expectation = np.zeros( (len(barcodes),dna_dim), dtype=float )
+    dna_loglikelihood = np.zeros( (np.sum(dna_observed_query),dna_dim), dtype=float )
+    
+    nbr_splits = 50
+    tensor2fill = []
+
+    id_start = 0
+    dna_data_inputs = np.minimum(1.0,dna_data)
+    batch[ DNA_INPUT ] = drop_factor*dna_data_inputs
+    
+    
+    
+    tensors = []; tensor_names=[]
+    tensors.extend(rec_z_space_tensors); tensor_names.extend(["z_mu","z_var"])
+    
+    #tensor2fill1 = 
+    
+    tensor2fill.extend( [dna_expectation_tensor, loglikes_data_as_matrix["gen_dna_space"] ] )
+    dna_ids = [id_start,id_start+1]
+    id_start+=2
+        
+    
+    # ---------
+    # RUN SESS
+    # ---------
+    self.network.FillFeedDict( feed_dict, batch )
+    tensor2fill_eval = sess.run( tensor2fill, feed_dict = feed_dict )
+
+    # ------
+    # FILL EVALUATION 
+    # -----      
+    if use_rna:
+      rna_expectation[:,drop_rna_ids]         = tensor2fill_eval[rna_ids[0]][:,drop_rna_ids]
+      rna_basic_expectation[:,drop_rna_ids]   = tensor2fill_eval[rna_ids[1]][:,drop_rna_ids]
+      rna_loglikelihood[:,drop_rna_ids]       = tensor2fill_eval[rna_ids[2]][:,drop_rna_ids]
+      rna_basic_loglikelihood[:,drop_rna_ids] = tensor2fill_eval[rna_ids[3]][:,drop_rna_ids]
+
+    if use_mirna:
+      mirna_expectation[:,drop_mirna_ids]         = tensor2fill_eval[mirna_ids[0]][:,drop_mirna_ids]
+      mirna_basic_expectation[:,drop_mirna_ids]   = tensor2fill_eval[mirna_ids[1]][:,drop_mirna_ids]
+      mirna_loglikelihood[:,drop_mirna_ids]       = tensor2fill_eval[mirna_ids[2]][:,drop_mirna_ids]
+      mirna_basic_loglikelihood[:,drop_mirna_ids] = tensor2fill_eval[mirna_ids[3]][:,drop_mirna_ids]
+    
+    if use_dna:
+      dna_expectation[:,drop_dna_ids] = tensor2fill_eval[dna_ids[0]][:,drop_dna_ids]
+      dna_loglikelihood[:,drop_dna_ids] = tensor2fill_eval[dna_ids[1]][:,drop_dna_ids]
       
+    if use_meth:
+      meth_expectation[:,drop_meth_ids]         = tensor2fill_eval[meth_ids[0]][:,drop_meth_ids]
+      meth_basic_expectation[:,drop_meth_ids]   = tensor2fill_eval[meth_ids[1]][:,drop_meth_ids]
+      meth_loglikelihood[:,drop_meth_ids]       = tensor2fill_eval[meth_ids[2]][:,drop_meth_ids]
+      meth_basic_loglikelihood[:,drop_meth_ids] = tensor2fill_eval[meth_ids[3]][:,drop_meth_ids]
+      
+    if use_tissue:
+      tissue_data = batch["TISSUE_input"]
+      neg_tissue_expectation = tensor2fill_eval[tissue_ids[0]]
+      neg_tissue_expectation_no_bias = tensor2fill_eval[tissue_ids[1]]
+      
+      
+      z_mu = tensor2fill_eval[z_ids[0]]
+      z_var = tensor2fill_eval[z_ids[1]]
+      
+      feed_dict[self.network.GetLayer( "Z_rec_input" ).tensor] = z_mu #+ np.sqrt(z_var)*batch["u_z"]
+      
+      evals = sess.run( [positive_tissue_prediction_tensor,no_bias_positive_tissue_prediction_tensor], feed_dict = feed_dict )
+      pos_tissue_expectation = evals[0]
+      pos_tissue_expectation_no_bias = evals[1]
+      #pos_tissue_expectation = tensor2fill_eval[tissue_ids[0]]
+      #pdb.set_trace()
+
+    #if use_dna:
+    self.WriteRunFillExpectation( epoch, DNA, barcodes, self.dna_genes, dna_observed_query, dna_expectation, dna_data, mode )
+    self.WriteRunFillLoglikelihood( epoch, DNA, barcodes[dna_observed_query], self.dna_genes, dna_loglikelihood, mode )
+
+    # if use_tissue:
+    #   self.WriteRunFillExpectation( epoch, TISSUE+"+", barcodes, self.tissue_names, tissue_observed_query, pos_tissue_expectation, tissue_data, mode )
+    #   self.WriteRunFillExpectation( epoch, TISSUE+"-", barcodes, self.tissue_names, tissue_observed_query, neg_tissue_expectation, tissue_data, mode )
+    #   self.WriteRunFillExpectation( epoch, TISSUE+"no_bias+", barcodes, self.tissue_names, tissue_observed_query, pos_tissue_expectation_no_bias, tissue_data, mode )
+    #   self.WriteRunFillExpectation( epoch, TISSUE+"no_bias-", barcodes, self.tissue_names, tissue_observed_query, neg_tissue_expectation_no_bias, tissue_data, mode )
+ 
+       
        
   def VizWeightsGeneric( self, sess, info_dict ):    
     print "  -> Generic Viz" 

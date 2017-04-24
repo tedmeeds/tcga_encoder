@@ -103,9 +103,12 @@ def SparseMatMul( t1, t2, name ):
   assert False, "Cannot handle these sizes "
   print dims1, dims2
     
-def xavier_init(fan_in, fan_out, constant=0.1): 
+def xavier_init(fan_in, fan_out, constant=0.1, positive = False): 
   
-    low = -constant*np.sqrt(6.0/(fan_in + fan_out)) 
+    if positive is True:
+      low = 0.0
+    else:
+      low = -constant*np.sqrt(6.0/(fan_in + fan_out)) 
     high = constant*np.sqrt(6.0/(fan_in + fan_out))
     return tf.random_uniform((fan_in, fan_out), 
                              minval=low, maxval=high, 
@@ -121,9 +124,12 @@ def weight_init_old(in_shape, out_shape, constant=0.1):
                              minval=low, maxval=high, 
                              dtype=tf.float32)
 
-def weight_init(weight_shape, constant=0.1): 
+def weight_init(weight_shape, constant=0.1, positive = False): 
     n_weights = sum( weight_shape )
-    low = -constant*np.sqrt(6.0/n_weights) 
+    if positive is True:
+      low = 0.0
+    else:
+      low = -constant*np.sqrt(6.0/n_weights) 
     high = constant*np.sqrt(6.0/n_weights)
     
     #s = in_shape + out_shape
@@ -159,7 +165,7 @@ def EstimateWeightShape( input_shape, output_shape ):
   
   return weight_shape
                                                             
-def MakeWeights( input_sources, output_shape, name = "", has_biases=True, constant=None, shared_layers = None, shared_idx = None, layer_specs=None ):
+def MakeWeights( input_sources, output_shape, name = "", has_biases=True, constant=None, shared_layers = None, shared_idx = None, layer_specs=None, positive = False ):
     weights   = []
     default_constant = 0.1
     input_idx = 0
@@ -193,7 +199,7 @@ def MakeWeights( input_sources, output_shape, name = "", has_biases=True, consta
             is_shared = True
       if is_shared is False:
         #pdb.set_trace()
-        w = tf.Variable( weight_init( weight_shape, constant=default_constant ), name = "w_"+input_source.name+"2"+name, trainable=is_trainable )
+        w = tf.Variable( weight_init( weight_shape, constant=default_constant, positive=positive ), name = "w_"+input_source.name+"2"+name, trainable=is_trainable )
       else:
         print "USING BORROWED WEIGHT"
       weights.append(w)
@@ -204,7 +210,7 @@ def MakeWeights( input_sources, output_shape, name = "", has_biases=True, consta
     
     return weights, biases 
 
-def ForwardPropagate( input_layers, weights, biases, transfer_function = None, name = "", observation_layer = None  ):
+def ForwardPropagate( input_layers, weights, biases, transfer_function = None, name = "", observation_layer = None, layer_specs={}  ):
   input_activations = []
     
   for idx,source, w in zip( range(len(input_layers)),input_layers, weights ):
@@ -213,7 +219,15 @@ def ForwardPropagate( input_layers, weights, biases, transfer_function = None, n
       print "ForwardPropagate with SPARSE input"
       a_input = SparseMatMul( source.tensor, w, name = "act_input_"+source.name+"2h" )
     else:
-      a_input = MatMul( source.tensor, w, name = "act_input_"+source.name+"2h" )
+      
+      if layer_specs.has_key( "tensor_ids"):
+        if layer_specs["tensor_ids"].has_key(source.name):
+          #pdb.set_trace()
+          a_input = MatMul( source.tensor[layer_specs["tensor_ids"][source.name]], w, name = "act_input_"+source.name+"2h" )
+        else:
+          a_input = MatMul( source.tensor, w, name = "act_input_"+source.name+"2h" )
+      else:
+        a_input = MatMul( source.tensor, w, name = "act_input_"+source.name+"2h" )
     
     if observation_layer is not None:
       source_w = observation_layer.tensor #expand_dims(t, 1)
@@ -259,7 +273,10 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     constant = 0.1
     if layer_specs.has_key("weight_constant"):
           constant = layer_specs["weight_constant"]
-    weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases, constant=constant, layer_specs=layer_specs  )  
+    positive = False
+    if layer_specs.has_key("positive"):
+      positive = layer_specs["postive"]
+    weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases, constant=constant, layer_specs=layer_specs, positive=positive  )  
     # if shared_layer is None:
     #   weights, biases    = MakeWeights( input_layers, shape, name, has_biases=has_biases  )
     #   #total_penalty = tf.add_n( penalties )
@@ -275,7 +292,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
           #weights = shared_weights.weights
           #biases  = shared_weights.biases
     #pdb.set_trace() 
-    activation, activation_input  = ForwardPropagate( input_layers, weights, biases, transfer_function, name )
+    activation, activation_input  = ForwardPropagate( input_layers, weights, biases, transfer_function, name, layer_specs=layer_specs )
 
     model = {ACTIVATION:activation, ACTIVATION_INPUT:activation_input, WEIGHTS:weights,BIASES:biases}
     
@@ -358,7 +375,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       weights = shared_layers.weights
       biases  = shared_layers.biases
       
-    activation, activation_input  = ForwardPropagate( source_layers, weights, biases, transfer_function, name, observation_layer=observation_layer )
+    activation, activation_input  = ForwardPropagate( source_layers, weights, biases, transfer_function, name, observation_layer=observation_layer, layer_specs=layer_specs )
 
     model = {ACTIVATION:activation, ACTIVATION_INPUT:activation_input, WEIGHTS:weights,BIASES:biases}
     
@@ -395,8 +412,8 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
 
     
     if shared_layers is None:
-      weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases, layer_specs=layer_specs  )
-      weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases, layer_specs=layer_specs  )
+      weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases, layer_specs=layer_specs )
+      weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases, layer_specs=layer_specs )
     else:
       weights_mu    = shared_weights.weights[0]
       weights_var   = shared_weights.weights[1]
@@ -404,10 +421,10 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       biases_var    = shared_weights.biases[1]
     
     z_mu, z_mu_input    = ForwardPropagate( input_layers, weights_mu, biases_mu, \
-                                                     transfer_function=None, name=name+"_"+MU )
+                                                     transfer_function=None, name=name+"_"+MU, layer_specs=layer_specs )
 
     z_var, z_var_input  = ForwardPropagate( input_layers, weights_var, biases_var, \
-                                                     transfer_function=tf.exp, name=name+"_"+VAR )
+                                                     transfer_function=tf.exp, name=name+"_"+VAR, layer_specs=layer_specs )
     mu  = {WEIGHTS:weights_mu,  BIASES:biases_mu,  Z:z_mu }
     var = {WEIGHTS:weights_var, BIASES:biases_var, Z:z_var }
     
@@ -440,13 +457,13 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       biases_nu     = shared_weights.biases[2]
     
     z_mu, z_mu_input    = ForwardPropagate( input_layers, weights_mu, biases_mu, \
-                                                     transfer_function=None, name=name+"_"+MU )
+                                                     transfer_function=None, name=name+"_"+MU, layer_specs=layer_specs )
 
     z_logprec_mu, z_logprec_mu_input  = ForwardPropagate( input_layers, weights_logprec_mu, biases_logprec_mu, \
-                                                     transfer_function=None, name=name+"_"+LOG_PREC_MU )
+                                                     transfer_function=None, name=name+"_"+LOG_PREC_MU,layer_specs=layer_specs )
                                                      
     z_logprec_var, z_logprec_var_input  = ForwardPropagate( input_layers, weights_logprec_var, biases_logprec_var, \
-                                                     transfer_function=tf.exp, name=name+"_"+LOG_PREC_VAR )
+                                                     transfer_function=tf.exp, name=name+"_"+LOG_PREC_VAR, layer_specs=layer_specs )
                                                      
     mu  = {WEIGHTS:weights_mu,  BIASES:biases_mu,  Z:z_mu }
     logprec_mu = {WEIGHTS:weights_logprec_mu, BIASES:biases_logprec_mu, Z:z_logprec_mu }
@@ -476,13 +493,13 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       biases_nu     = shared_weights.biases[2]
     
     z_mu, z_mu_input    = ForwardPropagate( input_layers, weights_mu, biases_mu, \
-                                                     transfer_function=None, name=name+"_"+MU )
+                                                     transfer_function=None, name=name+"_"+MU, layer_specs=layer_specs )
 
     z_var, z_var_input  = ForwardPropagate( input_layers, weights_var, biases_var, \
-                                                     transfer_function=tf.exp, name=name+"_"+VAR )
+                                                     transfer_function=tf.exp, name=name+"_"+VAR, layer_specs=layer_specs )
                                                      
     z_nu, z_nu_input  = ForwardPropagate( input_layers, weights_nu, biases_nu, \
-                                                     transfer_function=tf.exp, name=name+"_"+NU )
+                                                     transfer_function=tf.exp, name=name+"_"+NU, layer_specs=layer_specs )
                                                      
     mu  = {WEIGHTS:weights_mu,  BIASES:biases_mu,  Z:z_mu }
     var = {WEIGHTS:weights_var, BIASES:biases_var, Z:z_var }
@@ -511,13 +528,13 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       biases_v     = shared_weights.biases[2]
     
     z_mu, z_mu_input    = ForwardPropagate( input_layers, weights_mu, biases_mu, \
-                                                     transfer_function=None, name=name+"_"+MU )
+                                                     transfer_function=None, name=name+"_"+MU, layer_specs=layer_specs )
 
     z_var, z_var_input  = ForwardPropagate( input_layers, weights_var, biases_var, \
-                                                     transfer_function=tf.exp, name=name+"_"+VAR )
+                                                     transfer_function=tf.exp, name=name+"_"+VAR, layer_specs=layer_specs )
                                                      
     z_v, z_v_input  = ForwardPropagate( input_layers, weights_v, biases_v, \
-                                                     transfer_function=None, name=name+"_"+"V" )
+                                                     transfer_function=None, name=name+"_"+"V", layer_specs=layer_specs )
                                                      
     mu  = {WEIGHTS:weights_mu,  BIASES:biases_mu,  Z:z_mu }
     var = {WEIGHTS:weights_var, BIASES:biases_var, Z:z_var }
@@ -581,10 +598,10 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     weights_log_b,  biases_log_b = MakeWeights( input_layers, shape, name+"_log_b", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 1, layer_specs=layer_specs  )
 
     a, a_input          = ForwardPropagate( input_layers, weights_log_a, biases_log_a, \
-                                                     transfer_function=tf.exp, name=name+"_"+A )
+                                                     transfer_function=tf.exp, name=name+"_"+A, layer_specs=layer_specs )
                                                      
     b, b_input          = ForwardPropagate( input_layers, weights_log_b, biases_log_b, \
-                                                     transfer_function=tf.exp, name=name+"_"+B )
+                                                     transfer_function=tf.exp, name=name+"_"+B, layer_specs=layer_specs )
 
     #pdb.set_trace()
     a_clipped = tf.clip_by_value( a, 0.00001, 1000.0 )
@@ -623,7 +640,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       biases = shared_weights.biases
       
     a, a_input          = ForwardPropagate( input_layers, weights, biases, \
-                                                     transfer_function=tf.sigmoid, name=name )
+                                                     transfer_function=tf.sigmoid, name=name, layer_specs=layer_specs )
                                                      
 
     model     = dict(prob = a,   \
@@ -672,10 +689,10 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
       biases = shared_weights.biases
       
     a, a_input          = ForwardPropagate( input_layers, weights, biases, \
-                                                     transfer_function=tf.nn.softmax, name=name )
+                                                     transfer_function=tf.nn.softmax, name=name, layer_specs=layer_specs )
     # the unbiases parts
     un_b, un_b_input          = ForwardPropagate( input_layers, weights, None, \
-                                                     transfer_function=tf.nn.softmax, name=name )
+                                                     transfer_function=tf.nn.softmax, name=name, layer_specs=layer_specs )
                                                      
 
     model     = dict(prob=a,   \

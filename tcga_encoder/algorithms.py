@@ -129,12 +129,17 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
     
     network.FillFeedDict( batch_feed_dict, batch_feed_imputation )
     batch_feed_dict[learning_rate_placeholder] = current_learning_rate
-    batcher.DoWhatYouWantAtEpoch( sess, epoch, network,cb_info )
+    
+    
     # -------------------------------------------------- #
     # TRAIN STEP                                         #
     # -------------------------------------------------- #
-    train_op_eval = sess.run( train_op, feed_dict = batch_feed_dict )
-    batcher.DoWhatYouWantAtEpoch( sess, epoch, network,cb_info )
+    train_ops = batcher.PreStepDoWhatYouWant( sess, epoch, network, cb_info, train_op )
+    #train_ops = batcher.AddOpsForTrainStep( train_op, sess, epoch, network, cb_info )
+    #train_op_eval = sess.run( train_op, feed_dict = batch_feed_dict )
+    train_ops_eval = sess.run( train_ops, feed_dict = batch_feed_dict )
+    batcher.PostStepDoWhatYouWant( sess, epoch, network, cb_info, train_ops_eval )
+    
     # -------------------------------------------------- #
     # CALLBACKS                                          #
     # -------------------------------------------------- #
