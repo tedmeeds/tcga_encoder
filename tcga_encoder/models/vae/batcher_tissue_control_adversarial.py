@@ -5,6 +5,7 @@ from tcga_encoder.models.vae.batcher_tissue_control import *
 class TCGABatcherAdversarial( TCGABatcher ):
   def MakeVizFilenames(self):
     self.fill_z_input = True
+    self.aucs_save = os.path.join( self.savedir, "dna_aucs.csv" )
     self.viz_filename_survival      =  os.path.join( self.savedir, "survival" )
     self.viz_filename_survival_lda  =  os.path.join( self.savedir, "survival__lda" )
     self.viz_filename_z_to_dna      =  os.path.join( self.savedir, "lda_dna" )
@@ -593,6 +594,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     f.savefig( self.viz_filename_dna_aucs, dpi=300,  )
     #pdb.set_trace()
     pp.close('all')
+    self.dna_aucs.T.to_csv(self.aucs_save,sep=",")
     self.fill_store.close()
     
   def PlotTissuePrediction(self,sess, info_dict):
