@@ -572,6 +572,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     val_auc = roc_auc_score( val_targets.values.flatten(), val_predictions.values.flatten() )
     train_auc = roc_auc_score( train_targets.values.flatten(), train_predictions.values.flatten() )
     
+    
     self.dna_aucs["ALL"] = pd.Series( [train_auc,val_auc], index = ["Train","Val"])  
     print self.dna_aucs.T
     #pdb.set_trace()
@@ -579,9 +580,13 @@ class TCGABatcherAdversarial( TCGABatcher ):
     f=pp.figure()
     ax=f.add_subplot(111)
     ax.plot( [0.0,1.0], [0,1], 'k--')
+    self.dna_aucs_all.append( [train_auc,val_auc]  )
+    X = np.array( self.dna_aucs_all)
+    ax.plot( X[:,0], X[:,1], 'ro-', alpha=0.5  )
     self.dna_aucs[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Blue', s=50, alpha=0.75, edgecolors='k')
     self.dna_aucs[groups0].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="s", color='Green',s=50, alpha=0.75, edgecolors='k')
     self.dna_aucs[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=100, alpha=0.75, edgecolors='k')
+    
     
     if self.data_dict.has_key("highlight_genes"):
       highlight_genes = self.data_dict[ "highlight_genes"]
@@ -1215,6 +1220,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
 
   def InitializeAnythingYouWant(self, sess, network ):
     print "Running : InitializeAnythingYouWant"
+    self.dna_aucs_all = []
     self.fill_z_input = True
     
     input_sources = ["METH","RNA","miRNA"] 
