@@ -560,12 +560,18 @@ class TCGABatcherAdversarial( TCGABatcher ):
     aucs = []
     groups1 = []
     groups0 = []
+    val_weighted_auc = 0.0
+    val_weights = 0.0
+    train_weighted_auc = 0.0
+    train_weights = 0.0
     for dna_gene in self.dna_genes:
       val_auc = 1.0
       val_cnt = np.sum(val_targets[dna_gene].values)
       if val_cnt>0:
         val_auc = roc_auc_score( val_targets[dna_gene].values, val_predictions[dna_gene].values )
         val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets[dna_gene].values, val_predictions[dna_gene].values )
+        val_weighted_auc += val_cnt*val_auc
+        val_weights += val_cnt
         if val_cnt>5:
           ax.plot( val_auc_fpr, val_auc_tpr, "k-", lw=0.25, alpha=0.5, label = "Val %s"%(dna_gene) )
         groups1.append(dna_gene)
@@ -574,6 +580,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
       train_cnt = np.sum(train_targets[dna_gene].values)
       if train_cnt>0:
         train_auc = roc_auc_score( train_targets[dna_gene].values, train_predictions[dna_gene].values )
+        train_weighted_auc += train_cnt*train_auc
+        train_weights += train_cnt
       aucs.append([train_auc,val_auc, 1+1000*float(train_cnt)/n_train,1+1000*float(val_cnt)/n_val])
     aucs = np.array(aucs)
     
@@ -582,8 +590,14 @@ class TCGABatcherAdversarial( TCGABatcher ):
     val_auc = roc_auc_score( val_targets.values.flatten(), val_predictions.values.flatten() )
     train_auc = roc_auc_score( train_targets.values.flatten(), train_predictions.values.flatten() )
     
+    val_weighted_auc /= val_weights
+    train_weighted_auc /= train_weights
+    
     val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets.values.flatten(), val_predictions.values.flatten() )
     tr_auc_fpr, tr_auc_tpr, thresholds = roc_curve( train_targets.values.flatten(), train_predictions.values.flatten() )
+    
+    I_val   = np.argsort( -val_predictions.values.flatten() )
+    I_train = np.argsort( -train_predictions.values.flatten() )
     
     self.dna_aucs["ALL"] = pd.Series( [train_auc,val_auc, 1000.0,1000.0], index = ["Train","Val","Frequency","Frequency2"])  
     print self.dna_aucs.T
@@ -591,15 +605,11 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     mean_aucs = self.dna_aucs[self.dna_genes].mean(1)
     #pdb.set_trace()
-    self.dna_aucs_all.append( [train_auc,val_auc, mean_aucs.loc["Train"], mean_aucs.loc["Val"]]  )
-    X = np.array( self.dna_aucs_all)
-    ax.plot( X[:,0], X[:,1], 'r.-', alpha=0.5  )
-    ax.plot( X[:,2], X[:,3], 'g.-', alpha=0.5  )
+    self.dna_aucs_all.append( [train_auc,val_auc, mean_aucs.loc["Train"], mean_aucs.loc["Val"], train_weighted_auc, val_weighted_auc]  )
     #pdb.set_trace()
-    self.dna_aucs[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Blue', s=self.dna_aucs[groups1].T["Frequency2"].values, alpha=0.75, edgecolors='k')
+    self.dna_aucs[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='White', s=self.dna_aucs[groups1].T["Frequency2"].values, alpha=0.75, edgecolors='k')
     self.dna_aucs[groups0].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="s", color='Green',s=self.dna_aucs[groups0].T["Frequency2"].values, alpha=0.75, edgecolors='k')
-    self.dna_aucs[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=self.dna_aucs[["ALL"]].T["Frequency2"].values, alpha=0.25, edgecolors='k')
-    ax.plot( X[-1,2], X[-1,3],  'go', ms=50,alpha=0.25)
+    
     ax.plot( val_auc_fpr, val_auc_tpr, "r-", label = "Val ROC" )
     ax.plot( tr_auc_fpr, tr_auc_tpr, "b-", label = "Train ROC" )
     
@@ -611,11 +621,26 @@ class TCGABatcherAdversarial( TCGABatcher ):
         ax.text( x,y,dna_gene, fontsize=8 )
         val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets[dna_gene].values, val_predictions[dna_gene].values )
         ax.plot( val_auc_fpr, val_auc_tpr, "y-", lw=2, alpha=0.95, label = "Val %s"%(dna_gene) )
+    
+    X = np.array( self.dna_aucs_all)
+    ax.plot( X[:,0], X[:,1], 'r.-', alpha=0.75  )
+    ax.plot( X[:,2], X[:,3], 'g.-', alpha=0.75  )
+    ax.plot( X[:,4], X[:,5], 'm.-', alpha=0.75  )
+    self.dna_aucs[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=self.dna_aucs[["ALL"]].T["Frequency2"].values, alpha=0.25, edgecolors='k')
+    ax.plot( X[-1,2], X[-1,3],  'go', ms=30,alpha=0.25,mec='k')
+    ax.plot( X[-1,4], X[-1,5],  'mo', ms=30,alpha=0.25,mec='k')
     #pp.plot( [self.dna_aucs["ALL"].values[0]], [self.dna_aucs["ALL"].values[1]], 'ro' )
     pp.xlim(0.0,1)
     pp.ylim(0.0,1)
     f.savefig( self.viz_filename_dna_aucs, dpi=300,  )
     #pdb.set_trace()
+    f2 = pp.figure()
+    ax2 = f2.add_subplot(111)
+    ax2.plot( np.linspace(0,1,len(I_val)), val_predictions.values.flatten()[I_val], 'r', alpha=0.5 )
+    ax2.plot( np.linspace(0,1,len(I_val)), 0.025+val_targets.values.flatten()[I_val], color='r', marker="+", alpha=0.5 )
+    ax2.plot( np.linspace(0,1,len(I_train)), train_predictions.values.flatten()[I_train], 'b', alpha=0.5 )
+    ax2.plot( np.linspace(0,1,len(I_train)), train_targets.values.flatten()[I_train], color='b', marker="+", alpha=0.5 )
+    f2.savefig( self.viz_filename_dna_aucs+"_2.png", dpi=300,  )
     pp.close('all')
     self.dna_aucs.T.to_csv(self.aucs_save,sep=",")
     self.fill_store.close()
