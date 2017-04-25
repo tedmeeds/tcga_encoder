@@ -552,6 +552,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     val_targets   = self.dna_store.loc[dna_observed_val_barcodes]
     train_targets = self.dna_store.loc[dna_observed_train_barcodes]
     #pdb.set_trace()
+    n_train = len(train_targets)
     aucs = []
     groups1 = []
     groups0 = []
@@ -562,18 +563,19 @@ class TCGABatcherAdversarial( TCGABatcher ):
         groups1.append(dna_gene)
       else:
         groups0.append(dna_gene)
-      if np.sum(train_targets[dna_gene].values)>0:
+      train_cnt = np.sum(train_targets[dna_gene].values)
+      if train_cnt>0:
         train_auc = roc_auc_score( train_targets[dna_gene].values, train_predictions[dna_gene].values )
-      aucs.append([train_auc,val_auc])
+      aucs.append([train_auc,val_auc, 1+1000*float(train_cnt)/n_train])
     aucs = np.array(aucs)
     
-    self.dna_aucs = pd.DataFrame( aucs.T, index = ["Train","Val"], columns = self.dna_genes )
+    self.dna_aucs = pd.DataFrame( aucs.T, index = ["Train","Val","Frequency"], columns = self.dna_genes )
     
     val_auc = roc_auc_score( val_targets.values.flatten(), val_predictions.values.flatten() )
     train_auc = roc_auc_score( train_targets.values.flatten(), train_predictions.values.flatten() )
     
     
-    self.dna_aucs["ALL"] = pd.Series( [train_auc,val_auc], index = ["Train","Val"])  
+    self.dna_aucs["ALL"] = pd.Series( [train_auc,val_auc, 1000.0], index = ["Train","Val","Frequency"])  
     print self.dna_aucs.T
     #pdb.set_trace()
     
@@ -582,16 +584,17 @@ class TCGABatcherAdversarial( TCGABatcher ):
     ax.plot( [0.0,1.0], [0,1], 'k--')
     self.dna_aucs_all.append( [train_auc,val_auc]  )
     X = np.array( self.dna_aucs_all)
-    ax.plot( X[:,0], X[:,1], 'ro-', alpha=0.5  )
-    self.dna_aucs[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Blue', s=50, alpha=0.75, edgecolors='k')
-    self.dna_aucs[groups0].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="s", color='Green',s=50, alpha=0.75, edgecolors='k')
-    self.dna_aucs[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=100, alpha=0.75, edgecolors='k')
+    ax.plot( X[:,0], X[:,1], 'r.-', alpha=0.5  )
+    #pdb.set_trace()
+    self.dna_aucs[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Blue', s=self.dna_aucs[groups1].T["Frequency"].values, alpha=0.75, edgecolors='k')
+    self.dna_aucs[groups0].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="s", color='Green',s=self.dna_aucs[groups0].T["Frequency"].values, alpha=0.75, edgecolors='k')
+    self.dna_aucs[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=self.dna_aucs[["ALL"]].T["Frequency"].values, alpha=0.25, edgecolors='k')
     
     
     if self.data_dict.has_key("highlight_genes"):
       highlight_genes = self.data_dict[ "highlight_genes"]
       X = self.dna_aucs[highlight_genes]
-      X.T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='White', s=50, alpha=0.75, edgecolors='k', linewidths=2)
+      X.T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Yellow', s=self.dna_aucs[highlight_genes].T["Frequency"].values, alpha=0.75, edgecolors='k', linewidths=1)
       for x,y,t in zip( X.T.values[:,0], X.T.values[:,1], highlight_genes ):
         ax.text( x,y,t, fontsize=8 )
     #pp.plot( [self.dna_aucs["ALL"].values[0]], [self.dna_aucs["ALL"].values[1]], 'ro' )
