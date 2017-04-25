@@ -477,13 +477,14 @@ class TCGABatcherAdversarial( TCGABatcher ):
                  ms = 8, \
                  label="Val (%0.6f)"%(loglik[-1]) )
                  
-        query = query2#&query2
-        df = self.epoch_store[VAL_FILL_ERROR][query]
-        epochs = df["Epoch"].values
-        loglik = df["Error"].values
-        if len(loglik) == 0:
-          continue
         if prior_source is not None:
+          query = query2#&query2
+          df = self.epoch_store[VAL_FILL_ERROR][query]
+          epochs = df["Epoch"].values
+          loglik = df["Error"].values
+          
+          if len(loglik) == 0:
+            continue
           pp.plot( epochs, loglik, 'v-', \
                  color=self.source2mediumcolor[prior_source],\
                  mec=self.source2darkcolor[prior_source], mew=1, \
