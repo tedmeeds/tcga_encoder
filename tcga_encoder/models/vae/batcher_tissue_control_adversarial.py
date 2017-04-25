@@ -573,7 +573,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
         val_weighted_auc += val_cnt*val_auc
         val_weights += val_cnt
         if val_cnt>20:
-          ax.plot( val_auc_fpr, val_auc_tpr, "k-", lw=0.25, alpha=0.5, label = "Val %s"%(dna_gene) )
+          ax.plot( val_auc_fpr, val_auc_tpr, "k-", lw=1, alpha=0.5, label = "Val %s"%(dna_gene) )
         groups1.append(dna_gene)
       else:
         groups0.append(dna_gene)
@@ -636,13 +636,13 @@ class TCGABatcherAdversarial( TCGABatcher ):
     #pdb.set_trace()
     f2 = pp.figure()
     ax2 = f2.add_subplot(111)
-    ax2.plot( np.linspace(0,1,len(I_val)), val_predictions.values.flatten()[I_val], 'r', alpha=0.5 )
+    ax2.semilogy( np.linspace(0,1,len(I_val)), val_predictions.values.flatten()[I_val], 'r', alpha=0.5 )
     #ax2.hist(val_targets.values.flatten()[I_val],100,cumulative=False, normed=True, histtype="step",color='r',lw=2)
-    ax2.plot( np.linspace(0,1,len(I_val)), val_targets.values.flatten()[I_val][: : -1].cumsum()[: : -1]/val_weights, 'r--' )
+    ax2.semilogy( np.linspace(0,1,len(I_val)), val_targets.values.flatten()[I_val][: : -1].cumsum()[: : -1]/val_weights, 'r--' )
     #ax2.scatter( np.linspace(0,1,len(I_val)), 0.025+val_targets.values.flatten()[I_val], color='r', marker="+", alpha=0.5 )
-    ax2.plot( np.linspace(0,1,len(I_train)), train_predictions.values.flatten()[I_train], 'b', alpha=0.5 )
+    ax2.semilogy( np.linspace(0,1,len(I_train)), train_predictions.values.flatten()[I_train], 'b', alpha=0.5 )
     #ax2.scatter( np.linspace(0,1,len(I_train)), train_targets.values.flatten()[I_train], color='b', marker="+", alpha=0.5 )
-    ax2.plot( np.linspace(0,1,len(I_train)), train_targets.values.flatten()[I_train][: : -1].cumsum()[: : -1]/train_weights, 'b--' )
+    ax2.semilogy( np.linspace(0,1,len(I_train)), train_targets.values.flatten()[I_train][: : -1].cumsum()[: : -1]/train_weights, 'b--' )
     f2.savefig( self.viz_filename_dna_aucs+"_2.png", dpi=300,  )
     pp.close('all')
     self.dna_aucs.T.to_csv(self.aucs_save,sep=",")
