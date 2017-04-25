@@ -574,6 +574,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
     val_auc = roc_auc_score( val_targets.values.flatten(), val_predictions.values.flatten() )
     train_auc = roc_auc_score( train_targets.values.flatten(), train_predictions.values.flatten() )
     
+    val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets.values.flatten(), val_predictions.values.flatten() )
+    tr_auc_fpr, tr_auc_tpr, thresholds = roc_curve( train_targets.values.flatten(), train_predictions.values.flatten() )
     
     self.dna_aucs["ALL"] = pd.Series( [train_auc,val_auc, 1000.0], index = ["Train","Val","Frequency"])  
     print self.dna_aucs.T
@@ -589,7 +591,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.dna_aucs[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Blue', s=self.dna_aucs[groups1].T["Frequency"].values, alpha=0.75, edgecolors='k')
     self.dna_aucs[groups0].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="s", color='Green',s=self.dna_aucs[groups0].T["Frequency"].values, alpha=0.75, edgecolors='k')
     self.dna_aucs[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=self.dna_aucs[["ALL"]].T["Frequency"].values, alpha=0.25, edgecolors='k')
-    
+    ax.plot( val_auc_fpr, val_auc_tpr, "r-", label = "Val ROC" )
+    ax.plot( tr_auc_fpr, tr_auc_tpr, "b-", label = "Train ROC" )
     
     if self.data_dict.has_key("highlight_genes"):
       highlight_genes = self.data_dict[ "highlight_genes"]
