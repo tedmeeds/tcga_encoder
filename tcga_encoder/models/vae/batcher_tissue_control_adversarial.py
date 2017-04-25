@@ -572,7 +572,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
         val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets[dna_gene].values, val_predictions[dna_gene].values )
         val_weighted_auc += val_cnt*val_auc
         val_weights += val_cnt
-        if val_cnt>5:
+        if val_cnt>20:
           ax.plot( val_auc_fpr, val_auc_tpr, "k-", lw=0.25, alpha=0.5, label = "Val %s"%(dna_gene) )
         groups1.append(dna_gene)
       else:
