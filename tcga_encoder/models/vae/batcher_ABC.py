@@ -1669,7 +1669,7 @@ class TCGABatcherABC( object ):
         dna_data = self.dna_store.loc[ batch_barcodes ].fillna( 0 ).values
         
         if mode == "BATCH":
-          dna_data = AddDnaNoise( dna_data, rate = 0.1 )
+          dna_data = self.AddDnaNoise( dna_data, rate = 0.1 )
         
         batch[ layer_name ] = np.minimum(1.0,dna_data)
         
