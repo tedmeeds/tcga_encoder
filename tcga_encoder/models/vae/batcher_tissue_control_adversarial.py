@@ -1325,25 +1325,64 @@ class TCGABatcherAdversarial( TCGABatcher ):
   def AddDnaNoise( self, X, rate=0.5 ):
     #return X
     
-    a,b = X.shape
-
-    x = X.flatten()
-
-    #I = 
-    I=pp.find(x>0)
-    J=pp.find(x==0)
-
-    #true_freq = float(len(I))/float(len(J))
+    sums = X.sum(0)
+    n,d = X.shape
+    I1 = X==1
+    I0 = X==0
+    for j in xrange(d):
+      x = X[:,j]
+      
+      
+      i1 = I1[:,j]
+      i0 = I0[:,j]
+      
+      n1 = int(x.sum())
+      
+      if n1 <=1:
+        continue
+      
+      n0 = n-n1
+      
+      #print n1, max(1,int(rate*n1)), rate*n1
+      I = np.random.permutation( n1 )[:max(1,int(rate*n1))]
+      n1a = len(I)
+      x[i1][I] = 0
+      
+      i0 = x==0
+      n01 = i0.sum()
+      
+      I = np.random.permutation( n01 )[:n1a]
+      
+      x[i0][I]=1
+      
+      X[:,j] = x
     
-    r1 = np.random.rand(len(I)) < rate
-    n0 = np.sum(r1)
-    r2 = np.random.permutation(J)[:n0]
-    # move n0 to J
+    sums2 = X.sum(0)
     
-    #r2 = np.random.rand(len(J)) < rate2
-    #pdb.set_trace()
-    x[I[r1]]=0
-    x[r2]=1
-
-    return x.reshape((a,b))
+    assert np.sum( sums==sums2)==d, "should be equal"
+    return X
+      
+      
+      
+    # a,b = X.shape
+    #
+    # x = X.flatten()
+    #
+    # #I =
+    # I=pp.find(x>0)
+    # J=pp.find(x==0)
+    #
+    # #true_freq = float(len(I))/float(len(J))
+    #
+    # r1 = np.random.rand(len(I)) < rate
+    # n0 = np.sum(r1)
+    # r2 = np.random.permutation(J)[:n0]
+    # # move n0 to J
+    #
+    # #r2 = np.random.rand(len(J)) < rate2
+    # #pdb.set_trace()
+    # x[I[r1]]=0
+    # x[r2]=1
+    #
+    # return x.reshape((a,b))
     

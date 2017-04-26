@@ -95,7 +95,24 @@ class TCGABatcherABC( object ):
     self.data_store     = self.data_dict[DATASET].store
     self.batch_size     = self.algo_dict[BATCH_SIZE]
     
+    self.mirna_noise_rate = 0.0
+    self.rna_noise_rate = 0.0
+    self.meth_noise_rate = 0.0
+    self.dna_noise_rate = 0.0
     
+    if self.var_dict.has_key("dna_noise"):
+      self.dna_noise_rate = self.var_dict["dna_noise"]
+    if self.var_dict.has_key("rna_noise"):
+      self.rna_noise_rate = self.var_dict["rna_noise"]
+    if self.var_dict.has_key("mirna_noise"):
+      self.mirna_noise_rate = self.var_dict["mirna_noise"]
+    if self.var_dict.has_key("meth_noise"):
+      self.meth_noise_rate = self.var_dict["meth_noise"]
+    
+    print "DNA noise rate ",self.dna_noise_rate
+    print "RNA noise rate ",self.rna_noise_rate
+    print "miRNA noise rate ",self.mirna_noise_rate
+    print "METH noise rate ",self.meth_noise_rate
     
     self.batch_imputation_dict = {}
     self.batch_feed_dict       = {}
@@ -1607,7 +1624,7 @@ class TCGABatcherABC( object ):
         nans = np.isnan( batch_data.values )
         batch_data_values = batch_data.values
         if mode == "BATCH":
-         batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.1 )
+         batch_data_values = self.AddRnaNoise( batch_data.values, rate = self.rna_noise_rate )
           
         batch[ layer_name ] = self.NormalizeRnaInput( batch_data_values )
         batch[ layer_name ][nans] = 0
@@ -1635,7 +1652,7 @@ class TCGABatcherABC( object ):
         nans = np.isnan( batch_data.values )
         batch_data_values = batch_data.values
         if mode == "BATCH":
-         batch_data_values = self.AddmiRnaNoise( batch_data.values, rate = 0.1 )
+         batch_data_values = self.AddmiRnaNoise( batch_data.values, rate = self.mirna_noise_rate )
           
         batch[ layer_name ] = self.NormalizemiRnaInput( batch_data_values )
         batch[ layer_name ][nans] = 0
@@ -1669,7 +1686,7 @@ class TCGABatcherABC( object ):
         dna_data = self.dna_store.loc[ batch_barcodes ].fillna( 0 ).values
         
         if mode == "BATCH":
-          dna_data = self.AddDnaNoise( dna_data, rate = 0.1 )
+          dna_data = self.AddDnaNoise( dna_data, rate = self.dna_noise_rate )
         
         batch[ layer_name ] = np.minimum(1.0,dna_data)
         
@@ -1679,7 +1696,7 @@ class TCGABatcherABC( object ):
 
         batch_data_values = batch_data.values
         if mode == "BATCH":
-         batch_data_values = self.AddMethNoise( batch_data.values, rate = 0.1 )
+         batch_data_values = self.AddMethNoise( batch_data.values, rate = self.meth_noise_rate )
           
         batch[ layer_name ] = self.NormalizeMethInput( batch_data_values )
         batch[ layer_name ][nans] = 0
@@ -1881,6 +1898,8 @@ class TCGABatcherABC( object ):
 
 
   def AddMethNoise( self, X, rate=0.5 ):
+    if rate == 0:
+      return X
     #return X
     
     a,b = X.shape
@@ -1900,6 +1919,8 @@ class TCGABatcherABC( object ):
     return x.reshape((a,b))
 
   def AddmiRnaNoise( self, X, rate=0.5 ):
+    if rate == 0:
+      return X
     #return X
     
     a,b = X.shape
@@ -1919,6 +1940,9 @@ class TCGABatcherABC( object ):
     return x.reshape((a,b))
 
   def AddRnaNoise( self, X, rate=0.5 ):
+    if rate == 0:
+      return X
+      
     #return X
     
     a,b = X.shape
@@ -1938,6 +1962,8 @@ class TCGABatcherABC( object ):
     return x.reshape((a,b))
     
   def AddDnaNoise( self, X, rate=0.5 ):
+    if rate == 0:
+      return X
     #return X
     
     a,b = X.shape
