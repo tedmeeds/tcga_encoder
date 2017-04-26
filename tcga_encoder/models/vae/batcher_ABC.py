@@ -1667,6 +1667,10 @@ class TCGABatcherABC( object ):
       elif layer_name == DNA_INPUT or layer_name == DNA_TARGET:
         #dna_data = np.zeros( (len(batch_barcodes), self.dna_dim) )
         dna_data = self.dna_store.loc[ batch_barcodes ].fillna( 0 ).values
+        
+        if mode == "BATCH":
+          dna_data = AddDnaNoise( dna_data, rate = 0.1 )
+        
         batch[ layer_name ] = np.minimum(1.0,dna_data)
         
       elif layer_name == METH_INPUT :

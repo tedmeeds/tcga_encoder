@@ -1,6 +1,6 @@
 #from tcga_encoder.models.vae.batcher_ABC import *
 from tcga_encoder.models.vae.batcher_tissue_control import *
-
+from sklearn.ensemble import RandomForestClassifier as rfc
   
 class TCGABatcherAdversarial( TCGABatcher ):
   def MakeVizFilenames(self):
@@ -552,6 +552,9 @@ class TCGABatcherAdversarial( TCGABatcher ):
     val_predictions   = self.fill_store["/Fill/VAL/DNA"].loc[dna_observed_val_barcodes]
     train_predictions = self.fill_store["/Fill/TRAIN/DNA"].loc[dna_observed_train_barcodes]
     
+    train_z = self.fill_store["/Z/TRAIN/Z/mu"].loc[dna_observed_train_barcodes]
+    val_z   = self.fill_store["/Z/VAL/Z/mu"].loc[dna_observed_val_barcodes]
+    
     val_targets   = self.dna_store.loc[dna_observed_val_barcodes]
     train_targets = self.dna_store.loc[dna_observed_train_barcodes]
     #pdb.set_trace()
@@ -565,27 +568,38 @@ class TCGABatcherAdversarial( TCGABatcher ):
     train_weighted_auc = 0.0
     train_weights = 0.0
     for dna_gene in self.dna_genes:
+      train_auc_rfc = 1.0
+      train_cnt = np.sum(train_targets[dna_gene].values)
+      if train_cnt>0:
+        train_auc = roc_auc_score( train_targets[dna_gene].values, train_predictions[dna_gene].values )
+        train_weighted_auc += train_cnt*train_auc
+        train_weights += train_cnt
+        M = rfc(n_estimators=100, max_depth=2, class_weight="balanced", bootstrap=True)
+        print "training %s"%(dna_gene)
+        M.fit( train_z,  train_targets[dna_gene].values )
+        train_rfc = M.predict_proba(train_z)[:,1]
+        val_rfc = M.predict_proba(val_z)[:,1]
+        train_auc_rfc = roc_auc_score( train_targets[dna_gene].values, train_rfc )
+        #pdb.set_trace()
+      
       val_auc = 1.0
+      val_auc_rfc = 1.0
       val_cnt = np.sum(val_targets[dna_gene].values)
       if val_cnt>0:
         val_auc = roc_auc_score( val_targets[dna_gene].values, val_predictions[dna_gene].values )
         val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets[dna_gene].values, val_predictions[dna_gene].values )
         val_weighted_auc += val_cnt*val_auc
         val_weights += val_cnt
+        val_auc_rfc = roc_auc_score( val_targets[dna_gene].values, val_rfc )
         if val_cnt>20:
           ax.plot( val_auc_fpr, val_auc_tpr, "k-", lw=1, alpha=0.5, label = "Val %s"%(dna_gene) )
         groups1.append(dna_gene)
       else:
         groups0.append(dna_gene)
-      train_cnt = np.sum(train_targets[dna_gene].values)
-      if train_cnt>0:
-        train_auc = roc_auc_score( train_targets[dna_gene].values, train_predictions[dna_gene].values )
-        train_weighted_auc += train_cnt*train_auc
-        train_weights += train_cnt
-      aucs.append([train_auc,val_auc, 1+1000*float(train_cnt)/n_train,1+1000*float(val_cnt)/n_val])
+      aucs.append([train_auc,val_auc, 1+1000*float(train_cnt)/n_train,1+1000*float(val_cnt)/n_val, train_auc_rfc, val_auc_rfc])
     aucs = np.array(aucs)
     
-    self.dna_aucs = pd.DataFrame( aucs.T, index = ["Train","Val","Frequency","Frequency2"], columns = self.dna_genes )
+    self.dna_aucs = pd.DataFrame( aucs.T, index = ["Train","Val","Frequency","Frequency2","Train-rfc","Val-rfc"], columns = self.dna_genes )
     
     val_auc = roc_auc_score( val_targets.values.flatten(), val_predictions.values.flatten() )
     train_auc = roc_auc_score( train_targets.values.flatten(), train_predictions.values.flatten() )
@@ -599,13 +613,13 @@ class TCGABatcherAdversarial( TCGABatcher ):
     I_val   = np.argsort( -val_predictions.values.flatten() )
     I_train = np.argsort( -train_predictions.values.flatten() )
     
-    self.dna_aucs["ALL"] = pd.Series( [train_auc,val_auc, 1000.0,1000.0], index = ["Train","Val","Frequency","Frequency2"])  
+    self.dna_aucs["ALL"] = pd.Series( [train_auc,val_auc, 1000.0,1000.0,0,0], index = ["Train","Val","Frequency","Frequency2","Train-rfc","Val-rfc"])  
     print self.dna_aucs.T
     #pdb.set_trace()
     
     mean_aucs = self.dna_aucs[self.dna_genes].mean(1)
     #pdb.set_trace()
-    self.dna_aucs_all.append( [train_auc,val_auc, mean_aucs.loc["Train"], mean_aucs.loc["Val"], train_weighted_auc, val_weighted_auc]  )
+    self.dna_aucs_all.append( [train_auc,val_auc, mean_aucs.loc["Train"], mean_aucs.loc["Val"], train_weighted_auc, val_weighted_auc, mean_aucs.loc["Train-rfc"], mean_aucs.loc["Val-rfc"]]  )
     #pdb.set_trace()
     self.dna_aucs[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='White', s=self.dna_aucs[groups1].T["Frequency2"].values, alpha=0.75, edgecolors='k')
     self.dna_aucs[groups0].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="s", color='Green',s=self.dna_aucs[groups0].T["Frequency2"].values, alpha=0.75, edgecolors='k')
@@ -626,9 +640,11 @@ class TCGABatcherAdversarial( TCGABatcher ):
     ax.plot( X[:,0], X[:,1], 'r.-', alpha=0.75  )
     ax.plot( X[:,2], X[:,3], 'g.-', alpha=0.75  )
     ax.plot( X[:,4], X[:,5], 'm.-', alpha=0.75  )
+    ax.plot( X[:,6], X[:,7], 'c.-', alpha=0.75  )
     self.dna_aucs[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=self.dna_aucs[["ALL"]].T["Frequency2"].values, alpha=0.25, edgecolors='k')
     ax.plot( X[-1,2], X[-1,3],  'go', ms=30,alpha=0.25,mec='k')
     ax.plot( X[-1,4], X[-1,5],  'mo', ms=30,alpha=0.25,mec='k')
+    ax.plot( X[-1,6], X[-1,7],  'co', ms=30,alpha=0.25,mec='k')
     #pp.plot( [self.dna_aucs["ALL"].values[0]], [self.dna_aucs["ALL"].values[1]], 'ro' )
     pp.xlim(0.0,1)
     pp.ylim(0.0,1)
