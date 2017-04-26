@@ -567,6 +567,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     val_weights = 0.0
     train_weighted_auc = 0.0
     train_weights = 0.0
+    print "training random forests"
     for dna_gene in self.dna_genes:
       train_auc_rfc = 1.0
       train_cnt = np.sum(train_targets[dna_gene].values)
@@ -574,8 +575,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
         train_auc = roc_auc_score( train_targets[dna_gene].values, train_predictions[dna_gene].values )
         train_weighted_auc += train_cnt*train_auc
         train_weights += train_cnt
-        M = rfc(n_estimators=100, max_depth=2, class_weight="balanced", bootstrap=True)
-        print "training %s"%(dna_gene)
+        M = rfc(n_estimators=10, max_depth=3, class_weight="balanced", bootstrap=True)
+        
         M.fit( train_z,  train_targets[dna_gene].values )
         train_rfc = M.predict_proba(train_z)[:,1]
         val_rfc = M.predict_proba(val_z)[:,1]
