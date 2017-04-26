@@ -630,7 +630,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.dna_aucs_all.append( [train_auc,val_auc, mean_aucs.loc["Train"], mean_aucs.loc["Val"], train_weighted_auc, val_weighted_auc, mean_aucs.loc["Train-rfc"], mean_aucs.loc["Val-rfc"]]  )
     #pdb.set_trace()
     self.dna_aucs[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='White', s=self.dna_aucs[groups1].T["Frequency2"].values, alpha=0.75, edgecolors='k')
-    self.dna_aucs[groups0].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="s", color='Green',s=self.dna_aucs[groups0].T["Frequency2"].values, alpha=0.75, edgecolors='k')
+    #self.dna_aucs[groups0].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="s", color='Green',s=self.dna_aucs[groups0].T["Frequency2"].values, alpha=0.75, edgecolors='k')
     
     ax.plot( val_auc_fpr, val_auc_tpr, "r-", label = "Val ROC" )
     ax.plot( tr_auc_fpr, tr_auc_tpr, "b-", label = "Train ROC" )
