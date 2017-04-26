@@ -568,6 +568,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     train_weighted_auc = 0.0
     train_weights = 0.0
     print "training random forests"
+    ok_val = []
     for dna_gene in self.dna_genes:
       train_auc_rfc = 1.0
       train_cnt = np.sum(train_targets[dna_gene].values)
@@ -575,31 +576,37 @@ class TCGABatcherAdversarial( TCGABatcher ):
         train_auc = roc_auc_score( train_targets[dna_gene].values, train_predictions[dna_gene].values )
         train_weighted_auc += train_cnt*train_auc
         train_weights += train_cnt
-        M = rfc(n_estimators=10, max_depth=3, class_weight="balanced", bootstrap=True)
         
-        M.fit( train_z,  train_targets[dna_gene].values )
-        train_rfc = M.predict_proba(train_z)[:,1]
-        val_rfc = M.predict_proba(val_z)[:,1]
-        train_auc_rfc = roc_auc_score( train_targets[dna_gene].values, train_rfc )
+        #M = rfc(n_estimators=1, max_depth=3, class_weight="balanced", bootstrap=True)
+        
+        #M.fit( train_z,  train_targets[dna_gene].values )
+        train_rfc = 0#M.predict_proba(train_z)[:,1]
+        val_rfc = 0#M.predict_proba(val_z)[:,1]
+        train_auc_rfc = 0#roc_auc_score( train_targets[dna_gene].values, train_rfc )
         #pdb.set_trace()
       
       val_auc = 1.0
       val_auc_rfc = 1.0
       val_cnt = np.sum(val_targets[dna_gene].values)
       if val_cnt>0:
+        ok_val.append(True)
+        
         val_auc = roc_auc_score( val_targets[dna_gene].values, val_predictions[dna_gene].values )
         val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets[dna_gene].values, val_predictions[dna_gene].values )
         val_weighted_auc += val_cnt*val_auc
         val_weights += val_cnt
-        val_auc_rfc = roc_auc_score( val_targets[dna_gene].values, val_rfc )
+        val_auc_rfc = 0#roc_auc_score( val_targets[dna_gene].values, val_rfc )
         if val_cnt>20:
           ax.plot( val_auc_fpr, val_auc_tpr, "k-", lw=1, alpha=0.5, label = "Val %s"%(dna_gene) )
         groups1.append(dna_gene)
       else:
         groups0.append(dna_gene)
+        ok_val.append(False)
       aucs.append([train_auc,val_auc, 1+1000*float(train_cnt)/n_train,1+1000*float(val_cnt)/n_val, train_auc_rfc, val_auc_rfc])
     aucs = np.array(aucs)
     
+    ok_val.append(False)
+    ok_val = np.array(ok_val)
     self.dna_aucs = pd.DataFrame( aucs.T, index = ["Train","Val","Frequency","Frequency2","Train-rfc","Val-rfc"], columns = self.dna_genes )
     
     val_auc = roc_auc_score( val_targets.values.flatten(), val_predictions.values.flatten() )
@@ -618,7 +625,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     print self.dna_aucs.T
     #pdb.set_trace()
     
-    mean_aucs = self.dna_aucs[self.dna_genes].mean(1)
+    mean_aucs = self.dna_aucs.T[ok_val].T.mean(1)
     #pdb.set_trace()
     self.dna_aucs_all.append( [train_auc,val_auc, mean_aucs.loc["Train"], mean_aucs.loc["Val"], train_weighted_auc, val_weighted_auc, mean_aucs.loc["Train-rfc"], mean_aucs.loc["Val-rfc"]]  )
     #pdb.set_trace()
@@ -641,11 +648,11 @@ class TCGABatcherAdversarial( TCGABatcher ):
     ax.plot( X[:,0], X[:,1], 'r.-', alpha=0.75  )
     ax.plot( X[:,2], X[:,3], 'g.-', alpha=0.75  )
     ax.plot( X[:,4], X[:,5], 'm.-', alpha=0.75  )
-    ax.plot( X[:,6], X[:,7], 'c.-', alpha=0.75  )
+    #ax.plot( X[:,6], X[:,7], 'c.-', alpha=0.75  )
     self.dna_aucs[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=self.dna_aucs[["ALL"]].T["Frequency2"].values, alpha=0.25, edgecolors='k')
     ax.plot( X[-1,2], X[-1,3],  'go', ms=30,alpha=0.25,mec='k')
     ax.plot( X[-1,4], X[-1,5],  'mo', ms=30,alpha=0.25,mec='k')
-    ax.plot( X[-1,6], X[-1,7],  'co', ms=30,alpha=0.25,mec='k')
+    #ax.plot( X[-1,6], X[-1,7],  'co', ms=30,alpha=0.25,mec='k')
     #pp.plot( [self.dna_aucs["ALL"].values[0]], [self.dna_aucs["ALL"].values[1]], 'ro' )
     pp.xlim(0.0,1)
     pp.ylim(0.0,1)
@@ -1314,4 +1321,29 @@ class TCGABatcherAdversarial( TCGABatcher ):
       if network.HasLayer(layer_name ):
         network.GetLayer( layer_name ).SetWeights( sess, [log_alpha, log_beta ])
       #pdb.set_trace()
+      
+  def AddDnaNoise( self, X, rate=0.5 ):
+    #return X
+    
+    a,b = X.shape
+
+    x = X.flatten()
+
+    #I = 
+    I=pp.find(x>0)
+    J=pp.find(x==0)
+
+    #true_freq = float(len(I))/float(len(J))
+    
+    r1 = np.random.rand(len(I)) < rate
+    n0 = np.sum(r1)
+    r2 = np.random.permutation(J)[:n0]
+    # move n0 to J
+    
+    #r2 = np.random.rand(len(J)) < rate2
+    #pdb.set_trace()
+    x[I[r1]]=0
+    x[r2]=1
+
+    return x.reshape((a,b))
     
