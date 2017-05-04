@@ -197,7 +197,7 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
     
   nD = np.minimum( D, max_nbr )
   
-  f1=pp.figure( figsize=(4,8))
+  f1=pp.figure( figsize=(4,12))
   ax11 = f1.add_subplot(111)
   
   if orientation == "vertical":
