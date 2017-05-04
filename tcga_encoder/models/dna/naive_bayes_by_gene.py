@@ -197,7 +197,7 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
     
   nD = np.minimum( D, max_nbr )
   
-  f1=pp.figure()
+  f1=pp.figure( figsize=(4,8))
   ax11 = f1.add_subplot(111)
   
   if orientation == "vertical":
@@ -231,15 +231,21 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
       ax11.set_xticklabels( ordered_source_genes[:nD], rotation='vertical', fontsize=8 )
   
   #
-  # for permutation_idx in range(n_permutations):
-  #   mean_auc_p = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method,permutation_idx+1)].mean()
-  #   var_auc_p  = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method, permutation_idx+1)].var()
-  #   std_auc_p  = np.sqrt( var_auc_p )
-  #   ax11.hlines( mean_auc_p, 0, D-1, color='r' )
-  #   mean_aucs = store["/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(gene,source, method,permutation_idx+1)].loc[ordered_source_genes].mean(1)
-  #   ax11.plot( np.arange(D), mean_aucs, 'o', color='orange', mec='k', alpha=0.5)
-  #
+  for permutation_idx in range(n_permutations):
+    mean_auc_p = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method,permutation_idx+1)].mean()
+    var_auc_p  = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method, permutation_idx+1)].var()
+    std_auc_p  = np.sqrt( var_auc_p )
     
+    mean_aucs = store["/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(gene,source, method,permutation_idx+1)].loc[ordered_source_genes].mean(1)
+    
+    if orientation == "vertical":
+      ax11.vlines( mean_auc_p, 0, nD-1, color='r' )
+      ax11.plot( mean_aucs[:nD], nD-1-np.arange(nD),  'o', color='orange', mec='k', alpha=0.5)
+    else:
+      ax11.hlines( mean_auc_p, 0, nD-1, color='r' )
+      ax11.plot( nD-1-np.arange(nD), mean_aucs[:nD], 'o', color='orange', mec='k', alpha=0.5)
+  #
+  pp.grid('on')
   pp.title( "%s %s %s mean AUC = %0.3f"%(gene,source, method, mean_auc))
   pp.subplots_adjust(bottom=0.2)
   figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/aucs_%s_%s_%s_%s.png"%(gene,source, method,title_str)
