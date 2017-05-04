@@ -7,8 +7,6 @@ def logistic_sigmoid( activations ):
   return 1.0 / (1.0 + np.exp(-activations) )
   
 class NaiveBayesClassifier(object):
-  # def z_from_x( self, X ):
-  #   raise NotImplementedError
   def fit( self, X, y ):
     raise NotImplementedError
   def predict( self, X ):
@@ -49,9 +47,6 @@ class BetaNaiveBayesModel( object ):
     self.common_b = np.log(self.pi_1) - np.log(self.pi_0)
     self.w = np.hstack( (self.w_alpha, self.w_beta )).T    
     self.b = np.sum( self.b_vec )
-     
-       
-    #pdb.set_trace()
     
   def predict( self, X, elementwise = False ):
     logX     = np.log( np.maximum( X, 1e-12 ) )
@@ -104,9 +99,7 @@ class PoissonNaiveBayesModel( object ):
 
     if elementwise is True:
       activations = X*self.w + self.b_vec + self.common_b
-      
     else:
-      #z = np.hstack( (Z_alpha,Z_beta) )
       activations = np.dot( X, self.w ) + self.b + self.common_b
       
     predictions = logistic_sigmoid( activations )
@@ -128,13 +121,6 @@ class GaussianNaiveBayesModel( object ):
     self.mu_0 = X[self.class_0,:].mean(0)
     self.var_1 = X[self.class_1,:].var(0)
     self.var_0 = X[self.class_0,:].var(0)
-    
-    #self.rate_1 = self.mu_1
-    #self.rate_0 = self.mu_0
-    #b = mu_0*mu_0/(2*var_0) - mu_1*mu_1/(2*var_1) + 0.5*np.log(var_0)- 0.5*np.log(var_1)
-    
-    #activations_train = z_train*w + b + z_train*z_train*( 1.0/(2*var_0) - 1.0/(2*var_1))
-    #activations_val   = z_val*w + b + z_val*z_val*( 1.0/(2*var_0) - 1.0/(2*var_1))
     
     self.w = self.mu_1/self.var_1 - self.mu_0/self.var_0
     self.b_vec = self.mu_0*self.mu_0/(2*self.var_0) - self.mu_1*self.mu_1/(2*self.var_1) + 0.5*np.log(self.var_0)- 0.5*np.log(self.var_1)          
@@ -175,21 +161,10 @@ class NegBinNaiveBayesModel( object ):
     self.var_1 = X[self.class_1,:].var(0)
     self.var_0 = X[self.class_0,:].var(0)
     
- 
-    #self.p_success_1 = self.mu_1/self.var_1
-    #self.p_success_0 = self.mu_0/self.var_0
-    
     self.alpha_1 = np.square(self.mu_1)/np.maximum(0.1,self.var_1 - self.mu_1)
     self.alpha_0 = np.square(self.mu_0)/np.maximum(0.1,self.var_0 - self.mu_0)
     self.beta_1 = self.mu_1/np.maximum(0.1,self.var_1 - self.mu_1)
     self.beta_0 = self.mu_0/np.maximum(0.1,self.var_0 - self.mu_0)
-    
-    
-    # self.alpha_1 = self.mu_1*( self.mu_1*(1.0-self.mu_1)/self.var_1 - 1.0 )
-    # self.alpha_0 = self.mu_0*( self.mu_0*(1.0-self.mu_0)/self.var_0 - 1.0 )
-    #
-    # self.beta_1 = (1.0-self.mu_1)*( self.mu_1*(1-self.mu_1)/self.var_1 - 1.0 )
-    # self.beta_0 = (1.0-self.mu_0)*( self.mu_0*(1-self.mu_0)/self.var_0 - 1.0 )
     
     self.w = np.log(self.beta_1) - np.log(self.beta_0)
                    
@@ -198,24 +173,17 @@ class NegBinNaiveBayesModel( object ):
                  + special.gammaln( self.alpha_0 ) \
                  - self.alpha_0*np.log(1.0+self.beta_0) + self.alpha_1*np.log(1.0+self.beta_1)
     
-    # activations_train = z_train*w + b - special.gammaln( f_0 + z_train ) + special.gammaln( f_1 + z_train )
-    # activations_val   = z_val*w + b - special.gammaln( f_0 + z_val ) + special.gammaln( f_1 + z_val )
-    #
-    
     self.common_b = np.log(self.pi_1) - np.log(self.pi_0)
     self.b = np.sum( self.b_vec )
-    #pdb.set_trace() 
     
   def predict( self, X, elementwise = False ):
     N,D = X.shape
     b_x = special.gammaln( self.alpha_0 + X ) + special.gammaln( self.alpha_1 + X )
     
     if elementwise is True:
-      #b_x = special.gammaln( self.failure_0 + X ) + special.gammaln( self.failure_1 + X )
       activations = X*self.w + b_x + self.b_vec + self.common_b
       
     else:
-      #z = np.hstack( (Z_alpha,Z_beta) )
       activations = np.dot( X, self.w ) + b_x.sum() + self.b + self.common_b
       
     predictions = logistic_sigmoid( activations )
