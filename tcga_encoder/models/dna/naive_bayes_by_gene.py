@@ -175,10 +175,11 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
     print "\tINFO (%s): Running with permuted labels...%d of %d"%(dna_gene,permutation_idx+1, n_permutations)
     run_method( data, results_store, dna_gene, source, method, n_folds, n_xval_repeats, randomize_labels = True, label_permutation_idx = permutation_idx+1)
   
-  view_results( results_location, results_store, dna_gene, n_permutations, source, method )
+  view_results( results_location, results_store, dna_gene, n_permutations, source, method, title_str = "all", max_nbr=1000, zoom = False )
+  view_results( results_location, results_store, dna_gene, n_permutations, source, method, title_str = "zoom", max_nbr=100, zoom=True )
   print "... done run_train."  
 
-def view_results( location, store, gene, n_permutations, source, method ):
+def view_results( location, store, gene, n_permutations, source, method, title_str = "", max_nbr = 100, zoom = True ):
   mean_auc = store["/%s/%s/%s/labels_0/xval_aucs"%(gene,source, method)].mean()
   var_auc  = store["/%s/%s/%s/labels_0/xval_aucs"%(gene,source, method)].var()
   std_auc  = np.sqrt( var_auc )
@@ -187,40 +188,63 @@ def view_results( location, store, gene, n_permutations, source, method ):
   ordered_var_aucs = store["/%s/%s/%s/labels_0/xval_aucs_elementwise"%(gene,source, method)].loc[ordered_source_genes].var(1)
   order_std_aucs = np.sqrt(ordered_var_aucs)
   D = len(ordered_mean_aucs.values)
+  
+  orientation = "vertical"
+  if zoom is True:
+    marker = 'o'
+  else:
+    marker = '.'
+    
+  nD = np.minimum( D, max_nbr )
+  
   f1=pp.figure()
   ax11 = f1.add_subplot(111)
   
-  ax11.fill_between( np.arange(D), \
-                      ordered_mean_aucs.values + 2*order_std_aucs.values, \
-                      ordered_mean_aucs.values - 2*order_std_aucs.values, facecolor='blue', edgecolor = 'k', alpha=0.5 )
-  ax11.plot( ordered_mean_aucs.values, 'bo-', mec = 'k', label = "True" )
+  if orientation == "vertical":
+    ax11.fill_betweenx( nD-np.arange(nD)-1, \
+                        ordered_mean_aucs.values[:nD] + 2*order_std_aucs.values[:nD], \
+                        ordered_mean_aucs.values[:nD] - 2*order_std_aucs.values[:nD], facecolor='blue', edgecolor = 'k', alpha=0.5 )
+    ax11.plot( ordered_mean_aucs.values[:nD], nD-np.arange(nD)-1, 'b'+marker+"-", mec = 'k', label = "True" )
 
-  ax11.fill_between( np.arange(D), \
-                      mean_auc*np.ones(D) -2*std_auc, \
-                      mean_auc*np.ones(D) +2*std_auc, facecolor='blue',edgecolor='k', alpha=0.5 )
+    ax11.fill_betweenx( nD-np.arange(nD)-1, \
+                        mean_auc*np.ones(nD) -2*std_auc, \
+                        mean_auc*np.ones(nD) +2*std_auc, facecolor='blue',edgecolor='k', alpha=0.5 )
 
-  ax11.hlines( mean_auc, 0, D-1, color='b' )
-  ax11.set_xticks( np.arange(D) )
-  ax11.set_xticklabels( ordered_source_genes, rotation='vertical', fontsize=8 )
-  
-  for permutation_idx in range(n_permutations):
-    mean_auc_p = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method,permutation_idx+1)].mean()
-    var_auc_p  = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method, permutation_idx+1)].var()
-    std_auc_p  = np.sqrt( var_auc_p )
-    ax11.hlines( mean_auc_p, 0, D-1, color='r' )
-    mean_aucs = store["/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(gene,source, method,permutation_idx+1)].loc[ordered_source_genes].mean(1)
-    ax11.plot( np.arange(D), mean_aucs, 'o', color='orange', mec='k', alpha=0.5)
+    ax11.vlines( mean_auc, 0, nD-1, color='b' )
+    if zoom is True:
+      ax11.set_yticks( nD-1-np.arange(nD) )
+      ax11.set_yticklabels( ordered_source_genes[:nD], rotation='horizontal', fontsize=8 )
     
+  else:
+    ax11.fill_between( np.arange(nD), \
+                        ordered_mean_aucs.values[:nD] + 2*order_std_aucs.values[:nD], \
+                        ordered_mean_aucs.values[:nD] - 2*order_std_aucs.values[:nD], facecolor='blue', edgecolor = 'k', alpha=0.5 )
+    ax11.plot( ordered_mean_aucs.values[:nD], 'b'+marker+"-", mec = 'k', label = "True" )
+
+    ax11.fill_between( np.arange(nD), \
+                        mean_auc*np.ones(nD) -2*std_auc, \
+                        mean_auc*np.ones(nD) +2*std_auc, facecolor='blue',edgecolor='k', alpha=0.5 )
+
+    ax11.hlines( mean_auc, 0, nD-1, color='b' )
+    if zoom is True:
+      ax11.set_xticks( np.arange(nD) )
+      ax11.set_xticklabels( ordered_source_genes[:nD], rotation='vertical', fontsize=8 )
+  
+  #
+  # for permutation_idx in range(n_permutations):
+  #   mean_auc_p = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method,permutation_idx+1)].mean()
+  #   var_auc_p  = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method, permutation_idx+1)].var()
+  #   std_auc_p  = np.sqrt( var_auc_p )
+  #   ax11.hlines( mean_auc_p, 0, D-1, color='r' )
+  #   mean_aucs = store["/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(gene,source, method,permutation_idx+1)].loc[ordered_source_genes].mean(1)
+  #   ax11.plot( np.arange(D), mean_aucs, 'o', color='orange', mec='k', alpha=0.5)
+  #
     
   pp.title( "%s %s %s mean AUC = %0.3f"%(gene,source, method, mean_auc))
-  #print location
-  #pp.show()
-  #pdb.set_trace()
   pp.subplots_adjust(bottom=0.2)
-  figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/aucs_%s_%s_%s.png"%(gene,source, method)
+  figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/aucs_%s_%s_%s_%s.png"%(gene,source, method,title_str)
   f1.savefig(  figname1, dpi=300 )
-  # f2=pp.figure()
-  # ax21 = f1.add_subplot(111)
+
 
 def main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train ):
   print "***************************************************************"
