@@ -11,6 +11,7 @@ from tcga_encoder.models.dna.models import *
 BETA_METHOD    = "beta"
 BETA_METHOD2    = "beta2"
 POISSON_METHOD = "poisson"
+GAUSSIAN_METHOD = "gaussian"
 NEGBIN_METHOD  = "negbin"
 log_prior = 1e-2
 
@@ -19,6 +20,8 @@ def model_by_method( method ):
     return BetaNaiveBayesModel()
   elif method == POISSON_METHOD:
     return PoissonNaiveBayesModel()
+  elif method == GAUSSIAN_METHOD:
+    return GaussianNaiveBayesModel()
   elif method == NEGBIN_METHOD:
     return NegBinNaiveBayesModel()
   else:
@@ -79,10 +82,10 @@ def run_method( data, results_store, \
     
   xval_columns = np.array( ["seed_%d"%(seed+1) for seed in range(n_xval_repeats) ] )
   
-  results_store[ "/%s/labels_%d/xval_aucs_elementwise"%(dna_gene,label_permutation_idx)] = pd.DataFrame( elementwise_aucs, index = source_data.columns, columns=xval_columns )
-  results_store[ "/%s/labels_%d/xval_aucs"%(dna_gene,label_permutation_idx)]        = pd.Series( np.array(aucs), index=xval_columns )
-  results_store[ "/%s/labels_%d/xval_predictions"%(dna_gene,label_permutation_idx)] = pd.DataFrame( test_predictions, index = barcodes, columns = xval_columns )
-  results_store[ "/%s/labels_%d/xval_targets"%(dna_gene,label_permutation_idx)]     = pd.DataFrame( labels, index = barcodes, columns = ["true","permuted"])
+  results_store[ "/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( elementwise_aucs, index = source_data.columns, columns=xval_columns )
+  results_store[ "/%s/%s/%s/labels_%d/xval_aucs"%(dna_gene,source, method,label_permutation_idx)]        = pd.Series( np.array(aucs), index=xval_columns )
+  results_store[ "/%s/%s/%s/labels_%d/xval_predictions"%(dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( test_predictions, index = barcodes, columns = xval_columns )
+  results_store[ "/%s/%s/%s/labels_%d/xval_targets"%(dna_gene,source, method,label_permutation_idx)]     = pd.DataFrame( labels, index = barcodes, columns = ["true","permuted"])
 
 
 def prepare_results_store( results_location, mode = "a" ):
@@ -116,25 +119,28 @@ def prepare_data_store( data_file, dna_gene, source, method ):
   if source == RNA:
     if method == BETA_METHOD:
       source_data = data_store["/RNA/FAIR"].loc[ barcodes ]
-    elif method == POISSON_METHOD:
-      source_data = np.log( data_store["/RNA/RSEM"].loc[ barcodes ] + log_prior )
+    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD:
+      source_data = np.log2( data_store["/RNA/RSEM"].loc[ barcodes ] + log_prior )
     elif method == NEGBIN_METHOD:
+      #source_data = np.log2( np.maximum( 2.0, data_store["/RNA/RSEM"].loc[ barcodes ]+ log_prior ) )
       source_data = data_store["/RNA/RSEM"].loc[ barcodes ]
       
   elif source == miRNA:
     if method == BETA_METHOD:
       source_data = data_store["/miRNA/FAIR"].loc[ barcodes ]
-    elif method == POISSON_METHOD:
-      source_data = np.log( data_store["/miRNA/READS"].loc[ barcodes ] + log_prior )
+    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD:
+      source_data = np.log2( data_store["/miRNA/READS"].loc[ barcodes ] + log_prior )
     elif method == NEGBIN_METHOD:
       source_data = data_store["/miRNA/READS"].loc[ barcodes ]
       
   elif source == METH:
     if method == BETA_METHOD:
       source_data = data_store["/METH/FAIR"].loc[ barcodes ]
-    elif method == POISSON_METHOD:
-      source_data = np.log( data_store["/METH/METH"].loc[ barcodes ]  )
+    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD:
+      source_data = np.log2( data_store["/METH/METH"].loc[ barcodes ]  )
     elif method == BETA_METHOD2:
+      source_data = data_store["/METH/METH"].loc[ barcodes ]
+    elif method == NEGBIN_METHOD:
       source_data = data_store["/METH/METH"].loc[ barcodes ]
   data_store.close()
   
@@ -173,12 +179,12 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
   print "... done run_train."  
 
 def view_results( location, store, gene, n_permutations, source, method ):
-  mean_auc = store["/%s/labels_0/xval_aucs"%(gene)].mean()
-  var_auc  = store["/%s/labels_0/xval_aucs"%(gene)].var()
+  mean_auc = store["/%s/%s/%s/labels_0/xval_aucs"%(gene,source, method)].mean()
+  var_auc  = store["/%s/%s/%s/labels_0/xval_aucs"%(gene,source, method)].var()
   std_auc  = np.sqrt( var_auc )
-  ordered_mean_aucs = store["/%s/labels_0/xval_aucs_elementwise"%(gene)].mean(1).sort_values(ascending=False)
+  ordered_mean_aucs = store["/%s/%s/%s/labels_0/xval_aucs_elementwise"%(gene,source, method)].mean(1).sort_values(ascending=False)
   ordered_source_genes = ordered_mean_aucs.index.values
-  ordered_var_aucs = store["/%s/labels_0/xval_aucs_elementwise"%(gene)].loc[ordered_source_genes].var(1)
+  ordered_var_aucs = store["/%s/%s/%s/labels_0/xval_aucs_elementwise"%(gene,source, method)].loc[ordered_source_genes].var(1)
   order_std_aucs = np.sqrt(ordered_var_aucs)
   D = len(ordered_mean_aucs.values)
   f1=pp.figure()
@@ -198,19 +204,15 @@ def view_results( location, store, gene, n_permutations, source, method ):
   ax11.set_xticklabels( ordered_source_genes, rotation='vertical', fontsize=8 )
   
   for permutation_idx in range(n_permutations):
-    mean_auc_p = store["/%s/labels_%d/xval_aucs"%(gene,permutation_idx+1)].mean()
-    var_auc_p  = store["/%s/labels_%d/xval_aucs"%(gene, permutation_idx+1)].var()
+    mean_auc_p = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method,permutation_idx+1)].mean()
+    var_auc_p  = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method, permutation_idx+1)].var()
     std_auc_p  = np.sqrt( var_auc_p )
     ax11.hlines( mean_auc_p, 0, D-1, color='r' )
-    #ax11.fill_between( np.arange(D), \
-    #                    mean_auc_p*np.ones(D) +2*std_auc_p, \
-    #                    mean_auc_p*np.ones(D) -2*std_auc_p, facecolor='orange', alpha=0.5 )
-                        
-    mean_aucs = store["/%s/labels_%d/xval_aucs_elementwise"%(gene,permutation_idx+1)].loc[ordered_source_genes].mean(1)
+    mean_aucs = store["/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(gene,source, method,permutation_idx+1)].loc[ordered_source_genes].mean(1)
     ax11.plot( np.arange(D), mean_aucs, 'o', color='orange', mec='k', alpha=0.5)
     
     
-  pp.title( "%s_%s_%s mean AUC = %0.3f"%(gene,source, method, mean_auc))
+  pp.title( "%s %s %s mean AUC = %0.3f"%(gene,source, method, mean_auc))
   #print location
   #pp.show()
   #pdb.set_trace()
