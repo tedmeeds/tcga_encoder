@@ -28,6 +28,28 @@ def model_by_method( method ):
     assert False, "No model called %s"%(method)
   return None
 
+def compute_auc_by_disease( true_y, est_y, diseases ):
+  u_diseases = np.unique(diseases)
+  
+  aucs = np.nan*np.ones( len(u_diseases) )
+  d_idx = 0
+  for disease in u_diseases:
+    I = pp.find( disease == diseases )
+    y = true_y[I]
+    x = est_y[I]
+    
+    n = len(I)
+    n_1 = y.sum()
+    n_0 = n-n_1
+    
+    if n_1 > 0 and n_0 < n:
+      aucs[ d_idx ] = roc_auc_score( y, x )
+    
+    d_idx += 1
+  return aucs
+    
+    
+  
 def run_method( data, results_store, \
                 dna_gene, source, method, \
                 n_folds, n_xval_repeats, \
@@ -50,8 +72,14 @@ def run_method( data, results_store, \
   D = source_data.shape[1]
   test_predictions = np.zeros( (N,n_xval_repeats), dtype=float )
   test_predictions_elementwise = np.zeros( (N,D), dtype=float )
+  diseases = np.array( [s.split("_")[0] for s in barcodes])
+  u_diseases = np.unique( diseases )
+  n_diseases = len(u_diseases)
   aucs = []
+  aucs_by_disease=[]
   elementwise_aucs = np.zeros( (D,n_xval_repeats) )
+  elementwise_aucs_by_disease = np.zeros( (n_diseases, D, n_xval_repeats) )
+  
   for xval_repeat_idx in range( n_xval_repeats ):
     print "\t\tINFO (%s): running xval repeat %d of %d"%(dna_gene,xval_repeat_idx+1, n_xval_repeats)
     
@@ -66,7 +94,7 @@ def run_method( data, results_store, \
       model = model_by_method( method )
       model.fit( inputs[train_index,:], permuted_targets[train_index] )
       
-      fold_test_predictions = model.predict( inputs[test_index,:] )
+      fold_test_predictions             = model.predict( inputs[test_index,:] )
       fold_test_predictions_elementwise = model.predict( inputs[test_index,:], elementwise=True )
       
       test_predictions[:,xval_repeat_idx][ test_index ] = fold_test_predictions
@@ -74,11 +102,12 @@ def run_method( data, results_store, \
       #pdb.set_trace()
       fold_idx+=1
     
-      
+    aucs_by_disease.append( compute_auc_by_disease( permuted_targets, test_predictions[:, xval_repeat_idx], diseases ) )  
     aucs.append( roc_auc_score( permuted_targets, test_predictions[:, xval_repeat_idx] ) )  
     print "\t\tINFO (%s): running AUC compute repeat %d of %d"%(dna_gene,xval_repeat_idx+1, n_xval_repeats)
     for d in xrange(D):
       elementwise_aucs[d,xval_repeat_idx] = roc_auc_score( permuted_targets, test_predictions_elementwise[:, d] )
+      elementwise_aucs_by_disease[:,d,xval_repeat_idx] = compute_auc_by_disease( permuted_targets, test_predictions_elementwise[:, d], diseases )
     
   xval_columns = np.array( ["seed_%d"%(seed+1) for seed in range(n_xval_repeats) ] )
   
@@ -87,6 +116,10 @@ def run_method( data, results_store, \
   results_store[ "/%s/%s/%s/labels_%d/xval_predictions"%(dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( test_predictions, index = barcodes, columns = xval_columns )
   results_store[ "/%s/%s/%s/labels_%d/xval_targets"%(dna_gene,source, method,label_permutation_idx)]     = pd.DataFrame( labels, index = barcodes, columns = ["true","permuted"])
 
+  for d_idx in range(len(u_diseases)):
+    disease = u_diseases[d_idx]
+    results_store[ "/%s/%s/%s/labels_%d/diseases/%s/xval_aucs_elementwise"%(dna_gene,source, method,label_permutation_idx,disease)] = pd.DataFrame( elementwise_aucs_by_disease[d_idx,:,:], index = source_data.columns, columns=xval_columns )
+  results_store[ "/%s/%s/%s/labels_%d/xval_disease_aucs"%(dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( np.array(aucs_by_disease).T, index = u_diseases, columns=xval_columns )
 
 def prepare_results_store( results_location, mode = "a" ):
   # create directory path for results
@@ -182,6 +215,15 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
 def view_results( location, store, gene, n_permutations, source, method, title_str = "", max_nbr = 100, zoom = True ):
   mean_auc = store["/%s/%s/%s/labels_0/xval_aucs"%(gene,source, method)].mean()
   var_auc  = store["/%s/%s/%s/labels_0/xval_aucs"%(gene,source, method)].var()
+  
+  barcodes = store["/%s/%s/%s/labels_0/xval_predictions"%(gene,source, method)].index.values
+  diseases = np.array( [s.split("_")[0] for s in barcodes])
+  u_diseases = np.unique( diseases )
+  
+  disease_aucs = store[ "/%s/%s/%s/labels_0/xval_disease_aucs"%(gene,source, method)]
+  mean_disease_aucs = disease_aucs.mean(1)
+  var_disease_aucs = disease_aucs.var(1)
+  
   std_auc  = np.sqrt( var_auc )
   ordered_mean_aucs = store["/%s/%s/%s/labels_0/xval_aucs_elementwise"%(gene,source, method)].mean(1).sort_values(ascending=False)
   ordered_source_genes = ordered_mean_aucs.index.values
@@ -201,6 +243,19 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
   ax11 = f1.add_subplot(111)
   
   if orientation == "vertical":
+    # for d_idx in range(len(u_diseases)):
+   #    disease = u_diseases[d_idx]
+   #    results_store[ "/%s/%s/%s/labels_%d/diseases/%s/xval_aucs_elementwise"%(dna_gene,source, method,label_permutation_idx,disease)] = pd.DataFrame( elementwise_aucs_by_disease[d_idx,:,:], index = source_data.columns, columns=xval_columns )
+   #    results_store[ "/%s/%s/%s/labels_%d/diseases/%s/xval_aucs"%(dna_gene,source, method,label_permutation_idx,disease)] = pd.DataFrame( np.array(aucs_by_disease).T, index = u_diseases, columns=xval_columns )
+   #  
+    #ax11.vlines( mean_disease_aucs.values, 0, nD-1, color='g' )
+    
+    for disease in u_diseases:
+      aucs =store[ "/%s/%s/%s/labels_0/diseases/%s/xval_aucs_elementwise"%(gene,source, method, disease)].mean(1)
+      ax11.plot( aucs.values[:nD], nD-np.arange(nD)-1, '.-', mec = 'k', label = "%s"%(disease) )
+      
+    ax11.plot( ordered_mean_aucs.values[:nD], nD-np.arange(nD)-1, 'b'+marker+"-", mec = 'k', label = "True" )
+    
     ax11.fill_betweenx( nD-np.arange(nD)-1, \
                         ordered_mean_aucs.values[:nD] + 2*order_std_aucs.values[:nD], \
                         ordered_mean_aucs.values[:nD] - 2*order_std_aucs.values[:nD], facecolor='blue', edgecolor = 'k', alpha=0.5 )
