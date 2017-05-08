@@ -146,7 +146,7 @@ class GaussianNaiveBayesModel( object ):
 
     self.mu_1_0 = X[self.class_1,:].mean(0)
     self.mu_0_0 = X[self.class_0,:].mean(0)
-    self.var_1_0 = X[self.class_1,:].var(0) 
+    self.var_1_0 = X[self.class_0,:].var(0) 
     self.var_0_0 = X[self.class_0,:].var(0) 
     
     D = len(self.mu_1_0)
@@ -167,7 +167,7 @@ class GaussianNaiveBayesModel( object ):
         self.pi_1[ k ] = len( class_1 ) / float(len(ik))
         self.mu_1[ k,: ] = X[class_1,:].mean(0)
         self.mu_0[ k,: ] = X[class_0,:].mean(0)
-        self.var_1[ k,: ] = 0.9*X[class_1,:].var(0) + 0.1*self.var_1_0.reshape((1,D))
+        self.var_1[ k,: ] = 0.9*X[class_0,:].var(0) + 0.1*self.var_1_0.reshape((1,D))
         self.var_0[ k,: ] = 0.9*X[class_0,:].var(0)  + 0.1*self.var_0_0.reshape((1,D))
         
     
