@@ -89,6 +89,7 @@ class PoissonNaiveBayesModel( object ):
     self.rate_0 = self.mu_0
     
     self.w = np.log(self.rate_1) - np.log(self.rate_0)
+    
     self.b_vec = self.rate_0 - self.rate_1               
 
     self.common_b = np.log(self.pi_1) - np.log(self.pi_0)

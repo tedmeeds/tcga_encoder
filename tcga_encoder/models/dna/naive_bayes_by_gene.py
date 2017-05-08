@@ -108,7 +108,7 @@ def run_method( data, results_store, \
     for d in xrange(D):
       elementwise_aucs[d,xval_repeat_idx] = roc_auc_score( permuted_targets, test_predictions_elementwise[:, d] )
       elementwise_aucs_by_disease[:,d,xval_repeat_idx] = compute_auc_by_disease( permuted_targets, test_predictions_elementwise[:, d], diseases )
-    
+    #pdb.set_trace()
   xval_columns = np.array( ["seed_%d"%(seed+1) for seed in range(n_xval_repeats) ] )
   
   results_store[ "/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( elementwise_aucs, index = source_data.columns, columns=xval_columns )
@@ -190,6 +190,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
       source_data = source_data[ ok ]
       dna_data = dna_data[ ok ]
       #pdb.set_trace()
+      barcodes = barcodes[ok]
     print "\tINFO: %s has %d of %d mutated (%0.2f percent)"%( dna_gene, dna_data.sum(), len(barcodes), 100.0*dna_data.sum() / float(len(barcodes)) )
     
     
@@ -259,7 +260,7 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
    #    results_store[ "/%s/%s/%s/labels_%d/diseases/%s/xval_aucs_elementwise"%(dna_gene,source, method,label_permutation_idx,disease)] = pd.DataFrame( elementwise_aucs_by_disease[d_idx,:,:], index = source_data.columns, columns=xval_columns )
    #    results_store[ "/%s/%s/%s/labels_%d/diseases/%s/xval_aucs"%(dna_gene,source, method,label_permutation_idx,disease)] = pd.DataFrame( np.array(aucs_by_disease).T, index = u_diseases, columns=xval_columns )
    #  
-    #ax11.vlines( mean_disease_aucs.values, 0, nD-1, color='g' )
+    ax11.vlines( mean_disease_aucs.values, 0, nD-1, color='g' )
     
     for disease in u_diseases:
       aucs =store[ "/%s/%s/%s/labels_0/diseases/%s/xval_aucs_elementwise"%(gene,source, method, disease)].mean(1)
