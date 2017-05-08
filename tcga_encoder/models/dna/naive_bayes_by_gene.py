@@ -130,7 +130,7 @@ def prepare_results_store( results_location, mode = "a" ):
   
   return results_store
   
-def prepare_data_store( data_file, dna_gene, source, method ):
+def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases ):
   # later add restrictions on tissue type
   #source = source.upper()
   
@@ -181,13 +181,24 @@ def prepare_data_store( data_file, dna_gene, source, method ):
     return None 
   else:
     
+    if len(restricted_diseases)>0:
+      diseases = np.array( [s.split("_")[0] for s in barcodes])
+      ok = np.zeros( len(diseases), dtype = bool)
+      for disease in restricted_diseases:
+        ok |= diseases == disease
+      
+      source_data = source_data[ ok ]
+      dna_data = dna_data[ ok ]
+      #pdb.set_trace()
     print "\tINFO: %s has %d of %d mutated (%0.2f percent)"%( dna_gene, dna_data.sum(), len(barcodes), 100.0*dna_data.sum() / float(len(barcodes)) )
+    
+    
     return dna_data, source_data
 
-def run_train( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations ):
+def run_train( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, restricted_diseases ):
   
   # extract in for the dna_gene
-  data = prepare_data_store( data_file, dna_gene, source, method )
+  data = prepare_data_store( data_file, dna_gene, source, method, restricted_diseases )
   
   if data is None:
     print "Skipping gene %s"%dna_gene
@@ -252,8 +263,9 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
     
     for disease in u_diseases:
       aucs =store[ "/%s/%s/%s/labels_0/diseases/%s/xval_aucs_elementwise"%(gene,source, method, disease)].mean(1)
-      ax11.plot( aucs.values[:nD], nD-np.arange(nD)-1, '.-', mec = 'k', label = "%s"%(disease) )
+      ax11.plot( aucs.loc[ordered_source_genes].values[:nD], nD-np.arange(nD)-1, '.-', mec = 'k', label = "%s"%(disease) )
       
+    #pdb.set_trace()
     ax11.plot( ordered_mean_aucs.values[:nD], nD-np.arange(nD)-1, 'b'+marker+"-", mec = 'k', label = "True" )
     
     ax11.fill_betweenx( nD-np.arange(nD)-1, \
@@ -307,7 +319,7 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
   f1.savefig(  figname1, dpi=300 )
 
 
-def main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train ):
+def main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases ):
   print "***************************************************************"
   print "Data:     ", data_file
   print "Results:  ", results_location
@@ -321,12 +333,16 @@ def main( data_file, results_location, dna_gene, source, method, n_folds, n_xval
     print "TRAINING"
   else:
     print "REPORTING"
+  if len(restricted_diseases) > 0:
+    print "diseases: ", restricted_diseases
+  else:
+    print "diseases: ALL"
   print "***************************************************************"
   
   if train:
-    run_train( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations )
+    run_train( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, restricted_diseases )
   else:
-    run_report( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations )
+    run_report( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, restricted_diseases )
     
 
 if __name__ == "__main__":
@@ -347,10 +363,16 @@ if __name__ == "__main__":
     n_xval_repeats = int( sys.argv[7] )
     n_permutations = int( sys.argv[8] )
     
-  train = False
-  if len(sys.argv) == 10:
-    train = bool(int( sys.argv[9]))
+  #train = False
+  #if len(sys.argv) == 10:
+  train = bool(int( sys.argv[9]))
+    
+  restricted_diseases = []
+  idx = 10
+  while len(sys.argv) > idx:
+    restricted_diseases.append( sys.argv[idx] )
+    idx += 1
   
   
-  main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train )
+  main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases )
   #pdb.set_trace()
