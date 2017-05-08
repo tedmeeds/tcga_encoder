@@ -50,11 +50,13 @@ def compute_auc_by_disease( true_y, est_y, diseases ):
     
     
   
-def run_method( data, results_store, \
+def run_method( data, results_location, results_store, \
                 dna_gene, source, method, \
                 n_folds, n_xval_repeats, \
                 randomize_labels, label_permutation_idx ):
-                
+  
+  colors = "rgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcmrgkcm"
+  
   dna_data, source_data = data              
   barcodes = source_data.index.values
   
@@ -67,19 +69,35 @@ def run_method( data, results_store, \
     np.random.seed( label_permutation_idx )
     np.random.shuffle( permuted_targets )
   
+  
   labels = np.vstack((targets,permuted_targets)).T
   N =  len(permuted_targets) 
   D = source_data.shape[1]
   test_predictions = np.zeros( (N,n_xval_repeats), dtype=float )
   test_predictions_elementwise = np.zeros( (N,D), dtype=float )
   diseases = np.array( [s.split("_")[0] for s in barcodes])
+  
+
   u_diseases = np.unique( diseases )
   n_diseases = len(u_diseases)
+  one_hot_diseases = np.zeros( (N,n_diseases) )
+  
   aucs = []
   aucs_by_disease=[]
   elementwise_aucs = np.zeros( (D,n_xval_repeats) )
   elementwise_aucs_by_disease = np.zeros( (n_diseases, D, n_xval_repeats) )
   
+  weights = np.ones( len(diseases))
+  k=0
+  for disease in u_diseases:
+    I = disease == diseases
+    weights[I] = permuted_targets[I].sum()
+    one_hot_diseases[I,k] = 1
+    k+=1
+  weights = np.array(weights)  
+  if label_permutation_idx == 0:
+    f = pp.figure()
+    ax_roc = f.add_subplot(111)
   for xval_repeat_idx in range( n_xval_repeats ):
     print "\t\tINFO (%s): running xval repeat %d of %d"%(dna_gene,xval_repeat_idx+1, n_xval_repeats)
     
@@ -92,23 +110,48 @@ def run_method( data, results_store, \
     for train_index, test_index in skf.split(inputs, permuted_targets):
       #print "\t\t\tINFO (%s): running fold %d of %d"%(dna_gene,fold_idx, n_folds)
       model = model_by_method( method )
-      model.fit( inputs[train_index,:], permuted_targets[train_index] )
+      model.fit( inputs[train_index,:], permuted_targets[train_index], one_hot_diseases[train_index,:] )
       
-      fold_test_predictions             = model.predict( inputs[test_index,:] )
-      fold_test_predictions_elementwise = model.predict( inputs[test_index,:], elementwise=True )
+      fold_test_predictions             = model.predict( inputs[test_index,:], one_hot_groups=one_hot_diseases[test_index,:] )
+      fold_test_predictions_elementwise = model.predict( inputs[test_index,:], elementwise=True, one_hot_groups=one_hot_diseases[test_index,:] )
       
       test_predictions[:,xval_repeat_idx][ test_index ] = fold_test_predictions
       test_predictions_elementwise[test_index,:] = fold_test_predictions_elementwise
       #pdb.set_trace()
       fold_idx+=1
     
+    #pdb.set_trace()
     aucs_by_disease.append( compute_auc_by_disease( permuted_targets, test_predictions[:, xval_repeat_idx], diseases ) )  
-    aucs.append( roc_auc_score( permuted_targets, test_predictions[:, xval_repeat_idx] ) )  
+    aucs.append( roc_auc_score( permuted_targets, test_predictions[:, xval_repeat_idx], sample_weight=weights ) )  
     print "\t\tINFO (%s): running AUC compute repeat %d of %d"%(dna_gene,xval_repeat_idx+1, n_xval_repeats)
     for d in xrange(D):
-      elementwise_aucs[d,xval_repeat_idx] = roc_auc_score( permuted_targets, test_predictions_elementwise[:, d] )
+      elementwise_aucs[d,xval_repeat_idx] = roc_auc_score( permuted_targets, test_predictions_elementwise[:, d], sample_weight=np.array(weights) )
       elementwise_aucs_by_disease[:,d,xval_repeat_idx] = compute_auc_by_disease( permuted_targets, test_predictions_elementwise[:, d], diseases )
+      
+      if d==3 and label_permutation_idx==0:
+        d_idx = 0
+        
+        for disease in u_diseases:
+          I = disease == diseases
+          fpr,tpr,thre = roc_curve( permuted_targets[I], test_predictions_elementwise[:, d][I] )
+          #pdb.set_trace()
+          #print d_idx, colors
+          ax_roc.plot( fpr, tpr, colors[d_idx]+'.-', alpha=0.4 )
+          d_idx+=1
+
+
+        fpr,tpr,thre = roc_curve( permuted_targets, test_predictions_elementwise[:, d], sample_weight=np.array(weights) )
+        ax_roc.plot( fpr, tpr, 'b.-', alpha = 0.4, lw=0.5)
+        #pdb.set_trace()
+        
+        
+        pp.title( source_data.columns[d])
+        #pdb.set_trace()
     #pdb.set_trace()
+    
+  if label_permutation_idx == 0:
+    figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/rocs_%s_%s_%s.png"%(dna_gene,source, method)
+    f.savefig(  figname1, dpi=300 )
   xval_columns = np.array( ["seed_%d"%(seed+1) for seed in range(n_xval_repeats) ] )
   
   results_store[ "/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( elementwise_aucs, index = source_data.columns, columns=xval_columns )
@@ -211,14 +254,14 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
   # run train with correct labels
   print "..............................................................."
   print "\tINFO (%s): Running with correct labels..."%(dna_gene)
-  run_method( data, results_store, dna_gene, source, method, n_folds, n_xval_repeats, randomize_labels = False, label_permutation_idx = 0)
+  run_method( data, results_location, results_store, dna_gene, source, method, n_folds, n_xval_repeats, randomize_labels = False, label_permutation_idx = 0)
 
   # run a nbr of permutated xval repeats
   for permutation_idx in range(n_permutations):
 
     print "..............................................................."
     print "\tINFO (%s): Running with permuted labels...%d of %d"%(dna_gene,permutation_idx+1, n_permutations)
-    run_method( data, results_store, dna_gene, source, method, n_folds, n_xval_repeats, randomize_labels = True, label_permutation_idx = permutation_idx+1)
+    run_method( data, results_location, results_store, dna_gene, source, method, n_folds, n_xval_repeats, randomize_labels = True, label_permutation_idx = permutation_idx+1)
   
   view_results( results_location, results_store, dna_gene, n_permutations, source, method, title_str = "all", max_nbr=1000, zoom = False )
   view_results( results_location, results_store, dna_gene, n_permutations, source, method, title_str = "zoom", max_nbr=100, zoom=True )

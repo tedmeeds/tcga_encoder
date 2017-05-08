@@ -111,17 +111,23 @@ class GaussianNaiveBayesModel( object ):
   def get_weights(self):
     return self.w
     
-  def fit( self, X, y ):
+  def fit( self, X, y, one_hot_groups = None ):
+    if one_hot_groups is None:
+      return self.fit_normal( X, y )
+    else:
+      return self.fit_grouped( X, y, one_hot_groups )
+  
+  def fit_normal( self, X, y ):
     self.class_1 = pp.find( y==1 )
     self.class_0 = pp.find( y==0 )
     
     self.pi_1 = len( self.class_1 ) / float(len(y))
     self.pi_0 = 1.0 - self.pi_1
-    
+ 
     self.mu_1 = X[self.class_1,:].mean(0)
     self.mu_0 = X[self.class_0,:].mean(0)
-    self.var_1 = X[self.class_1,:].var(0)
-    self.var_0 = X[self.class_0,:].var(0)
+    self.var_1 = X[self.class_1,:].var(0) 
+    self.var_0 = X[self.class_0,:].var(0) 
     
     self.w = self.mu_1/self.var_1 - self.mu_0/self.var_0
     self.b_vec = self.mu_0*self.mu_0/(2*self.var_0) - self.mu_1*self.mu_1/(2*self.var_1) + 0.5*np.log(self.var_0)- 0.5*np.log(self.var_1)          
@@ -130,20 +136,95 @@ class GaussianNaiveBayesModel( object ):
     
     self.common_b = np.log(self.pi_1) - np.log(self.pi_0)
     self.b = np.sum( self.b_vec )
+
+  def fit_grouped( self, X, y, groups ):
+    self.class_1 = pp.find( y==1 )
+    self.class_0 = pp.find( y==0 )
     
-  def predict( self, X, elementwise = False ):
+    self.pi_1 = len( self.class_1 ) / float(len(y))
+    self.pi_0 = 1.0 - self.pi_1
+
+    self.mu_1_0 = X[self.class_1,:].mean(0)
+    self.mu_0_0 = X[self.class_0,:].mean(0)
+    self.var_1_0 = X[self.class_1,:].var(0) 
+    self.var_0_0 = X[self.class_0,:].var(0) 
+    
+    D = len(self.mu_1_0)
+    N,K = groups.shape
+      
+    pi_1 = self.pi_1
+    self.pi_1 = pi_1*np.ones(K)
+    self.mu_1 = self.mu_1_0*np.ones((K,D))
+    self.mu_0 = self.mu_0_0*np.ones((K,D))
+    self.var_1 = self.var_1_0*np.ones((K,D))
+    self.var_0 = self.var_0_0*np.ones((K,D))
+    
+    for k in range(K):
+      ik = pp.find(groups[:,k]==1)
+      class_1 = pp.find( y[ik]==1 )
+      class_0 = pp.find( y[ik]==0 )
+      if len(class_1) > 0:
+        self.pi_1[ k ] = len( class_1 ) / float(len(ik))
+        self.mu_1[ k,: ] = X[class_1,:].mean(0)
+        self.mu_0[ k,: ] = X[class_0,:].mean(0)
+        self.var_1[ k,: ] = 0.9*X[class_1,:].var(0) + 0.1*self.var_1_0.reshape((1,D))
+        self.var_0[ k,: ] = 0.9*X[class_0,:].var(0)  + 0.1*self.var_0_0.reshape((1,D))
+        
+    
+    
+    self.w = self.mu_1/self.var_1 - self.mu_0/self.var_0
+    self.b_vec = self.mu_0*self.mu_0/(2*self.var_0) - self.mu_1*self.mu_1/(2*self.var_1) + 0.5*np.log(self.var_0)- 0.5*np.log(self.var_1)          
+
+    self.b_x_factor = 1.0/(2*self.var_0) - 1.0/(2*self.var_1) 
+    
+    self.common_b = np.log(self.pi_1) - np.log(self.pi_0)
+    self.b = np.sum( self.b_vec )
+        
+  def predict( self, X, elementwise = False, one_hot_groups = None ):
+    if one_hot_groups is None:
+      return self.predict_normal( X, elementwise=elementwise)
+    else:
+      return self.predict_grouped( X, one_hot_groups, elementwise=elementwise )
+  
+  def predict_normal( self, X, elementwise = False ):
     N,D = X.shape
 
+    common_b = self.common_b
+        
     if elementwise is True:
-      activations = X*self.w + np.square(X)*self.b_x_factor + self.b_vec + self.common_b
-      
+  
+      activations = X*self.w + np.square(X)*self.b_x_factor + self.b_vec + common_b
+
     else:
       #z = np.hstack( (Z_alpha,Z_beta) )
-      activations = np.dot( X, self.w ) + np.dot(np.square(X),self.b_x_factor) + self.b + self.common_b
+      activations = np.dot( X, self.w ) + np.dot(np.square(X),self.b_x_factor) + self.b + common_b
       
     predictions = logistic_sigmoid( activations )
     return predictions
 
+  def predict_grouped( self, X, groups, elementwise = False ):
+    N,D = X.shape
+    
+    common_b = np.dot( groups, self.common_b ) #.reshape( (N,1))
+    w = np.dot( groups, self.w )
+    b = np.dot( groups, self.b_vec )
+    b_x_factor = np.dot( groups, self.b_x_factor )
+        
+    if elementwise is True:
+      #pdb.set_trace()
+      activations = X*w + np.square(X)*b_x_factor + b + common_b.reshape((N,1))
+
+    else:
+      #z = np.hstack( (Z_alpha,Z_beta) )
+      #pdb.set_trace()
+      activations = np.sum(X*w,1)  + np.sum(np.square(X)*b_x_factor,1) + b.sum(1) + common_b
+      
+    predictions = logistic_sigmoid( activations )
+    
+    if np.any( np.isnan( predictions) ) or np.any( np.isinf( predictions) ):
+      pdb.set_trace()
+    return predictions
+    
 class NegBinNaiveBayesModel( object ):
     
   def get_weights(self):
