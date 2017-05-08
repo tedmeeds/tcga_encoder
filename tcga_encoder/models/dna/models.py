@@ -197,7 +197,8 @@ class GaussianNaiveBayesModel( object ):
 
     else:
       #z = np.hstack( (Z_alpha,Z_beta) )
-      activations = np.dot( X, self.w ) + np.dot(np.square(X),self.b_x_factor) + self.b + common_b
+      #pdb.set_trace()
+      activations = np.dot( X, self.w.T ) + np.dot(np.square(X),self.b_x_factor.T) + self.b + common_b
       
     predictions = logistic_sigmoid( activations )
     return predictions

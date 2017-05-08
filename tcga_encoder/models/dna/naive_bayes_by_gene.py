@@ -110,10 +110,12 @@ def run_method( data, results_location, results_store, \
     for train_index, test_index in skf.split(inputs, permuted_targets):
       #print "\t\t\tINFO (%s): running fold %d of %d"%(dna_gene,fold_idx, n_folds)
       model = model_by_method( method )
-      model.fit( inputs[train_index,:], permuted_targets[train_index], one_hot_diseases[train_index,:] )
+      model.fit( inputs[train_index,:], permuted_targets[train_index] )#, one_hot_diseases[train_index,:] )
       
-      fold_test_predictions             = model.predict( inputs[test_index,:], one_hot_groups=one_hot_diseases[test_index,:] )
-      fold_test_predictions_elementwise = model.predict( inputs[test_index,:], elementwise=True, one_hot_groups=one_hot_diseases[test_index,:] )
+      #fold_test_predictions             = model.predict( inputs[test_index,:], one_hot_groups=one_hot_diseases[test_index,:] )
+      #fold_test_predictions_elementwise = model.predict( inputs[test_index,:], elementwise=True, one_hot_groups=one_hot_diseases[test_index,:] )
+      fold_test_predictions             = model.predict( inputs[test_index,:]  )
+      fold_test_predictions_elementwise = model.predict( inputs[test_index,:], elementwise=True )
       
       test_predictions[:,xval_repeat_idx][ test_index ] = fold_test_predictions
       test_predictions_elementwise[test_index,:] = fold_test_predictions_elementwise
