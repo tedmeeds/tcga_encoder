@@ -51,7 +51,7 @@ def compute_auc_by_disease( true_y, est_y, diseases ):
     
   
 def run_method( data, results_location, results_store, \
-                dna_gene, source, method, \
+                dna_gene, source, method, disease_string, \
                 n_folds, n_xval_repeats, \
                 randomize_labels, label_permutation_idx ):
   
@@ -152,19 +152,19 @@ def run_method( data, results_location, results_store, \
     #pdb.set_trace()
     
   if label_permutation_idx == 0:
-    figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/rocs_%s_%s_%s.png"%(dna_gene,source, method)
+    figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/rocs_%s_%s_%s_%s.png"%(dna_gene,source, method, disease_string)
     f.savefig(  figname1, dpi=300 )
   xval_columns = np.array( ["seed_%d"%(seed+1) for seed in range(n_xval_repeats) ] )
   
-  results_store[ "/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( elementwise_aucs, index = source_data.columns, columns=xval_columns )
-  results_store[ "/%s/%s/%s/labels_%d/xval_aucs"%(dna_gene,source, method,label_permutation_idx)]        = pd.Series( np.array(aucs), index=xval_columns )
-  results_store[ "/%s/%s/%s/labels_%d/xval_predictions"%(dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( test_predictions, index = barcodes, columns = xval_columns )
-  results_store[ "/%s/%s/%s/labels_%d/xval_targets"%(dna_gene,source, method,label_permutation_idx)]     = pd.DataFrame( labels, index = barcodes, columns = ["true","permuted"])
+  results_store[ "/%s/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(disease_string,dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( elementwise_aucs, index = source_data.columns, columns=xval_columns )
+  results_store[ "/%s/%s/%s/%s/labels_%d/xval_aucs"%(disease_string,dna_gene,source, method,label_permutation_idx)]        = pd.Series( np.array(aucs), index=xval_columns )
+  results_store[ "/%s/%s/%s/%s/labels_%d/xval_predictions"%(disease_string,dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( test_predictions, index = barcodes, columns = xval_columns )
+  results_store[ "/%s/%s/%s/%s/labels_%d/xval_targets"%(disease_string,dna_gene,source, method,label_permutation_idx)]     = pd.DataFrame( labels, index = barcodes, columns = ["true","permuted"])
 
   for d_idx in range(len(u_diseases)):
     disease = u_diseases[d_idx]
-    results_store[ "/%s/%s/%s/labels_%d/diseases/%s/xval_aucs_elementwise"%(dna_gene,source, method,label_permutation_idx,disease)] = pd.DataFrame( elementwise_aucs_by_disease[d_idx,:,:], index = source_data.columns, columns=xval_columns )
-  results_store[ "/%s/%s/%s/labels_%d/xval_disease_aucs"%(dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( np.array(aucs_by_disease).T, index = u_diseases, columns=xval_columns )
+    results_store[ "/%s/%s/%s/%s/labels_%d/diseases/%s/xval_aucs_elementwise"%(disease_string,dna_gene,source, method,label_permutation_idx,disease)] = pd.DataFrame( elementwise_aucs_by_disease[d_idx,:,:], index = source_data.columns, columns=xval_columns )
+  results_store[ "/%s/%s/%s/%s/labels_%d/xval_disease_aucs"%(disease_string,dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( np.array(aucs_by_disease).T, index = u_diseases, columns=xval_columns )
 
 def prepare_results_store( results_location, mode = "a" ):
   # create directory path for results
@@ -243,6 +243,12 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
 
 def run_train( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, restricted_diseases ):
   
+  disease_string = "ALL"
+  if len(restricted_diseases)>0:
+    disease_string = restricted_diseases[0]
+    for d in restricted_diseases[1:]:
+      disease_string += "_%s"%(d)
+    
   # extract in for the dna_gene
   data = prepare_data_store( data_file, dna_gene, source, method, restricted_diseases )
   
@@ -256,35 +262,35 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
   # run train with correct labels
   print "..............................................................."
   print "\tINFO (%s): Running with correct labels..."%(dna_gene)
-  run_method( data, results_location, results_store, dna_gene, source, method, n_folds, n_xval_repeats, randomize_labels = False, label_permutation_idx = 0)
+  run_method( data, results_location, results_store, dna_gene, source, method, disease_string, n_folds, n_xval_repeats, randomize_labels = False, label_permutation_idx = 0)
 
   # run a nbr of permutated xval repeats
   for permutation_idx in range(n_permutations):
 
     print "..............................................................."
     print "\tINFO (%s): Running with permuted labels...%d of %d"%(dna_gene,permutation_idx+1, n_permutations)
-    run_method( data, results_location, results_store, dna_gene, source, method, n_folds, n_xval_repeats, randomize_labels = True, label_permutation_idx = permutation_idx+1)
+    run_method( data, results_location, results_store, dna_gene, source, method, disease_string, n_folds, n_xval_repeats, randomize_labels = True, label_permutation_idx = permutation_idx+1)
   
-  view_results( results_location, results_store, dna_gene, n_permutations, source, method, title_str = "all", max_nbr=1000, zoom = False )
-  view_results( results_location, results_store, dna_gene, n_permutations, source, method, title_str = "zoom", max_nbr=100, zoom=True )
+  view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "all", max_nbr=1000, zoom = False )
+  view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "zoom", max_nbr=100, zoom=True )
   print "... done run_train."  
 
-def view_results( location, store, gene, n_permutations, source, method, title_str = "", max_nbr = 100, zoom = True ):
-  mean_auc = store["/%s/%s/%s/labels_0/xval_aucs"%(gene,source, method)].mean()
-  var_auc  = store["/%s/%s/%s/labels_0/xval_aucs"%(gene,source, method)].var()
+def view_results( location, store, gene, n_permutations, source, method, disease_string, title_str = "", max_nbr = 100, zoom = True ):
+  mean_auc = store["/%s/%s/%s/%s/labels_0/xval_aucs"%(disease_string,gene,source, method)].mean()
+  var_auc  = store["/%s/%s/%s/%s/labels_0/xval_aucs"%(disease_string,gene,source, method)].var()
   
-  barcodes = store["/%s/%s/%s/labels_0/xval_predictions"%(gene,source, method)].index.values
+  barcodes = store["/%s/%s/%s/%s/labels_0/xval_predictions"%(disease_string,gene,source, method)].index.values
   diseases = np.array( [s.split("_")[0] for s in barcodes])
   u_diseases = np.unique( diseases )
   
-  disease_aucs = store[ "/%s/%s/%s/labels_0/xval_disease_aucs"%(gene,source, method)]
+  disease_aucs = store[ "/%s/%s/%s/%s/labels_0/xval_disease_aucs"%(disease_string,gene,source, method)]
   mean_disease_aucs = disease_aucs.mean(1)
   var_disease_aucs = disease_aucs.var(1)
   
   std_auc  = np.sqrt( var_auc )
-  ordered_mean_aucs = store["/%s/%s/%s/labels_0/xval_aucs_elementwise"%(gene,source, method)].mean(1).sort_values(ascending=False)
+  ordered_mean_aucs = store["/%s/%s/%s/%s/labels_0/xval_aucs_elementwise"%(disease_string,gene,source, method)].mean(1).sort_values(ascending=False)
   ordered_source_genes = ordered_mean_aucs.index.values
-  ordered_var_aucs = store["/%s/%s/%s/labels_0/xval_aucs_elementwise"%(gene,source, method)].loc[ordered_source_genes].var(1)
+  ordered_var_aucs = store["/%s/%s/%s/%s/labels_0/xval_aucs_elementwise"%(disease_string,gene,source, method)].loc[ordered_source_genes].var(1)
   order_std_aucs = np.sqrt(ordered_var_aucs)
   D = len(ordered_mean_aucs.values)
   
@@ -308,7 +314,7 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
     ax11.vlines( mean_disease_aucs.values, 0, nD-1, color='g' )
     
     for disease in u_diseases:
-      aucs =store[ "/%s/%s/%s/labels_0/diseases/%s/xval_aucs_elementwise"%(gene,source, method, disease)].mean(1)
+      aucs =store[ "/%s/%s/%s/%s/labels_0/diseases/%s/xval_aucs_elementwise"%(disease_string,gene,source, method, disease)].mean(1)
       ax11.plot( aucs.loc[ordered_source_genes].values[:nD], nD-np.arange(nD)-1, '.-', mec = 'k', label = "%s"%(disease) )
       
     #pdb.set_trace()
@@ -345,11 +351,11 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
   
   #
   for permutation_idx in range(n_permutations):
-    mean_auc_p = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method,permutation_idx+1)].mean()
-    var_auc_p  = store["/%s/%s/%s/labels_%d/xval_aucs"%(gene,source, method, permutation_idx+1)].var()
+    mean_auc_p = store["/%s/%s/%s/%s/labels_%d/xval_aucs"%(disease_string,gene,source, method,permutation_idx+1)].mean()
+    var_auc_p  = store["/%s/%s/%s/%s/labels_%d/xval_aucs"%(disease_string,gene,source, method, permutation_idx+1)].var()
     std_auc_p  = np.sqrt( var_auc_p )
     
-    mean_aucs = store["/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(gene,source, method,permutation_idx+1)].loc[ordered_source_genes].mean(1)
+    mean_aucs = store["/%s/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(disease_string,gene,source, method,permutation_idx+1)].loc[ordered_source_genes].mean(1)
     
     if orientation == "vertical":
       ax11.vlines( mean_auc_p, 0, nD-1, color='r' )
@@ -359,9 +365,9 @@ def view_results( location, store, gene, n_permutations, source, method, title_s
       ax11.plot( nD-1-np.arange(nD), mean_aucs[:nD], 'o', color='orange', mec='k', alpha=0.5)
   #
   pp.grid('on')
-  pp.title( "%s %s %s mean AUC = %0.3f"%(gene,source, method, mean_auc))
+  pp.title( "%s using %s of %s with %s mean AUC = %0.3f"%(gene,disease_string, source, method, mean_auc))
   pp.subplots_adjust(bottom=0.2)
-  figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/aucs_%s_%s_%s_%s.png"%(gene,source, method,title_str)
+  figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/aucs_%s_%s_%s_%s_%s.png"%(gene,source, method,disease_string,title_str)
   f1.savefig(  figname1, dpi=300 )
 
 
