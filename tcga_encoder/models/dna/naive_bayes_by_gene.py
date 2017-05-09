@@ -275,7 +275,7 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
     run_method( data, results_location, results_store, dna_gene, source, method, disease_string, n_folds, n_xval_repeats, randomize_labels = True, label_permutation_idx = permutation_idx+1)
   
   view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "all", max_nbr=1000, zoom = False )
-  view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "zoom", max_nbr=100, zoom=True )
+  view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "zoom", max_nbr=5, zoom=True )
   print "... done run_train."  
 
 def view_results( location, store, gene, n_permutations, source, method, disease_string, title_str = "", max_nbr = 100, zoom = True ):
@@ -425,7 +425,7 @@ def view_results( location, store, gene, n_permutations, source, method, disease
     
   #pdb.set_trace()
   t_tests = []
-  for this_gene in ordered_source_genes:
+  for this_gene in ordered_source_genes[:nD]:
     k = n_permutations
     
     p_value = ( np.sum( correct_labels.loc[this_gene].values.mean() < permutations.loc[this_gene].values ) + 1.0 )/ (k+1.0)
