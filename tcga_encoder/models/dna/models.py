@@ -128,8 +128,8 @@ class GaussianNaiveBayesModel( object ):
     self.mu_1 = X[self.class_1,:].mean(0)
     self.mu_0 = X[self.class_0,:].mean(0)
     self.var_1 = X[self.class_1,:].var(0) 
-    #self.var_0 = X[self.class_0,:].var(0) 
-    self.var_0 = X.var(0) 
+    self.var_0 = X[self.class_0,:].var(0) 
+    self.var_0 = 0.5*X.var(0) 
     
     self.var_1 = self.var_0
     self.w = self.mu_1/self.var_1 - self.mu_0/self.var_0
@@ -246,7 +246,7 @@ class KernelDensityNaiveBayesModel( object ):
  
     N,D = X.shape
     
-    self.bandwidths = np.std(X,0)*pow(4.0/3.0/N, 1.0/5.0)
+    self.bandwidths = 5*np.std(X,0)*pow(4.0/3.0/N, 1.0/5.0)
     
     self.models0 = []
     self.models1 = []

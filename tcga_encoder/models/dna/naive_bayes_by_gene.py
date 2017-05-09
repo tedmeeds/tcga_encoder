@@ -4,7 +4,7 @@ from tcga_encoder.definitions.tcga import *
 from tcga_encoder.definitions.nn import *
 from tcga_encoder.definitions.locations import *
 from sklearn.model_selection import StratifiedKFold
-
+from scipy import stats
 from tcga_encoder.models.dna.models import *
 
 
@@ -279,6 +279,7 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
   print "... done run_train."  
 
 def view_results( location, store, gene, n_permutations, source, method, disease_string, title_str = "", max_nbr = 100, zoom = True ):
+  mean_aucs = store["/%s/%s/%s/%s/labels_0/xval_aucs"%(disease_string,gene,source, method)]
   mean_auc = store["/%s/%s/%s/%s/labels_0/xval_aucs"%(disease_string,gene,source, method)].mean()
   var_auc  = store["/%s/%s/%s/%s/labels_0/xval_aucs"%(disease_string,gene,source, method)].var()
   
@@ -297,7 +298,11 @@ def view_results( location, store, gene, n_permutations, source, method, disease
   order_std_aucs = np.sqrt(ordered_var_aucs)
   D = len(ordered_mean_aucs.values)
   
-  orientation = "vertical"
+  element_aucs = store["/%s/%s/%s/%s/labels_0/xval_aucs_elementwise"%(disease_string,gene,source, method)]
+  element_aucs=element_aucs.T
+  element_aucs["ALL"] = mean_aucs
+  element_aucs=element_aucs.T
+  orientation = "horizontal"
   if zoom is True:
     marker = 'o'
   else:
@@ -305,9 +310,19 @@ def view_results( location, store, gene, n_permutations, source, method, disease
     
   nD = np.minimum( D, max_nbr )
   
-  f1=pp.figure( figsize=(6,16))
+  if orientation == "vertical":
+    f1=pp.figure( figsize=(6,16))
+  else:
+    f1=pp.figure( figsize=(16,6))
+    
   ax11 = f1.add_subplot(111)
-  
+  #
+  # disease_aucs = []
+  # for disease in u_diseases:
+  #   disease_aucs.append( store[ "/%s/%s/%s/%s/labels_0/diseases/%s/xval_aucs_elementwise"%(disease_string,gene,source, method, disease)].mean(1) )
+  #
+  # disease_aucs = pd.concat(disease_aucs,axis=1)
+  #pdb.set_trace() 
   if orientation == "vertical":
     # for d_idx in range(len(u_diseases)):
    #    disease = u_diseases[d_idx]
@@ -323,12 +338,12 @@ def view_results( location, store, gene, n_permutations, source, method, disease
     #pdb.set_trace()
     ax11.plot( ordered_mean_aucs.values[:nD], nD-np.arange(nD)-1, 'b'+marker+"-", mec = 'k', label = "True" )
     
-    ax11.fill_betweenx( nD-np.arange(nD)-1, \
+    ax11.fill_betweenx( nD-np.arange(nD), \
                         ordered_mean_aucs.values[:nD] + 2*order_std_aucs.values[:nD], \
                         ordered_mean_aucs.values[:nD] - 2*order_std_aucs.values[:nD], facecolor='blue', edgecolor = 'k', alpha=0.5 )
     ax11.plot( ordered_mean_aucs.values[:nD], nD-np.arange(nD)-1, 'b'+marker+"-", mec = 'k', label = "True" )
 
-    ax11.fill_betweenx( nD-np.arange(nD)-1, \
+    ax11.fill_betweenx( nD-np.arange(nD), \
                         mean_auc*np.ones(nD) -2*std_auc, \
                         mean_auc*np.ones(nD) +2*std_auc, facecolor='blue',edgecolor='k', alpha=0.5 )
 
@@ -338,35 +353,85 @@ def view_results( location, store, gene, n_permutations, source, method, disease
       ax11.set_yticklabels( ordered_source_genes[:nD], rotation='horizontal', fontsize=8 )
     
   else:
-    ax11.fill_between( np.arange(nD), \
-                        ordered_mean_aucs.values[:nD] + 2*order_std_aucs.values[:nD], \
-                        ordered_mean_aucs.values[:nD] - 2*order_std_aucs.values[:nD], facecolor='blue', edgecolor = 'k', alpha=0.5 )
-    ax11.plot( ordered_mean_aucs.values[:nD], 'b'+marker+"-", mec = 'k', label = "True" )
+    #ax11.fill_between( 2+np.arange(nD), \
+    #                    ordered_mean_aucs.values[:nD] + 2*order_std_aucs.values[:nD], \
+    #                    ordered_mean_aucs.values[:nD] - 2*order_std_aucs.values[:nD], facecolor='blue', edgecolor = 'k', alpha=0.5 )
+    #ax11.plot( np.arange(nD)+2, ordered_mean_aucs.values[:nD], 'b'+marker+"-", mec = 'k', label = "True" )
+    ax11.plot( np.arange(nD)+2, ordered_mean_aucs.values[:nD], 'b-', mec = 'k', label = "True" )
 
-    ax11.fill_between( np.arange(nD), \
-                        mean_auc*np.ones(nD) -2*std_auc, \
-                        mean_auc*np.ones(nD) +2*std_auc, facecolor='blue',edgecolor='k', alpha=0.5 )
-
-    ax11.hlines( mean_auc, 0, nD-1, color='b' )
+    # ax11.fill_between( 1+np.arange(nD), \
+    #                     mean_auc*np.ones(nD) -2*std_auc, \
+    #                     mean_auc*np.ones(nD) +2*std_auc, facecolor='blue',edgecolor='k', alpha=0.5 )
+    #
+    # ax11.hlines( mean_auc, 1, nD, color='b' )
     if zoom is True:
-      ax11.set_xticks( np.arange(nD) )
+      ax11.set_xticks( 2+np.arange(nD) )
       ax11.set_xticklabels( ordered_source_genes[:nD], rotation='vertical', fontsize=8 )
   
   #
+  #pdb.set_trace()
+  #ax11.plot( np.ones( len(mean_aucs.values)), mean_aucs.values, 'o', ms=10, color='orange', mec='k', alpha=0.75) 
+  #ax11.plot( [1], [mean_auc], 'd', color='orchid',mec='orchid' ,ms=30, mew=2, lw=2, alpha=0.75 )
+  permutations = []
+  combined_permutations = []
+  for permutation_idx in range(n_permutations):
+    mean_auc_p = store["/%s/%s/%s/%s/labels_%d/xval_aucs"%(disease_string,gene,source, method,permutation_idx+1)].mean()
+    combined_permutations.append( mean_auc_p)
+  combined_permutations = pd.Series( np.array(combined_permutations), index = np.arange(n_permutations) )
+  
+  #permutations.append(combined_permutations )
   for permutation_idx in range(n_permutations):
     mean_auc_p = store["/%s/%s/%s/%s/labels_%d/xval_aucs"%(disease_string,gene,source, method,permutation_idx+1)].mean()
     var_auc_p  = store["/%s/%s/%s/%s/labels_%d/xval_aucs"%(disease_string,gene,source, method, permutation_idx+1)].var()
     std_auc_p  = np.sqrt( var_auc_p )
     
+    
     mean_aucs = store["/%s/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(disease_string,gene,source, method,permutation_idx+1)].loc[ordered_source_genes].mean(1)
     
-    if orientation == "vertical":
-      ax11.vlines( mean_auc_p, 0, nD-1, color='r' )
-      ax11.plot( mean_aucs[:nD], nD-1-np.arange(nD),  'o', color='orange', mec='k', alpha=0.5)
-    else:
-      ax11.hlines( mean_auc_p, 0, nD-1, color='r' )
-      ax11.plot( nD-1-np.arange(nD), mean_aucs[:nD], 'o', color='orange', mec='k', alpha=0.5)
+    #permutations.append( store["/%s/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(disease_string,gene,source, method,permutation_idx+1)].loc[ordered_source_genes] )
+    permutations.append( mean_aucs )
+    
+    # if orientation == "vertical":
+    #   ax11.vlines( mean_auc_p, 0, nD-1, color='r' )
+    #   #ax11.plot( mean_aucs[:nD], nD-1-np.arange(nD),  'o', color='orange', mec='k', alpha=0.5)
+    # else:
+    #   ax11.hlines( mean_auc_p, 0, nD-1, color='r' )
+    #   #ax11.plot( nD-1-np.arange(nD), mean_aucs[:nD], 'o', color='orange', mec='k', alpha=0.5)
   #
+  
+  permutations = pd.concat( permutations,axis=1 )
+  permutations = permutations.T
+  permutations["ALL"] = combined_permutations
+  new_order = ["ALL"]
+  new_order.extend(ordered_source_genes[:nD] )
+  permutations = permutations.T.loc[new_order]
+  element_aucs=element_aucs.loc[new_order]
+  print permutations
+  #pdb.set_trace()
+  correct_labels = store["/%s/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(disease_string,gene,source, method,0)].loc[ordered_source_genes]
+  if orientation == "vertical":
+    color = dict(boxes='DarkRed', whiskers='DarkOrange',  medians='Red', caps='Black')
+    color2 = dict(boxes='DarkBlue', whiskers='DarkBlue',  medians='DarkBlue', caps='Cyan')
+    permutations.T.boxplot(ax=ax11,color=color)
+    element_aucs.T.boxplot(ax=ax11,color=color2)
+  else:
+    color = dict(boxes='LightCoral', whiskers='DarkRed',  medians='DarkRed', caps='LightCoral')
+    color2 = dict(boxes='SkyBlue', whiskers='DarkBlue',  medians='DarkBlue', caps='SkyBlue')
+    permutations.T.plot.box(ax=ax11,color=color,patch_artist=True)
+    element_aucs.T.plot.box(ax=ax11,color=color2,patch_artist=True, widths=0.25)
+    if zoom is True:
+      ax11.set_xticks( 1+np.arange(len(new_order)) )
+      ax11.set_xticklabels( new_order, rotation='vertical', fontsize=8 )
+    
+  #pdb.set_trace()
+  t_tests = []
+  for this_gene in ordered_source_genes:
+    k = n_permutations
+    
+    p_value = ( np.sum( correct_labels.loc[this_gene].values.mean() < permutations.loc[this_gene].values ) + 1.0 )/ (k+1.0)
+    #t_tests.append( [gene,stats.ttest_ind( permutations.loc[gene].values, correct_labels.loc[gene], equal_var=False )] )
+    t_tests.append(p_value)
+  #pdb.set_trace()
   pp.grid('on')
   pp.title( "%s using %s of %s with %s mean AUC = %0.3f"%(gene,disease_string, source, method, mean_auc))
   pp.subplots_adjust(bottom=0.2)
