@@ -2,6 +2,7 @@ from tcga_encoder.utils.helpers import *
 from scipy import special
 #import numpy as np
 import pdb
+from sklearn.neighbors import KernelDensity
 
 def logistic_sigmoid( activations ):
   return 1.0 / (1.0 + np.exp(-activations) )
@@ -227,6 +228,76 @@ class GaussianNaiveBayesModel( object ):
     if np.any( np.isnan( predictions) ) or np.any( np.isinf( predictions) ):
       pdb.set_trace()
     return predictions
+
+class KernelDensityNaiveBayesModel( object ):
+  
+  def fit( self, X, y, one_hot_groups = None ):
+    if one_hot_groups is None:
+      return self.fit_normal( X, y )
+    else:
+      return self.fit_grouped( X, y, one_hot_groups )
+  
+  def fit_normal( self, X, y ):
+    self.class_1 = pp.find( y==1 )
+    self.class_0 = pp.find( y==0 )
+    
+    self.pi_1 = len( self.class_1 ) / float(len(y))
+    self.pi_0 = 1.0 - self.pi_1
+ 
+    N,D = X.shape
+    
+    self.bandwidths = np.std(X,0)*pow(4.0/3.0/N, 1.0/5.0)
+    
+    self.models0 = []
+    self.models1 = []
+    for d in xrange(D):
+      self.models0.append( KernelDensity( kernel='gaussian', bandwidth = self.bandwidths[d] ) )
+      self.models0[-1].fit( X[self.class_0,:][:,d][:, np.newaxis] )
+
+      self.models1.append( KernelDensity( kernel='gaussian', bandwidth = self.bandwidths[d] ) )
+      self.models1[-1].fit( X[self.class_1,:][:,d][:, np.newaxis] )
+      
+      #pdb.set_trace()
+    
+    # self.w = self.mu_1/self.var_1 - self.mu_0/self.var_0
+    # self.b_vec = self.mu_0*self.mu_0/(2*self.var_0) - self.mu_1*self.mu_1/(2*self.var_1) + 0.5*np.log(self.var_0)- 0.5*np.log(self.var_1)
+    #
+    # self.b_x_factor = 1.0/(2*self.var_0) - 1.0/(2*self.var_1)
+    #
+    self.common_b = np.log(self.pi_1) - np.log(self.pi_0)
+    # self.b = np.sum( self.b_vec )
+
+  def predict( self, X, elementwise = False, one_hot_groups = None ):
+    if one_hot_groups is None:
+      return self.predict_normal( X, elementwise=elementwise)
+    else:
+      return self.predict_grouped( X, one_hot_groups, elementwise=elementwise )
+  
+  def predict_normal( self, X, elementwise = False ):
+    N,D = X.shape
+
+    common_b = self.common_b
+
+    log_prob_0 = self.log_prob( self.models0, X )
+    log_prob_1 = self.log_prob( self.models1, X )
+    
+    if elementwise is True:
+      activations = log_prob_1 - log_prob_0 + common_b
+    else:
+      activations = np.sum(log_prob_1 - log_prob_0, 1 ) + common_b
+      
+    predictions = logistic_sigmoid( activations )
+    return predictions
+
+  def log_prob( self, models, X ):
+    N,D = X.shape
+    
+    logprob = np.zeros( (N,D) )
+    for model, d in zip( models, xrange(D) ):
+      logprob[:,d] = model.score_samples( X[:,d][:, np.newaxis] )
+      
+    return logprob
+      
     
 class NegBinNaiveBayesModel( object ):
     

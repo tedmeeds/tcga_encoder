@@ -12,6 +12,7 @@ BETA_METHOD    = "beta"
 BETA_METHOD2    = "beta2"
 POISSON_METHOD = "poisson"
 GAUSSIAN_METHOD = "gaussian"
+KDE_METHOD  = "kde"
 NEGBIN_METHOD  = "negbin"
 log_prior = 1e-2
 
@@ -20,6 +21,8 @@ def model_by_method( method ):
     return BetaNaiveBayesModel()
   elif method == POISSON_METHOD:
     return PoissonNaiveBayesModel()
+  elif method == KDE_METHOD:
+    return KernelDensityNaiveBayesModel()
   elif method == GAUSSIAN_METHOD:
     return GaussianNaiveBayesModel()
   elif method == NEGBIN_METHOD:
@@ -197,7 +200,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
   if source == RNA:
     if method == BETA_METHOD:
       source_data = data_store["/RNA/FAIR"].loc[ barcodes ]
-    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD:
+    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD or method == KDE_METHOD:
       source_data = np.log2( data_store["/RNA/RSEM"].loc[ barcodes ] + log_prior )
     elif method == NEGBIN_METHOD:
       #source_data = np.log2( np.maximum( 2.0, data_store["/RNA/RSEM"].loc[ barcodes ]+ log_prior ) )
@@ -206,7 +209,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
   elif source == miRNA:
     if method == BETA_METHOD:
       source_data = data_store["/miRNA/FAIR"].loc[ barcodes ]
-    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD:
+    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD or method == KDE_METHOD:
       source_data = np.log2( data_store["/miRNA/READS"].loc[ barcodes ] + log_prior )
     elif method == NEGBIN_METHOD:
       source_data = data_store["/miRNA/READS"].loc[ barcodes ]
@@ -214,7 +217,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
   elif source == METH:
     if method == BETA_METHOD:
       source_data = data_store["/METH/FAIR"].loc[ barcodes ]
-    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD:
+    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD or method == KDE_METHOD:
       source_data = np.log2( data_store["/METH/METH"].loc[ barcodes ]  )
     elif method == BETA_METHOD2:
       source_data = data_store["/METH/METH"].loc[ barcodes ]
