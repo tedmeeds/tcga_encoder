@@ -29,7 +29,7 @@ class LogisticRegressionModel( object ):
     self.class_1 = pp.find( y==1 )
     self.class_0 = pp.find( y==0 )
     
-    self.model = linear_model.LogisticRegression( penalty='l1', C=1.0 )
+    self.model = linear_model.LogisticRegression( penalty='l1', C=100.0 )
     self.model.fit( X, y )
     
     self.pi_1 = len( self.class_1 ) / float(len(y))
