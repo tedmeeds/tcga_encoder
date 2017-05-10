@@ -37,7 +37,7 @@ class LogisticRegressionModel( object ):
     X_normed = X - self.mu_0_0
     X_normed /= self.var_0_0
     
-    self.model = linear_model.LogisticRegression( penalty='l1', C = 0.5 )
+    self.model = linear_model.LogisticRegression( penalty='l1', C = 10.0 )
     self.model.fit( X_normed, y )
     
     self.pi_1 = len( self.class_1 ) / float(len(y))
