@@ -29,8 +29,16 @@ class LogisticRegressionModel( object ):
     self.class_1 = pp.find( y==1 )
     self.class_0 = pp.find( y==0 )
     
-    self.model = linear_model.LogisticRegression( penalty='l1', C=100.0 )
-    self.model.fit( X, y )
+    self.mu_1_0 = X[self.class_1,:].mean(0)
+    self.mu_0_0 = X[self.class_0,:].mean(0)
+    self.var_1_0 = X[self.class_0,:].var(0) 
+    self.var_0_0 = X[self.class_0,:].var(0) 
+    
+    X_normed = X - self.mu_0_0
+    X_normed /= self.var_0_0
+    
+    self.model = linear_model.LogisticRegression( penalty='l1', C=0.1 )
+    self.model.fit( X_normed, y )
     
     self.pi_1 = len( self.class_1 ) / float(len(y))
     self.pi_0 = 1.0 - self.pi_1
@@ -92,13 +100,16 @@ class LogisticRegressionModel( object ):
     N,D = X.shape
 
     common_b = self.common_b
-        
+    
+    X_normed = X - self.mu_0_0
+    X_normed /= self.var_0_0
+    
     if elementwise is True:
   
-      activations = X*self.w + self.common_b
+      activations = X_normed*self.w + self.common_b
       predictions = logistic_sigmoid( activations )
     else:
-      predictions = self.model.predict_proba( X )[:,1]
+      predictions = self.model.predict_proba( X_normed )[:,1]
     return predictions
 
   def predict_grouped( self, X, groups, elementwise = False ):
