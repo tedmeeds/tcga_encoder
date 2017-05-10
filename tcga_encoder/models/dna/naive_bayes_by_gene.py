@@ -245,6 +245,32 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
       dna_data = dna_data[ ok ]
       #pdb.set_trace()
       barcodes = barcodes[ok]
+      
+    print "Trying to filter coadread MSI barcodes"
+    try:
+      msi_bcs = np.loadtxt( os.path.join( HOME_DIR, "data/broad_processed_april_2017" )+"/coadread_msi_barcodes.txt", dtype=str )
+      ok = np.zeros( len(barcodes), dtype=bool)
+      
+      non_disease2idx = {}
+      non_disease_bcs = np.array([s.split("_")[1] for s in barcodes])
+      for idx in xrange(len(barcodes)):
+        non_disease2idx[non_disease_bcs[idx]] = idx
+        
+      msi_bcs = np.array( [s.lower() for s in msi_bcs])
+      
+      ok_bcs = np.setdiff1d( non_disease_bcs, msi_bcs )
+      for bc in ok_bcs:
+        ok[ non_disease2idx[bc] ] = True
+        
+      source_data = source_data[ ok ]
+      dna_data = dna_data[ ok ]
+      barcodes = barcodes[ok]
+      
+      
+      #pdb.set_trace()
+    except:
+      print "could not load msi"
+    #pdb.set_trace()
     print "\tINFO: %s has %d of %d mutated (%0.2f percent)"%( dna_gene, dna_data.sum(), len(barcodes), 100.0*dna_data.sum() / float(len(barcodes)) )
     
     
