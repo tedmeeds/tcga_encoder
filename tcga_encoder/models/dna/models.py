@@ -32,7 +32,7 @@ class LogisticRegressionModel( object ):
     self.mu_1_0 = X[self.class_1,:].mean(0)
     self.mu_0_0 = X[self.class_0,:].mean(0)
     self.var_1_0 = X[self.class_0,:].var(0) 
-    self.var_0_0 = X[self.class_0,:].var(0) 
+    self.var_0_0 = X[self.class_0,:].var(0) + 1.0
     
     X_normed = X - self.mu_0_0
     X_normed /= self.var_0_0
