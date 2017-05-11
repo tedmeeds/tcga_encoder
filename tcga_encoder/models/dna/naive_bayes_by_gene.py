@@ -232,6 +232,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
   data_store.close()
   
   if source_data is None or dna_data is None:
+    pdb.set_trace()
     return None 
   else:
     
