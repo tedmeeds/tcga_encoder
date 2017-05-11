@@ -183,6 +183,45 @@ def prepare_results_store( results_location, mode = "a" ):
   results_store = pd.HDFStore( os.path.join( HOME_DIR, results_location ), mode )
   
   return results_store
+
+def add_dna_data_store( data_file, dna_gene, predictions ):
+  # later add restrictions on tissue type
+  #source = source.upper()
+  
+  barcodes = predictions.index.values
+  
+  data_store = pd.HDFStore( data_file, "r" )
+  dna_data    = data_store["/DNA/channel/0"].loc[ barcodes ] #[ dna_gene ]
+  
+  # /DNA/variant/Frame_Shift_Del              frame        (shape->[9316,168])
+  # /DNA/variant/Frame_Shift_Ins              frame        (shape->[9316,168])
+  # /DNA/variant/In_Frame_Del                 frame        (shape->[9316,168])
+  # /DNA/variant/In_Frame_Ins                 frame        (shape->[9316,168])
+  # /DNA/variant/Missense_Mutation            frame        (shape->[9316,168])
+  # /DNA/variant/Nonsense_Mutation            frame        (shape->[9316,168])
+  # /DNA/variant/Nonstop_Mutation             frame        (shape->[9316,168])
+  auc = roc_auc_score( predictions["target"].values, predictions["prediction"].values)
+  print "Target AUC: %0.3f"%(auc)
+  v_aucs = []
+  variants = ["Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins","Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation"]
+  for v in variants:
+    dna = data_store["/DNA/variant/%s"%(v)].loc[ barcodes ][dna_gene]
+    
+    if np.sum(dna.values)>0:
+      predictions[v] = dna
+      v_auc = roc_auc_score( predictions[v].values, predictions["prediction"].values)
+      print "variant %15s AUC: %0.3f"%(v, v_auc)
+      v_aucs.append(v_auc)
+  
+  predictions["KRAS"] = data_store["/DNA/channel/0"].loc[ barcodes ]["KRAS"]  
+  predictions["BRAF"] = data_store["/DNA/channel/0"].loc[ barcodes ]["BRAF"]  
+  predictions["CTNNB1"] = data_store["/DNA/channel/0"].loc[ barcodes ]["CTNNB1"]
+  predictions["AXIN1"] = data_store["/DNA/channel/0"].loc[ barcodes ]["AXIN1"] 
+  predictions.sort_values(by="prediction", ascending=False, inplace=True) 
+  print predictions.sum(0)
+  #pdb.set_trace()
+  return predictions
+  
   
 def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases ):
   # later add restrictions on tissue type
@@ -201,7 +240,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
   
   
   dna_data    = data_store["/DNA/channel/0"].loc[ barcodes ] #[ dna_gene ]
-  dna_data    = data_store["/DNA/variant/Nonsense_Mutation"].loc[ barcodes ] #[ dna_gene ]
+  #dna_data    = data_store["/DNA/variant/Missense_Mutation"].loc[ barcodes ] #[ dna_gene ]
   source_data = None
   
   if source == RNA:
@@ -274,7 +313,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
       print "could not load msi"
     #pdb.set_trace()
     #data_store["/DNA/channel/0"].loc[ barcodes ][ dna_gene ]
-    pdb.set_trace()
+    #pdb.set_trace()
     dna_data = dna_data[ dna_gene ]
     print "\tINFO: %s has %d of %d mutated (%0.2f percent)"%( dna_gene, dna_data.sum(), len(barcodes), 100.0*dna_data.sum() / float(len(barcodes)) )
     return dna_data, source_data
@@ -311,7 +350,30 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
   
   view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "all", max_nbr=1000, zoom = False )
   view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "zoom", max_nbr=100, zoom=True )
+  
+  predictions = results_store["/%s/%s/%s/%s/labels_0/xval_predictions"%(disease_string,dna_gene,source, method)]
+  targets = results_store["/%s/%s/%s/%s/labels_0/xval_targets"%(disease_string,dna_gene,source, method)]
+  
+  barcodes = predictions.index.values
+  #pdb.set_trace()
+  cohorts = np.array( [s.split("_")[0] for s in barcodes],dtype=str)
+  bcs = np.array( [s.split("_")[1] for s in barcodes], dtype=str)
+  #values = np.vstack( (predictions.loc[barcodes].values[:,0],targets.loc[barcodes].values[:,0].astype(int)) ).T
+  p = predictions.loc[barcodes].values[:,0]
+  t = targets.loc[barcodes].values[:,0].astype(int)
+  predictions = pd.DataFrame( [], index=barcodes)
+  predictions["cohort"] = pd.Series( cohorts, index=barcodes )
+  predictions["barcodes"] = pd.Series( bcs, index=barcodes )
+  predictions["prediction"] = pd.Series( p, index=barcodes )
+  predictions["target"] = pd.Series( t, index=barcodes )
+  #pdb.set_trace()
+  predictions = add_dna_data_store( data_file, dna_gene, predictions )
+  #predictinos = 
+  predictions.to_csv( os.path.join( HOME_DIR, os.path.dirname(results_location) )+"/predictions.csv" )
+  
+  #pdb.set_trace()
   print "... done run_train."  
+  return predictions
 
 def view_results( location, store, gene, n_permutations, source, method, disease_string, title_str = "", max_nbr = 100, zoom = True ):
   mean_aucs = store["/%s/%s/%s/%s/labels_0/xval_aucs"%(disease_string,gene,source, method)]
@@ -495,7 +557,7 @@ def main( data_file, results_location, dna_gene, source, method, n_folds, n_xval
   print "***************************************************************"
   
   if train:
-    run_train( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, restricted_diseases )
+    predictions = run_train( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, restricted_diseases )
   else:
     run_report( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, restricted_diseases )
     
