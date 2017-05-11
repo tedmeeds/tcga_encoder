@@ -238,8 +238,17 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
   observed = data_store["/CLINICAL/observed"][ sources ] 
   barcodes = observed[ observed.sum(1)==len(sources) ].index.values
   
+  #variants = ["Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins","Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation"]
   
+  variant = "Nonsense_Mutation"
   dna_data    = data_store["/DNA/channel/0"].loc[ barcodes ] #[ dna_gene ]
+  zeros = data_store["/DNA/channel/0"].loc[ barcodes ][ data_store["/DNA/channel/0"].loc[ barcodes ][ dna_gene ]==0].index.values
+  
+  v_ones = data_store["/DNA/variant/%s"%(variant)].loc[barcodes][ data_store["/DNA/variant/%s"%(variant)].loc[barcodes][dna_gene]==1 ].index.values
+  
+  barcodes = np.hstack( (v_ones,zeros))
+  dna_data    = data_store["/DNA/variant/%s"%(variant)].loc[ barcodes ] #[ dna_gene ]
+  #pdb.set_trace()
   #dna_data    = data_store["/DNA/variant/Missense_Mutation"].loc[ barcodes ] #[ dna_gene ]
   source_data = None
   
