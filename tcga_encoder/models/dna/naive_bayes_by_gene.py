@@ -201,7 +201,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
   
   
   dna_data    = data_store["/DNA/channel/0"].loc[ barcodes ] #[ dna_gene ]
-  dna_data    = data_store["/DNA/variant/Missense_Mutation"].loc[ barcodes ] #[ dna_gene ]
+  dna_data    = data_store["/DNA/variant/Nonsense_Mutation"].loc[ barcodes ] #[ dna_gene ]
   source_data = None
   
   if source == RNA:
