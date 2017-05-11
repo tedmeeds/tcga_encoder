@@ -250,7 +250,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
     print "Trying to filter coadread MSI barcodes"
     try:
       msi_bcs = np.loadtxt( os.path.join( HOME_DIR, "data/broad_processed_april_2017" )+"/coadread_msi_barcodes.txt", dtype=str )
-      ok = np.ones( len(barcodes), dtype=bool)
+      ok = np.zeros( len(barcodes), dtype=bool)
       
       non_disease2idx = {}
       non_disease_bcs = np.array([s.split("_")[1] for s in barcodes])
@@ -261,7 +261,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
       
       ok_bcs = np.setdiff1d( non_disease_bcs, msi_bcs )
       for bc in ok_bcs:
-        ok[ non_disease2idx[bc] ] = False
+        ok[ non_disease2idx[bc] ] = True
         
       source_data = source_data[ ok ]
       dna_data = dna_data[ ok ]
