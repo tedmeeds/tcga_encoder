@@ -206,7 +206,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
   if source == RNA:
     if method == BETA_METHOD:
       source_data = data_store["/RNA/FAIR"].loc[ barcodes ]
-    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD or method == KDE_METHOD:
+    elif method == POISSON_METHOD or method == GAUSSIAN_METHOD or method == KDE_METHOD or method == LOGREG_METHOD:
       source_data = np.log2( data_store["/RNA/RSEM"].loc[ barcodes ] + log_prior )
     elif method == NEGBIN_METHOD:
       #source_data = np.log2( np.maximum( 2.0, data_store["/RNA/RSEM"].loc[ barcodes ]+ log_prior ) )
