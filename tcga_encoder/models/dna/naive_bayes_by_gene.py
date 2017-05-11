@@ -240,7 +240,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
   
   #variants = ["Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins","Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation"]
   
-  variant = "Nonsense_Mutation"
+  variant = "Missense_Mutation"
   dna_data    = data_store["/DNA/channel/0"].loc[ barcodes ] #[ dna_gene ]
   zeros = data_store["/DNA/channel/0"].loc[ barcodes ][ data_store["/DNA/channel/0"].loc[ barcodes ][ dna_gene ]==0].index.values
   
