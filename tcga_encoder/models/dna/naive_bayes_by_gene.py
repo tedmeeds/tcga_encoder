@@ -274,7 +274,7 @@ def prepare_data_store( data_file, dna_gene, source, method, restricted_diseases
     #pdb.set_trace()
     print "\tINFO: %s has %d of %d mutated (%0.2f percent)"%( dna_gene, dna_data.sum(), len(barcodes), 100.0*dna_data.sum() / float(len(barcodes)) )
     
-    
+    pdb.set_trace()
     return dna_data, source_data
 
 def run_train( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, restricted_diseases ):
