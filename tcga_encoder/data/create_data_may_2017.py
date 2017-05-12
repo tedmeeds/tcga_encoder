@@ -18,6 +18,7 @@ def process_dna( spec, broad_location ):
   h5 = ReadH5( os.path.join( broad_location, spec["data_store"]) )
   h5_raw = ReadH5( os.path.join( broad_location, spec["data_store_raw"]) )
   
+  print "process_dna: |genes2keep| = ", len(genes2keep)
   return h5, h5_raw, genes2keep 
   
   
