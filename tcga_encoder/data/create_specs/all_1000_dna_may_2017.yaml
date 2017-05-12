@@ -4,7 +4,7 @@ sources:
     data_store_raw: "RAW_DNA/gdac.broadinstitute.org_PAN17.Mutation_Packager_Raw_Calls.Level_3.2016012800.0.0.h5"
     filter_file: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/MUT_SIG/PAN30_sig_genes.csv"
     filter_column: "pan-fisher-chi"
-    filter_nbr: 20000
+    filter_nbr: 1000
     #min_nbr_in_pan: 100
     mutation_channels:
       - ["Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation","Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins"]
