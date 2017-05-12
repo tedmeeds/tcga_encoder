@@ -615,6 +615,8 @@ class MultiSourceData(object):
       #pdb.set_trace()
     elif method is None:
       pass
+    elif method == "none":
+      pass
     else:
       assert False, "unknown selection method for RNA = %s"%(method)
     
@@ -727,6 +729,8 @@ class MultiSourceData(object):
       R = R[:,hsa_ids]
       #pdb.set_trace()
     elif method is None:
+      pass
+    elif method == "none":
       pass
     else:
       assert False, "unknown selection method for RNA = %s"%(method)
