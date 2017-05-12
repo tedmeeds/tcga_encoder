@@ -510,6 +510,8 @@ class MultiSourceData(object):
       #pdb.set_trace()
     elif method is None:
       pass
+    elif method == "none":
+      pass
     else:
       assert False, "unknown selection method for RNA = %s"%(method)
     self.store[ RNA + "/" + "RSEM" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = gene_columns )
