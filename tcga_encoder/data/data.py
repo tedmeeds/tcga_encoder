@@ -285,7 +285,7 @@ class MultiSourceData(object):
       print "** DNA filtering genes"
       n = len(h5)
       g = len(genes2keep)
-      pdb.set_trace()
+      #pdb.set_trace()
       query = np.squeeze(np.array([ (h5["Hugo_Symbol"]==d).values.reshape((n,1)) for d in genes2keep ])).T.sum(1).astype(bool)   
       h5 = h5[query]
       n_after = len(h5)
@@ -293,7 +293,10 @@ class MultiSourceData(object):
       self.AddInfo( DNA, "filtering_step", "genes filter: from %d to %d"%(n,n_after) )
     
     print "** DNA figuring out patients"
-    gene_columns = np.sort( np.unique( h5["Hugo_Symbol"].values ) )
+    if genes2keep is None:
+      gene_columns = np.sort( np.unique( h5["Hugo_Symbol"].values ) )
+    else:
+      gene_columns = genes2keep
 
     print "** DNA making gene2idx patient2idx"
     self.dna_gene2idx = OrderedDict()
@@ -390,7 +393,9 @@ class MultiSourceData(object):
         selected_genes = summed[summed>=min_nbr_in_pan].index
         self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ] = self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ][ selected_genes ]
         #pdb.set_trace()
-      print self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum().sort_values(ascending=False)
+      print self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum().sort_values(ascending=False)[:100]
+      print self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum()[:100]
+      pdb.set_trace()
       channel_idx+=1  
       
   def AddRNA( self, broad_location, filename, h5store_ga, h5store_hi, nbr_genes, method = "max_var_fair", diseases = None ):
