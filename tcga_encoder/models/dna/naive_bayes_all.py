@@ -81,6 +81,6 @@ if __name__ == "__main__":
       print "-----------------------------------------------------------------"
       print "running ", dna_gene, " on ", restricted_diseases 
       print "-----------------------------------------------------------------"
-      #main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases )
+      main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases )
     #main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases )
   #pdb.set_trace()
