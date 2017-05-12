@@ -4,18 +4,11 @@ sources:
     data_store_raw: "RAW_DNA/gdac.broadinstitute.org_PAN17.Mutation_Packager_Raw_Calls.Level_3.2016012800.0.0.h5"
     filter_file: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/MUT_SIG/PAN30_sig_genes.csv"
     filter_column: "pan-fisher-chi"
-    filter_nbr: 1000
+    filter_nbr: 20000
     #min_nbr_in_pan: 100
     mutation_channels:
       - ["Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation","Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins"]
-
-  METH:
-    #data_store: "METH/gdac.broadinstitute.org_UVM.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
-    #data_store: "METH/gdac.broadinstitute.org_PAN5.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
-    data_store: "METH/gdac.broadinstitute.org_PAN33.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
-    nbr: 20
-    method: "none"
-  #
+ #
   
   CLINICAL:
     data_store: "CLINICAL/gdac.broadinstitute.org_PAN33.Merge_Clinical.Level_1.2016012800.0.0.h5"
@@ -23,5 +16,5 @@ sources:
 broad_location: "data/broad_firehose/stddata__2016_01_28_processed_may_2017/20160128/"
    
 data_store: 
-  location: "data/broad_processed_may_2017/20160128/pan_all_meth_and_1000_dna"
+  location: "data/broad_processed_may_2017/20160128/pan_all_dna"
   name_of_store: "data"
