@@ -13,7 +13,7 @@ sources:
     #data_store: "METH/gdac.broadinstitute.org_UVM.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
     #data_store: "METH/gdac.broadinstitute.org_PAN5.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
     data_store: "METH/gdac.broadinstitute.org_PAN33.Methylation_Preprocess.Level_3.2016012800.0.0.h5"
-    nbr: 20
+    nbr: 200000
     method: "none"
   #
   
