@@ -75,9 +75,12 @@ if __name__ == "__main__":
   #   restricted_diseases.append( sys.argv[idx] )
   #   idx += 1
   
-  dna_gene = "APC"
-  for dna_gene in dna_genes[:10]:
+  #dna_gene = "APC"
+  for dna_gene in dna_genes[:1000]:
     for restricted_diseases in disease_groups:
+      print "-----------------------------------------------------------------"
       print "running ", dna_gene, " on ", restricted_diseases 
+      print "-----------------------------------------------------------------"
+      #main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases )
     #main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases )
   #pdb.set_trace()
