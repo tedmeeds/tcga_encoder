@@ -395,7 +395,7 @@ class MultiSourceData(object):
         #pdb.set_trace()
       print self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum().sort_values(ascending=False)[:100]
       print self.store[ DNA + "/" + CHANNEL + "/%d"%channel_idx ].sum()[:100]
-      pdb.set_trace()
+      #pdb.set_trace()
       channel_idx+=1  
       
   def AddRNA( self, broad_location, filename, h5store_ga, h5store_hi, nbr_genes, method = "max_var_fair", diseases = None ):
