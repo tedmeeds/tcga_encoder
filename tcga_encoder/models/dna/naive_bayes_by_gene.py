@@ -384,7 +384,7 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
   print "... done run_train."  
   return predictions
 
-def view_results( location, store, gene, n_permutations, source, method, disease_string, title_str = "", max_nbr = 100, zoom = True ):
+def view_results( results_location, store, gene, n_permutations, source, method, disease_string, title_str = "", max_nbr = 100, zoom = True ):
   mean_aucs = store["/%s/%s/%s/%s/labels_0/xval_aucs"%(disease_string,gene,source, method)]
   mean_auc = store["/%s/%s/%s/%s/labels_0/xval_aucs"%(disease_string,gene,source, method)].mean()
   var_auc  = store["/%s/%s/%s/%s/labels_0/xval_aucs"%(disease_string,gene,source, method)].var()
