@@ -281,6 +281,7 @@ class MultiSourceData(object):
       print "** DNA filtering genes"
       n = len(h5)
       g = len(genes2keep)
+      pdb.set_trace()
       query = np.squeeze(np.array([ (h5["Hugo_Symbol"]==d).values.reshape((n,1)) for d in genes2keep ])).T.sum(1).astype(bool)   
       h5 = h5[query]
       n_after = len(h5)
