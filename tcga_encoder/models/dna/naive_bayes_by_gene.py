@@ -66,6 +66,7 @@ def run_method( data, results_location, results_store, \
   dna_data, source_data = data              
   barcodes = source_data.index.values
   
+  
   targets = dna_data.loc[ barcodes ].values
   inputs  = source_data.loc[ barcodes ].values
   n_1 = np.sum(targets)
@@ -338,10 +339,17 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
   # extract in for the dna_gene
   data = prepare_data_store( data_file, dna_gene, source, method, restricted_diseases )
   
+  
+  
   if data is None:
     print "Skipping gene %s"%dna_gene
+    
     return
   
+  dna_data,s_data = data
+  if dna_data.sum()<10:
+    print "not enough data"
+    return 
   # prepare HDF store
   results_store = prepare_results_store( results_location )
    
