@@ -77,8 +77,8 @@ if __name__ == "__main__":
   #   idx += 1
   
   #dna_gene = "APC"
-  for dna_gene in dna_genes[15:100]:
-    for restricted_diseases in disease_groups:
+  for dna_gene in dna_genes[15:16]: #100]:
+    for restricted_diseases in disease_groups[:1]:
       print "-----------------------------------------------------------------"
       print "running ", dna_gene, " on ", restricted_diseases 
       print "-----------------------------------------------------------------"
