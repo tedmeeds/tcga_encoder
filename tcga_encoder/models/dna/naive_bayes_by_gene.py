@@ -161,9 +161,9 @@ def run_method( data, results_location, results_store, \
         #pdb.set_trace()
     #pdb.set_trace()
     
-  if label_permutation_idx == 0:
-    figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/rocs_%s_%s_%s_%s.png"%(dna_gene,source, method, disease_string)
-    f.savefig(  figname1, dpi=300 )
+  # if label_permutation_idx == 0:
+  #   figname1 = os.path.join( HOME_DIR, os.path.dirname(results_location) ) + "/rocs_%s_%s_%s_%s.png"%(dna_gene,source, method, disease_string)
+  #   f.savefig(  figname1, dpi=300 )
   xval_columns = np.array( ["seed_%d"%(seed+1) for seed in range(n_xval_repeats) ] )
   
   results_store[ "/%s/%s/%s/%s/labels_%d/xval_aucs_elementwise"%(disease_string,dna_gene,source, method,label_permutation_idx)] = pd.DataFrame( elementwise_aucs, index = source_data.columns, columns=xval_columns )
