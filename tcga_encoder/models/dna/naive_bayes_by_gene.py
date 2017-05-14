@@ -357,7 +357,7 @@ def run_train( data_file, results_location, dna_gene, source, method, n_folds, n
     print "\tINFO (%s): Running with permuted labels...%d of %d"%(dna_gene,permutation_idx+1, n_permutations)
     run_method( data, results_location, results_store, dna_gene, source, method, disease_string, n_folds, n_xval_repeats, randomize_labels = True, label_permutation_idx = permutation_idx+1)
   
-  view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "all", max_nbr=1000, zoom = False )
+  #view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "all", max_nbr=1000, zoom = False )
   view_results( results_location, results_store, dna_gene, n_permutations, source, method, disease_string, title_str = "zoom", max_nbr=100, zoom=True )
   
   predictions = results_store["/%s/%s/%s/%s/labels_0/xval_predictions"%(disease_string,dna_gene,source, method)]

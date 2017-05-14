@@ -6,7 +6,8 @@ from tcga_encoder.definitions.locations import *
 from sklearn.model_selection import StratifiedKFold
 from scipy import stats
 from tcga_encoder.models.dna.models import *
-from tcga_encoder.models.dna.naive_bayes_by_gene import main
+#from tcga_encoder.models.dna.naive_bayes_by_gene import main
+import os 
 
 disease_groups = [
   ["acc"],
@@ -76,14 +77,19 @@ if __name__ == "__main__":
   #   idx += 1
   
   #dna_gene = "APC"
-  for dna_gene in dna_genes[:1000]:
+  for dna_gene in dna_genes[15:100]:
     for restricted_diseases in disease_groups:
       print "-----------------------------------------------------------------"
       print "running ", dna_gene, " on ", restricted_diseases 
       print "-----------------------------------------------------------------"
-      try:
-        main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases )
-      except:
-        print "PROBLEM, skipping..."
+      diseases = restricted_diseases[0]
+      for d in restricted_diseases[1:]:
+        diseases += " %s"%(d)
+      #try:
+      s = "python tcga_encoder/models/dna/naive_bayes_by_gene.py %s %s %s %s %s %d %d %d 1 %s"%(data_file,results_location,dna_gene,source,method,n_folds,n_xval_repeats,n_permutations,diseases)
+      os.system(s)
+      #  #main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases )
+      #except:
+      #  print "PROBLEM, skipping..."
     #main( data_file, results_location, dna_gene, source, method, n_folds, n_xval_repeats, n_permutations, train, restricted_diseases )
   #pdb.set_trace()
