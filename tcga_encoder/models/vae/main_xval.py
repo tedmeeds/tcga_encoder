@@ -40,6 +40,8 @@ if __name__ == "__main__":
     yaml_file = replace_template( yaml_template_file, fold+1 )
     if run is True:
       runner( yaml_file )
+      #s = "python tcga_encoder/models/vae/main.py %s "%(yaml_file)
+      #os.system(s)
     else:
       print "Run is OFF by default, pass argument 1 to turn on"
     

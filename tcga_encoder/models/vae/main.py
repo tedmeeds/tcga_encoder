@@ -97,16 +97,16 @@ if __name__ == "__main__":
   
     
   batcher = main( yaml_file )
-  try:
-    fill = batcher.fill_source_store
-  except:
-    fill = batcher.fill_store
-  fill.open()
-  Z_train = fill["/Z/TRAIN/Z/mu"].loc[ batcher.train_barcodes]
-  Z_val = fill["/Z/VAL/Z/mu"].loc[ batcher.validation_barcodes]
-  
-  #print Z_train
-  fill.close()
+  # try:
+  #   fill = batcher.fill_source_store
+  # except:
+  #   fill = batcher.fill_store
+  # fill.open()
+  # Z_train = fill["/Z/TRAIN/Z/mu"].loc[ batcher.train_barcodes]
+  # Z_val = fill["/Z/VAL/Z/mu"].loc[ batcher.validation_barcodes]
+  #
+  # #print Z_train
+  # fill.close()
 
   
   
