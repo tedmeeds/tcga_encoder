@@ -64,9 +64,9 @@ def viz_weights_horizontal( w, names ):
   return f, ax1
   
 def decifer_weights( model_store, arch_dict, data_dict, weights, fold ):
-  layers = arch_dict["layers"]
+  layers = arch_dict["generative"]["layers"]
   for layer in layers:
-    if layer["name"] == "dna_predictions":
+    if layer["name"] == "gen_dna_space":
       
       if layer["inputs"][0] != "hidden":
         these_weights = []
@@ -75,6 +75,7 @@ def decifer_weights( model_store, arch_dict, data_dict, weights, fold ):
 
           source_name = input.split("_")[0]
           if len(layer["inputs"])>1:
+            pdb.set_trace()
             weight_names = ["%s_%s"%(source_name,s) for s in data_dict["store"]["/%s/FAIR"%(source_name)].columns]
           else:
             weight_names = data_dict["store"]["/%s/FAIR"%(source_name)].columns
@@ -155,7 +156,7 @@ def main(yaml_file):
   #print "Loading data"
   load_data_from_dict( y[DATA] )
   algo_dict = y[ALGORITHM]
-  #arch_dict = y[ARCHITECTURE]
+  arch_dict = y[ARCHITECTURE]
   data_dict = y[DATA] #{N_TRAIN:4000}
   logging_dict = y[LOGGING]
   
@@ -180,9 +181,9 @@ def main(yaml_file):
     fill_store = pd.HDFStore( os.path.join( fold_location_dir, "full_vae_fill.h5" ), "r" )   
     model_store = pd.HDFStore( os.path.join( fold_location_dir, "full_vae_model.h5" ), "r" )   
     #print model_store
-    fill_store = pd.HDFOpenStore( os.path.join( fold_location_dir, "full_vae_fill.h5" ), "r" )
+    fill_store = pd.HDFStore( os.path.join( fold_location_dir, "full_vae_fill.h5" ), "r" )
     
-    decifer_weights( model_store, arch_dict, data_dict, weights, fold )
+    #decifer_weights( model_store, arch_dict, data_dict, weights, fold )
     #print fill_store
     fold_fill_dna.append( fill_store["/Fill/VAL/DNA"] )
     fold_loglik_dna.append( fill_store["/Loglik/VAL/DNA"] )
@@ -217,21 +218,25 @@ def main(yaml_file):
     y_true = dna[gene]
     y_est  = fill_dna[gene]
     
-    aucs.append( roc_auc_score( y_true.values, y_est.values ) )
+    ok = np.isnan(y_true.values)==False
+    y_true=y_true[ok]
+    y_est = y_est[ok]
+    if np.sum(y_true.values)>0:
+      aucs.append( roc_auc_score( y_true.values.astype(int), y_est.values ) )
     
-    fpr,tpr,thresholds = roc_curve( y_true.values, y_est.values )
+      fpr,tpr,thresholds = roc_curve( y_true.values, y_est.values )
     
-    gene_name = "%s auc=%0.3f"%(gene,aucs[-1])
-    ax_auc_curves.plot( fpr, tpr, label = gene_name )
+      gene_name = "%s auc=%0.3f"%(gene,aucs[-1])
+      ax_auc_curves.plot( fpr, tpr, label = gene_name )
     
-    plot_binary_classification_result( y_true.values, y_est.values, title = gene_name, dirname = summary_location_dir)
+      plot_binary_classification_result( y_true.values, y_est.values, title = gene_name, dirname = summary_location_dir)
 
     if len(weights) > 0:
       plot_weights( mean_weights[gene], title = gene_name, dirname = summary_location_dir )
     
     
     
-  
+  #pdb.set_trace()
   aucs = pd.Series( aucs, fill_dna.columns ).sort_index( ascending=False )
   logliks = loglik_dna.mean(0)
   
