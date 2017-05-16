@@ -71,6 +71,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
       self.fill_store.close()
     elif layer_name == "Z_rec_input":
       pdb.set_trace()
+    elif layer_name == "DNA_target_mask_special":
+      pdb.set_trace()
 
 
   def PreStepDoWhatYouWant( self, sess, epoch, network, cb_info, train_op ):
