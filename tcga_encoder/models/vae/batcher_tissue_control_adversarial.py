@@ -572,7 +572,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
     for dna_gene in self.dna_genes:
       train_auc_rfc = 1.0
       train_cnt = np.sum(train_targets[dna_gene].values)
-      if train_cnt>0:
+      n_train = len(train_targets[dna_gene].values)
+      if train_cnt>0 and train_cnt < n_train:
         train_auc = roc_auc_score( train_targets[dna_gene].values, train_predictions[dna_gene].values )
         train_weighted_auc += train_cnt*train_auc
         train_weights += train_cnt
@@ -587,8 +588,9 @@ class TCGABatcherAdversarial( TCGABatcher ):
       
       val_auc = 1.0
       val_auc_rfc = 1.0
+      n_val = len(val_targets[dna_gene].values) 
       val_cnt = np.sum(val_targets[dna_gene].values)
-      if val_cnt>0:
+      if val_cnt>0 and val_cnt<n_val:
         ok_val.append(True)
         
         val_auc = roc_auc_score( val_targets[dna_gene].values, val_predictions[dna_gene].values )
