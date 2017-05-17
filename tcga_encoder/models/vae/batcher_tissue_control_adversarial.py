@@ -1,7 +1,18 @@
 #from tcga_encoder.models.vae.batcher_ABC import *
 from tcga_encoder.models.vae.batcher_tissue_control import *
 from sklearn.ensemble import RandomForestClassifier as rfc
+
+def find_cohort( barcodes, cohorts ):
+  found = np.zeros( (len(barcodes),1), dtype=bool )
   
+  diseases = np.array( [s.split("_")[0] for s in barcodes], dtype = str)
+  
+  for cohort in cohorts:
+    I = pp.find( diseases == cohort )
+    found[I] = True
+    
+  return found
+   
 class TCGABatcherAdversarial( TCGABatcher ):
   def MakeVizFilenames(self):
     self.fill_z_input = True
@@ -72,7 +83,15 @@ class TCGABatcherAdversarial( TCGABatcher ):
     elif layer_name == "Z_rec_input":
       pdb.set_trace()
     elif layer_name == "DNA_target_mask_special":
-      pdb.set_trace()
+      #pdb.set_trace()
+      batch_barcodes = batch[ "barcodes" ]
+      batch_observed = self.data_store[self.OBSERVED_key].loc[ batch_barcodes ].values
+      cohort_observed = find_cohort( batch_barcodes, self.validation_tissues )
+      batch_observed *= cohort_observed
+      #pdb.set_trace()
+      batch[ layer_name ] = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool)
+      #nbr_observed = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool).sum()
+      
 
 
   def PreStepDoWhatYouWant( self, sess, epoch, network, cb_info, train_op ):
