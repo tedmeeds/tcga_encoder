@@ -91,8 +91,11 @@ class TCGABatcherAdversarial( TCGABatcher ):
       #pdb.set_trace()
       batch[ layer_name ] = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool)
       #nbr_observed = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool).sum()
-      
-
+    elif layer_name == "dropped_source_observations":
+      ids = [self.observed_source2idx[ source ] for source in self.arch_dict["input_sources"]]
+      batch_data = batch[ "observed_sources" ][:,ids]  
+      batch[ layer_name ]  = batch_data
+      #pdb.set_trace()
 
   def PreStepDoWhatYouWant( self, sess, epoch, network, cb_info, train_op ):
     train_ops = [train_op]
@@ -1321,6 +1324,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     n_tissues = len(self.data_store[self.TISSUE_key].columns)
     #self.data_store[self.TISSUE_key].loc[ batch_barcodes ]
     
+    self.source2expectation_by_tissue = {}
     # get log_alpha and log_beta values
     for layer_name, input_name in zip( layers, input_sources ):
       n_dims = self.dims_dict[ input_name ]
@@ -1328,6 +1332,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       alpha = np.zeros( (n_tissues, n_dims ), dtype = float )
       beta  = np.zeros( (n_tissues, n_dims ), dtype = float )
       
+      self.source2expectation_by_tissue[input_name] = 0.5*np.ones((n_tissues, n_dims ), dtype = float )
       for t_idx, tissue in zip( range( n_tissues), self.data_store[self.TISSUE_key].columns):
         
         n_samples = self.train_tissue[ tissue ].sum()
@@ -1337,6 +1342,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       log_alpha = np.log( alpha + 0.001 ).astype(np.float32)
       log_beta = np.log( beta + 0.001).astype(np.float32)
       
+      self.source2expectation_by_tissue[input_name] = (alpha+0.001) / (alpha+beta+0.002)
       #layer = network.GetLayer( layer_name )
       
       #sess.run( tf.assign(layer.weights[0][0], log_alpha) )
@@ -1344,7 +1350,24 @@ class TCGABatcherAdversarial( TCGABatcher ):
       if network.HasLayer(layer_name ):
         network.GetLayer( layer_name ).SetWeights( sess, [log_alpha, log_beta ])
       #pdb.set_trace()
-      
+  
+  def fill_nans( self, X, NaNs, source, barcodes ):
+    n,d = X.shape
+    
+    nan_sum = NaNs.sum(1)
+    
+    I = pp.find( nan_sum > 0  )
+    barcodes_with_nans = barcodes[I]
+    
+    expectation = self.source2expectation_by_tissue[source]
+    
+    tissues = self.data_store[self.TISSUE_key].loc[ barcodes_with_nans ]
+    
+    X[I,:] = np.dot( tissues, expectation )
+    
+    #pdb.set_trace()
+    return X
+        
   def AddDnaNoise( self, X, rate=0.5 ):
     #return X
     #Y=X.copy()

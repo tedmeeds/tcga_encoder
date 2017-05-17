@@ -231,7 +231,7 @@ class TCGABatcherABC( object ):
       
     self.used_sources = np.unique( np.array(self.used_sources,dtype=str))
     self.usable_query   = self.optional_query & self.required_query
-    
+    #pdb.set_trace()
     print "  there are %d usable observations "%(np.sum(self.usable_query))
       
     #self.data_store[self.OBSERVED_key].values[:,self.observed_product_sources].sum(1)>0
@@ -1627,19 +1627,29 @@ class TCGABatcherABC( object ):
          batch_data_values = self.AddRnaNoise( batch_data.values, rate = self.rna_noise_rate )
           
         batch[ layer_name ] = self.NormalizeRnaInput( batch_data_values )
-        batch[ layer_name ][nans] = 0
+        
+        if np.sum(nans)>0: 
+          batch[ layer_name ] = self.fill_nans( batch[ layer_name ], nans, RNA, batch_barcodes )
+          #pdb.set_trace()
+          
+        #batch[ layer_name ][nans] = 0
         #pdb.set_trace()
         
       elif layer_name == RNA_TARGET:
         batch_data = self.data_store[self.RNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
         
+        
         batch_data_values = batch_data.values
         # if mode == "BATCH":
         #   batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.1 )
           
         batch[ layer_name ] = self.NormalizeRnaTarget( batch_data.fillna( 0 ).values )
-        batch[ layer_name ][nans] = 0
+        
+        if np.sum(nans)>0: 
+          batch[ layer_name ] = self.fill_nans( batch[ layer_name ], nans, RNA, batch_barcodes )
+        
+        #batch[ layer_name ][nans] = 0
         
       elif layer_name == RNA_TARGET_MASK:
         #batch_data = self.store[self.RNA_key].loc[ batch_barcodes ]
@@ -1655,6 +1665,10 @@ class TCGABatcherABC( object ):
          batch_data_values = self.AddmiRnaNoise( batch_data.values, rate = self.mirna_noise_rate )
           
         batch[ layer_name ] = self.NormalizemiRnaInput( batch_data_values )
+        
+        if np.sum(nans)>0: 
+          batch[ layer_name ] = self.fill_nans( batch[ layer_name ], nans, miRNA, batch_barcodes )
+        
         batch[ layer_name ][nans] = 0
         #pdb.set_trace()
         
@@ -1667,6 +1681,8 @@ class TCGABatcherABC( object ):
         #   batch_data_values = self.AddRnaNoise( batch_data.values, rate = 0.1 )
           
         batch[ layer_name ] = self.NormalizemiRnaTarget( batch_data.fillna( 0 ).values )
+        if np.sum(nans)>0: 
+          batch[ layer_name ] = self.fill_nans( batch[ layer_name ], nans, miRNA, batch_barcodes )
         batch[ layer_name ][nans] = 0
         
       elif layer_name == miRNA_TARGET_MASK:
@@ -1699,7 +1715,12 @@ class TCGABatcherABC( object ):
          batch_data_values = self.AddMethNoise( batch_data.values, rate = self.meth_noise_rate )
           
         batch[ layer_name ] = self.NormalizeMethInput( batch_data_values )
-        batch[ layer_name ][nans] = 0
+        
+        
+        if np.sum(nans)>0: 
+          batch[ layer_name ] = self.fill_nans( batch[ layer_name ], nans, METH, batch_barcodes )
+          
+        #batch[ layer_name ][nans] = 0
         #pdb.set_trace()
         
       elif layer_name == METH_TARGET:
@@ -1708,6 +1729,8 @@ class TCGABatcherABC( object ):
         batch_data_values = batch_data.values
           
         batch[ layer_name ] = self.NormalizeMethTarget( batch_data_values )
+        if np.sum(nans)>0: 
+          batch[ layer_name ] = self.fill_nans( batch[ layer_name ], nans, METH, batch_barcodes )
         batch[ layer_name ][nans] = 0
         
       elif layer_name == METH_TARGET_MASK:

@@ -86,6 +86,18 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
 
   batch_id_generator  = batch_ids_maker( batch_size, n_train )
   batcher.batch_id_generator = batch_id_generator
+
+
+  # -------------------------------------------------- #
+  # TRAIN                                              #
+  # -------------------------------------------------- #
+  print "Running : init = tf.global_variables_initializer()"
+  init = tf.global_variables_initializer()
+  #init = tf.initialize_all_variables()
+  print "Running : sess.run(init)"
+  sess.run(init)
+  batcher.InitializeAnythingYouWant( sess, network )
+  
   test_feed_imputation = batcher.TestBatch()
   test_feed_dict = {}
   network.FillFeedDict( test_feed_dict, test_feed_imputation )
@@ -99,16 +111,6 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
   cb_info[TEST_FEED_IMPUTATION] = test_feed_imputation
   cb_info[VAL_FEED_DICT]       = val_feed_dict
   cb_info[VAL_FEED_IMPUTATION] = val_feed_imputation
-
-  # -------------------------------------------------- #
-  # TRAIN                                              #
-  # -------------------------------------------------- #
-  print "Running : init = tf.global_variables_initializer()"
-  init = tf.global_variables_initializer()
-  #init = tf.initialize_all_variables()
-  print "Running : sess.run(init)"
-  sess.run(init)
-  batcher.InitializeAnythingYouWant( sess, network )
   
   print "Running : for epoch in range(n_epochs):"
   for epoch in range(n_epochs):
