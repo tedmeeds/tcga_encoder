@@ -54,7 +54,7 @@ def load_gene_filter( gene_filter_name, filter_column, filter_min, sep = "," ):
 
 def load_gene_filter_by_index( gene_filter_name, filter_column, filter_min, sep = "," ):
   print "loading this gene filter file: ", gene_filter_name
-  df = pd.read_csv( gene_filter_name, sep = sep )
+  df = pd.read_csv( gene_filter_name, sep = sep, index_col=0 )
   pdb.set_trace()
   if filter_column == "top":
     genes = df["gene"][:filter_min].values
