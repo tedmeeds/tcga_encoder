@@ -67,10 +67,17 @@ class TCGABatcherABC( object ):
     self.epoch_store.close()  
 
   def GetAlgoDictStuff(self):
-    self.beta = self.algo_dict["beta_init"]
-    self.free_bits = self.algo_dict["free_bits_init"]
-    self.r1 = self.algo_dict["r1"]
-    self.r2 = self.algo_dict["r2"]
+    if self.algo_dict.has_key("beta_init"):
+      self.beta = self.algo_dict["beta_init"]
+      
+    if self.algo_dict.has_key("free_bits_init"):
+      self.free_bits = self.algo_dict["free_bits_init"]
+      
+    if self.algo_dict.has_key("r1"):
+      self.r1 = self.algo_dict["r1"]
+      
+    if self.algo_dict.has_key("r2"):
+      self.r2 = self.algo_dict["r2"]
         
   def Initialize(self):
     self.GetAlgoDictStuff()
