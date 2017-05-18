@@ -552,19 +552,19 @@ class TCGABatcherABC( object ):
       self.TestFillZ( sess, cb_info )
       #self.TrainFillZ( sess, cb_info )
       
-    elif function_name == "beta":
-      if self.algo_dict["beta_growth"] < 0:
-        self.beta = max( self.algo_dict["beta_min"], -self.beta*self.algo_dict["beta_growth"] )
-      else:
-        self.beta = min( self.algo_dict["beta_max"], self.beta*self.algo_dict["beta_growth"] )
-      print "BETA ", self.beta
-      
-    elif function_name == "free_bits":
-      if self.algo_dict["free_bits_growth"] < 0:
-        self.free_bits = max( self.algo_dict["free_bits_min"], -self.free_bits*self.algo_dict["free_bits_growth"] )
-      else:
-        self.free_bits = min( self.algo_dict["free_bits_max"], self.free_bits*self.algo_dict["free_bits_growth"] )
-      print "FREE_BITS ", self.free_bits
+    # elif function_name == "beta":
+    #   if self.algo_dict["beta_growth"] < 0:
+    #     self.beta = max( self.algo_dict["beta_min"], -self.beta*self.algo_dict["beta_growth"] )
+    #   else:
+    #     self.beta = min( self.algo_dict["beta_max"], self.beta*self.algo_dict["beta_growth"] )
+    #   print "BETA ", self.beta
+    #
+    # elif function_name == "free_bits":
+    #   if self.algo_dict["free_bits_growth"] < 0:
+    #     self.free_bits = max( self.algo_dict["free_bits_min"], -self.free_bits*self.algo_dict["free_bits_growth"] )
+    #   else:
+    #     self.free_bits = min( self.algo_dict["free_bits_max"], self.free_bits*self.algo_dict["free_bits_growth"] )
+    #   print "FREE_BITS ", self.free_bits
 
   def SaveSurvival( self, disease_list, predict_survival_train, g1, g2 ):
     if disease_list.__class__ == list:
