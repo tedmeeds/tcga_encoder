@@ -80,7 +80,7 @@ if __name__ == "__main__":
       
       dataset.InitSource( RNA, broad_location, source_name )
       dataset.store[ RNA + "/" + "RSEM" + "/" ] = rna_h5[RNA + "/" + "RSEM" + "/"][ genes2keep ]
-      self.store[ RNA + "/" + "FAIR" + "/" ] = rna_h5[RNA + "/" + "FAIR" + "/"][ genes2keep ]
+      dataset.store[ RNA + "/" + "FAIR" + "/" ] = rna_h5[RNA + "/" + "FAIR" + "/"][ genes2keep ]
       
       
     elif source_name == miRNA:
@@ -102,7 +102,7 @@ if __name__ == "__main__":
       
       dataset.InitSource( miRNA, broad_location, source_name )
       dataset.store[ miRNA + "/" + "READS" + "/" ] = mirna_h5[miRNA + "/" + "READS" + "/"][ genes2keep ]
-      self.store[ miRNA + "/" + "FAIR" + "/" ] = mirna_h5[miRNA + "/" + "FAIR" + "/"][ genes2keep ]
+      dataset.store[ miRNA + "/" + "FAIR" + "/" ] = mirna_h5[miRNA + "/" + "FAIR" + "/"][ genes2keep ]
       
     elif source_name == METH:
       meth_h5 = pd.HDFStore( os.path.join( broad_processed_location, source_spec["data_store"]), "r" )
@@ -117,7 +117,7 @@ if __name__ == "__main__":
       
       dataset.InitSource( METH, broad_location, source_name )
       dataset.store[ METH + "/" + "METH" + "/" ] = meth_h5[METH + "/" + "METH" + "/"][ genes2keep ]
-      self.store[ METH + "/" + "FAIR" + "/" ] = meth_h5[METH + "/" + "FAIR" + "/"][ genes2keep ]
+      dataset.store[ METH + "/" + "FAIR" + "/" ] = meth_h5[METH + "/" + "FAIR" + "/"][ genes2keep ]
 
       #dataset.AddMeth( broad_location, source_name, meth_h5, nbr, method )
     elif source_name == CLINICAL:
