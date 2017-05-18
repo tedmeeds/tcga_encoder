@@ -10,7 +10,7 @@ sources:
       - ["Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation","Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins"]
 
   RNA:
-    filter_file: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/RNA_SIG/PAN32_sig_genes.csv"
+    filter_file: "RNA_SIG/PAN32_sig_genes.csv"
     filter_column: "pan-fisher-chi"
     filter_nbr: 100
     data_store: "pan_all_rna_and_1000_dna/data.h5"
