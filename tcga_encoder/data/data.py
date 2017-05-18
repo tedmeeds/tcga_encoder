@@ -247,29 +247,6 @@ class MultiSourceData(object):
     print "intersect h5 & raw_h5 ", intersect_barcodes.shape
     print "intersect raw h5 & dropped ", intersect_barcodesb.shape
     print "intersect h5 & dropped ", intersect_barcodesc.shape
-    
-    #pdb.set_trace()
-    # #print "found %d barcodes to remove from h5"%(len(intersect_barcodes))
-    # # merge h5 and h5_raw
-    #
-    # for bc in intersect_barcodes:
-    #   n_h5 = len(h5)
-    #   #remove_query = np.zeros( (n_h5,1), dtype=bool )
-    #   remove_query = (h5["patient.bcr_patient_barcode"]==bc).values.reshape((n_h5,1))
-    #   keep_query = ~remove_query
-    #   #pdb.set_trace()
-    #   h5 = h5[keep_query]
-    #
-    # new_PATIENTS = h5["patient.bcr_patient_barcode"].values
-    # new_DISEASES = h5["admin.disease_code"].values
-    #
-    # new_u_barcodes = np.sort(np.unique( new_PATIENTS ) )
-    # new_PATIENTS = np.sort(np.unique( new_DISEASES + "_" + new_PATIENTS ))
-    # new_patient_rows = new_PATIENTS
-    #
-    #
-    # print "finding removing patients from h5"
-    #pdb.set_trace()  
     h5 = h5_dropped
     
     PATIENTS = h5["patient.bcr_patient_barcode"].values
@@ -413,35 +390,6 @@ class MultiSourceData(object):
     h5_b = h5store_hi.append(h5store_ga)
     h5 = h5_b.drop_duplicates( subset=["RNApatient.bcr_patient_barcode"])
     
-    # h5_barcodes = h5["patient.bcr_patient_barcode"].values
-    # u_h5_barcodes = np.unique(h5_barcodes)
-    #
-    # counter_ga = Counter(h5store_ga["RNApatient.bcr_patient_barcode"].values)
-    # counter_hi = Counter(h5store_hi["RNApatient.bcr_patient_barcode"].values)
-    #
-    # counts_ga = np.array(counter_ga.values())
-    # I_ga = pp.find( counts_ga > 1 )
-    #
-    # dup_bcs_ga = np.array( counter_ga.keys() )[I_ga]
-    # counts_hi = np.array(counter_hi.values())
-    # I_hi = pp.find( counts_hi > 1 )
-    #
-    # dup_bcs_hi = np.array( counter_hi.keys() )[I_hi]
-    
-    #pdb.set_trace()
-    #h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
-    
-    # if diseases is not None:
-    #   n=len(h5)
-    #   print "** RNA filtering diseases"
-    #   index_array = np.array(h5.index.values)
-    #   query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
-    #   h5 = h5[query]
-    #   n_after = len(h5)
-    #   self.AddInfo( RNA, "filtering_step", "disease number%d"%(len(diseases)) )
-    #   self.AddInfo( RNA, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
-    
-    #gene_columns = np.sort( np.unique( h5["Hugo_Symbol"].values ) )
     print "** RNA filter for tumor samples only"
     
     patient_disease = h5["admin.disease_code"].values
@@ -463,13 +411,8 @@ class MultiSourceData(object):
     
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
-    patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] #h5["patient.bcr_patient_barcode"].values
-    
-    #pdb.set_trace()
+    patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] 
     self.AddObservedPatients( RNA, patient_rows )
-    
-      
-    #self.rna_h5 = h5
     
     print "** RNA splitting genes"
     self.rna_original_genes = h5.columns
@@ -526,7 +469,6 @@ class MultiSourceData(object):
       assert False, "unknown selection method for RNA = %s"%(method)
     self.store[ RNA + "/" + "RSEM" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = gene_columns )
     self.store[ RNA + "/" + "FAIR" + "/" ] = pd.DataFrame( FAIR_R, index = patient_rows, columns = gene_columns )
-
     
   def AddMeth( self, broad_location, filename, h5store, nbr_genes, method = "max_var_fair", diseases = None ):
     print "*****************************************"
@@ -627,6 +569,8 @@ class MultiSourceData(object):
       pass
     elif method == "none":
       pass
+    elif method == "fisher":
+      
     else:
       assert False, "unknown selection method for RNA = %s"%(method)
     

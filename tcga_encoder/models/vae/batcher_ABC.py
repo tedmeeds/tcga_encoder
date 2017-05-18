@@ -1801,7 +1801,7 @@ class TCGABatcherABC( object ):
         #print "-- observed : |R|= %d  |D| = %d  |R*D| = %d |R*1-D| = %d  |1-R*D| = %d  neither=%d"%(sm[0],sm[1], both, only_first, only_second, neither)
       
         #pdb.set_trace()
-        if mode == "BATCH":
+        if 0: #mode == "BATCH":
           # find all data where batch observations has more than one source available
           I = pp.find( batch_data.sum(1) == 3 )
           for i_idx in I:

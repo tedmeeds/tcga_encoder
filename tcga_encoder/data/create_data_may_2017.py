@@ -57,24 +57,65 @@ if __name__ == "__main__":
         min_nbr_in_pan = source_spec["min_nbr_in_pan"]
       dataset.AddDNA( broad_location, source_name, dna_h5, dna_h5_raw, mutation_channels=mutation_channels, genes2keep=dna_genes, min_nbr_in_pan=min_nbr_in_pan )
     elif source_name == RNA:
-      print "loading ", source_spec["data_store_ga"]
-      rna_h5_ga = ReadH5( os.path.join( broad_location, source_spec["data_store_ga"]) )
-      print "loading ", source_spec["data_store_hi"]
-      rna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
+      rna_h5 = ReadH5( os.path.join( broad_location, source_spec["data_store"]) )
+      #print "loading ", source_spec["data_store_ga"]
+      #rna_h5_ga = ReadH5( os.path.join( broad_location, source_spec["data_store_ga"]) )
+      #print "loading ", source_spec["data_store_hi"]
+      #rna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
       nbr = source_spec["nbr"]
       method = source_spec["method"]
-      dataset.AddRNA( broad_location, source_name, rna_h5_ga, rna_h5_hi, nbr, method )
+      #dataset.AddRNA( broad_location, source_name, rna_h5_ga, rna_h5_hi, nbr, method )
+      
+      filter_column     = source_spec["filter_column"]
+      filtered_csv_file = source_spec["filter_file"]
+      filtered_csv_file = os.path.join( os.environ.get('HOME','/'), filtered_csv_file)
+      filter_nbr = spec["filter_nbr"]
+      genes2keep = load_gene_filter( filtered_csv_file, filter_column, filter_nbr )
+      
+      #dataset.SelectiveAddRNA( broad_location, source_name, rna_h5_ga, rna_h5_hi, genes2keep )
+      
+      dataset.InitSource( RNA, broad_location, source_name )
+      dataset.store[ RNA + "/" + "RSEM" + "/" ] = rna_h5[RNA + "/" + "RSEM" + "/"][ genes2keep ]
+      self.store[ RNA + "/" + "FAIR" + "/" ] = rna_h5[RNA + "/" + "FAIR" + "/"][ genes2keep ]
+      
+      
     elif source_name == miRNA:
-      mirna_h5_ga = ReadH5( os.path.join( broad_location, source_spec["data_store_ga"]) )
-      mirna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
+      #mirna_h5_ga = ReadH5( os.path.join( broad_location, source_spec["data_store_ga"]) )
+      #mirna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
+      mirna_h5 = ReadH5( os.path.join( broad_location, source_spec["data_store"]) )
+      #mirna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
       nbr = source_spec["nbr"]
       method = source_spec["method"]
-      dataset.AddmiRNA( broad_location, source_name, mirna_h5_ga, mirna_h5_hi, nbr, method )
+      
+      filter_column     = source_spec["filter_column"]
+      filtered_csv_file = source_spec["filter_file"]
+      filtered_csv_file = os.path.join( os.environ.get('HOME','/'), filtered_csv_file)
+      filter_nbr = spec["filter_nbr"]
+      genes2keep = load_gene_filter( filtered_csv_file, filter_column, filter_nbr )
+      
+      #dataset.AddmiRNA( broad_location, source_name, mirna_h5_ga, mirna_h5_hi, nbr, method )
+      #dataset.SelectiveAddmiRNA( broad_location, source_name, mirna_h5_ga, mirna_h5_hi, genes2keep )
+      
+      dataset.InitSource( miRNA, broad_location, source_name )
+      dataset.store[ miRNA + "/" + "READS" + "/" ] = mirna_h5[miRNA + "/" + "READS" + "/"][ genes2keep ]
+      self.store[ miRNA + "/" + "FAIR" + "/" ] = mirna_h5[miRNA + "/" + "FAIR" + "/"][ genes2keep ]
+      
     elif source_name == METH:
       meth_h5 = ReadH5( os.path.join( broad_location, source_spec["data_store"]) )
       nbr = source_spec["nbr"]
       method = source_spec["method"]
-      dataset.AddMeth( broad_location, source_name, meth_h5, nbr, method )
+      
+      filter_column     = source_spec["filter_column"]
+      filtered_csv_file = source_spec["filter_file"]
+      filtered_csv_file = os.path.join( os.environ.get('HOME','/'), filtered_csv_file)
+      filter_nbr = spec["filter_nbr"]
+      genes2keep = load_gene_filter( filtered_csv_file, filter_column, filter_nbr )
+      
+      dataset.InitSource( METH, broad_location, source_name )
+      dataset.store[ METH + "/" + "METH" + "/" ] = meth_h5[METH + "/" + "METH" + "/"][ genes2keep ]
+      self.store[ METH + "/" + "FAIR" + "/" ] = meth_h5[METH + "/" + "FAIR" + "/"][ genes2keep ]
+
+      #dataset.AddMeth( broad_location, source_name, meth_h5, nbr, method )
     elif source_name == CLINICAL:
       pass
     else:
