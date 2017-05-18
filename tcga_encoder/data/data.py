@@ -569,7 +569,6 @@ class MultiSourceData(object):
       pass
     elif method == "none":
       pass
-    elif method == "fisher":
       
     else:
       assert False, "unknown selection method for RNA = %s"%(method)
