@@ -51,7 +51,22 @@ def load_gene_filter( gene_filter_name, filter_column, filter_min, sep = "," ):
     genes = df["gene"][ df[filter_column] <= filter_min ]
     return genes.values
   return genes
-  
+
+def load_gene_filter_by_index( gene_filter_name, filter_column, filter_min, sep = "," ):
+  print "loading this gene filter file: ", gene_filter_name
+  df = pd.read_csv( gene_filter_name, sep = sep )
+  pdb.set_trace()
+  if filter_column == "top":
+    genes = df["gene"][:filter_min].values
+    return genes
+  elif filter_column == "pan-fisher-chi":
+    genes = df["gene"][:filter_min].values
+    return genes
+  else:
+    genes = df["gene"][ df[filter_column] <= filter_min ]
+    return genes.values
+  return genes
+    
 class MultiSourceData(object):
   def __init__(self, location, name_of_store = "data" ):
     self.location = location

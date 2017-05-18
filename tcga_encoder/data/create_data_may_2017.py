@@ -74,7 +74,7 @@ if __name__ == "__main__":
       
       print filtered_csv_file
       pdb.set_trace()
-      genes2keep = load_gene_filter( filtered_csv_file, filter_column, filter_nbr )
+      genes2keep = load_gene_filter_by_index( filtered_csv_file, filter_column, filter_nbr )
       
       #dataset.SelectiveAddRNA( broad_location, source_name, rna_h5_ga, rna_h5_hi, genes2keep )
       
@@ -95,7 +95,7 @@ if __name__ == "__main__":
       filtered_csv_file = source_spec["filter_file"]
       filtered_csv_file = os.path.join( broad_analyses_location, filtered_csv_file )
       filter_nbr = source_spec["filter_nbr"]
-      genes2keep = load_gene_filter( filtered_csv_file, filter_column, filter_nbr )
+      genes2keep = load_gene_filter_by_index( filtered_csv_file, filter_column, filter_nbr )
       
       #dataset.AddmiRNA( broad_location, source_name, mirna_h5_ga, mirna_h5_hi, nbr, method )
       #dataset.SelectiveAddmiRNA( broad_location, source_name, mirna_h5_ga, mirna_h5_hi, genes2keep )
@@ -113,7 +113,7 @@ if __name__ == "__main__":
       filtered_csv_file = source_spec["filter_file"]
       filtered_csv_file = os.path.join( broad_analyses_location, filtered_csv_file)
       filter_nbr = source_spec["filter_nbr"]
-      genes2keep = load_gene_filter( filtered_csv_file, filter_column, filter_nbr )
+      genes2keep = load_gene_filter_by_index( filtered_csv_file, filter_column, filter_nbr )
       
       dataset.InitSource( METH, broad_location, source_name )
       dataset.store[ METH + "/" + "METH" + "/" ] = meth_h5[METH + "/" + "METH" + "/"][ genes2keep ]
