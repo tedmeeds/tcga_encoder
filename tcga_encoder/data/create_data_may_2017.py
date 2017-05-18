@@ -63,7 +63,7 @@ if __name__ == "__main__":
       #rna_h5_ga = ReadH5( os.path.join( broad_location, source_spec["data_store_ga"]) )
       #print "loading ", source_spec["data_store_hi"]
       #rna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
-      nbr = source_spec["nbr"]
+      #nbr = source_spec["nbr"]
       method = source_spec["method"]
       #dataset.AddRNA( broad_location, source_name, rna_h5_ga, rna_h5_hi, nbr, method )
       
@@ -85,7 +85,7 @@ if __name__ == "__main__":
       #mirna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
       mirna_h5 = pd.HDFStore( os.path.join( broad_processed_location, source_spec["data_store"]), "r" )
       #mirna_h5_hi = ReadH5( os.path.join( broad_location, source_spec["data_store_hi"]) )
-      nbr = source_spec["nbr"]
+      #nbr = source_spec["nbr"]
       method = source_spec["method"]
       
       filter_column     = source_spec["filter_column"]
@@ -103,7 +103,7 @@ if __name__ == "__main__":
       
     elif source_name == METH:
       meth_h5 = pd.HDFStore( os.path.join( broad_processed_location, source_spec["data_store"]), "r" )
-      nbr = source_spec["nbr"]
+      #nbr = source_spec["nbr"]
       method = source_spec["method"]
       
       filter_column     = source_spec["filter_column"]
