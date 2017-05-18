@@ -10,7 +10,7 @@ sources:
     # filter_file: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/MUT_SIG/PAN30_sig_genes.csv"
     # filter_column: "pan-min_r"
     filter_nbr: 100
-    min_nbr_in_pan: 100
+    #min_nbr_in_pan: 100
     mutation_channels:
       - ["Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation","Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins"]
 
