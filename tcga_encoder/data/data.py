@@ -57,7 +57,7 @@ def load_gene_filter_by_index( gene_filter_name, filter_column, filter_min, sep 
   df = pd.read_csv( gene_filter_name, sep = sep, index_col=0 )
   #pdb.set_trace()
   if filter_column == "pan-fisher-chi":
-    genes = df["filter_column"][:filter_min].index.values
+    genes = df[filter_column][:filter_min].index.values
     return genes
   else:
     genes = df.index.values[:filter_min]
