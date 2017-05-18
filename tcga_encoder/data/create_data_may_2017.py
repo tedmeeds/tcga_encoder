@@ -81,7 +81,7 @@ if __name__ == "__main__":
       dataset.InitSource( RNA, broad_location, source_name )
       dataset.store[ RNA + "/" + "RSEM" + "/" ] = rna_h5[RNA + "/" + "RSEM" + "/"][ genes2keep ]
       dataset.store[ RNA + "/" + "FAIR" + "/" ] = rna_h5[RNA + "/" + "FAIR" + "/"][ genes2keep ]
-      dataset.AddObservedPatients( RNA, rna_h5[RNA + "/" + "RNA" + "/"].index.values )
+      dataset.AddObservedPatients( RNA, rna_h5[RNA + "/" + "FAIR" + "/"].index.values )
       
     elif source_name == miRNA:
       #mirna_h5_ga = ReadH5( os.path.join( broad_location, source_spec["data_store_ga"]) )
@@ -103,7 +103,7 @@ if __name__ == "__main__":
       dataset.InitSource( miRNA, broad_location, source_name )
       dataset.store[ miRNA + "/" + "READS" + "/" ] = mirna_h5[miRNA + "/" + "READS" + "/"][ genes2keep ]
       dataset.store[ miRNA + "/" + "FAIR" + "/" ] = mirna_h5[miRNA + "/" + "FAIR" + "/"][ genes2keep ]
-      dataset.AddObservedPatients( miRNA, mirna_h5[miRNA + "/" + "miRNA" + "/"].index.values )
+      dataset.AddObservedPatients( miRNA, mirna_h5[miRNA + "/" + "FAIR" + "/"].index.values )
       
     elif source_name == METH:
       meth_h5 = pd.HDFStore( os.path.join( broad_processed_location, source_spec["data_store"]), "r" )
