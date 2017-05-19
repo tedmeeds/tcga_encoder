@@ -335,9 +335,9 @@ class TCGABatcherABC( object ):
     self.meth_mean = self.data_store[self.METH_key].mean(0)
     self.meth_std = self.data_store[self.METH_key].std(0)
     
-    self.rna_order = np.argsort( self.rna_mean.values )
-    self.mirna_order = np.argsort( self.mirna_mean.values )
-    self.meth_order = np.argsort( self.meth_mean.values )
+    self.rna_order = np.arange(len(self.rna_mean.values)) # np.argsort( self.rna_mean.values )
+    self.mirna_order = np.arange(len(self.mirna_mean.values)) #np.argsort( self.mirna_mean.values )
+    self.meth_order = np.arange(len(self.meth_mean.values)) #np.argsort( self.meth_mean.values )
     
     self.tissue_statistics = {}
     

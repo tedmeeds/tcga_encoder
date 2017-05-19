@@ -36,7 +36,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.viz_filename_error_sources_per_gene_fill_all = os.path.join( self.savedir, "errors_sources_z_per_gene_fill_all.png" )
     self.viz_scaled_weights = os.path.join( self.savedir, "weights_scaled_inputs.png" )
     self.viz_tissue_predictions = os.path.join( self.savedir, "tissue_predictions" )
-
+    self.viz_hidden_weights = os.path.join( self.savedir, "hidden_weights" )
+    
   def FillDerivedPlaceholder( self, batch, layer_name, mode ):
     
     if layer_name == "Z_rec_input" and self.fill_z_input is True:
@@ -1315,12 +1316,148 @@ class TCGABatcherAdversarial( TCGABatcher ):
     #pdb.set_trace() 
     pp.savefig( self.viz_scaled_weights + ".png", fmt="png", bbox_inches = "tight")  
     self.model_store.close()
+
+  def VizRecHidden(self, sess, info_dict ):
+    
+    
+    
+    if self.network.HasLayer( "rec_hidden" ):
+      layer = self.network.GetLayer( "rec_hidden")
       
+      layer_specs = self.arch_dict["recognition"]["layers"]
+      for layer_spec in layer_specs:
+        if layer_spec["name"] == "rec_hidden":
+          inputs = layer_spec["inputs"]
+          input_sources = []
+          for input in inputs:
+            source = input.split("_")[0]
+            input_sources.append(source)
+          break
+    
+    else:
+      print "Could not find rec_hidden"
+      return
+      
+    self.model_store.open()
+    
+    f = pp.figure()
+    #input_sources = ["METH","RNA","miRNA"]
+    #orders        = [self.meth_order,self.rna_order,self.mirna_order]
+    #data_means    = [self.meth_mean,self.rna_mean,self.mirna_mean]
+    n_sources = len(input_sources)
+    
+    post_fix = "_scaled"
+    idx=1
+    
+    W = {}
+    for w_idx, input_source in zip( range(n_sources), input_sources ):
+      w = self.model_store[ "rec_hidden" + "/W/w%d"%(w_idx)].values
+      #pdb.set_trace()
+      
+      
+      d,k = w.shape
+      
+      columns = np.array( ["h_%d"%i for i in range(k)])
+      if input_source == "RNA":
+        rows = self.rna_genes
+        
+      if input_source == "miRNA":
+        rows = self.mirna_hsas
+        
+      if input_source == "METH":
+        rows = np.array( [ "M-%s"%g for g in self.meth_genes], dtype=str )
+        
+      if input_source == "TISSUE":
+        rows = self.tissue_names
+        
+      print input_source, w.shape, len(rows), len(columns)
+      W[ input_source ] = pd.DataFrame( w, index=rows, columns = columns )
+      
+      # colors = "brgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgkmcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymc"
+      # for t_idx in range(n_tissues):
+      #   m = mean[:,t_idx][w_i]
+      #   s = std_dev[:,t_idx][w_i]
+      #   #pdb.set_trace()
+      #   ax.fill_between( w_0, m - 0.5*s, m + 0.5*s, alpha=0.25, color=colors[t_idx] )
+      #   ax.plot( w_0, m,colors[t_idx]+'-' )
+      #
+      #
+      # pp.plot( w_0, data_means[idx-1][w_i], 'k--', lw=2, alpha=0.5)
+      # pp.ylabel( input_source )
+      # pp.ylim(0,1)
+      # idx+=1
+    self.model_store.close()
+    
+    #pp.show()
+    
+    cmap = sns.diverging_palette(h_neg=210, h_pos=350, s=90, l=30, as_cmap=True)
+    
+    W_all = pd.concat( W.values(), axis=0 )
+    rownames = W_all.index.values
+    
+    W_corr_hidden = W_all.corr()
+    W_corr_inputs = W_all.T.corr()
+    
+    f = pp.figure(figsize=(16,12))
+    ax=f.add_subplot(111)
+    # mask = np.zeros_like(W_corr, dtype=np.bool)
+    # mask[np.triu_indices_from(mask)] = True
+    
+    htmap = sns.clustermap ( W_corr_hidden, cmap=cmap, square=True )
+    #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
+    #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
+    
+    pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+    pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+    
+    pp.savefig( self.viz_hidden_weights + "_corr_heatmap_hidden.png", fmt="png", bbox_inches = "tight") 
+
+    f2 = pp.figure(figsize=(16,12))
+    ax2=f.add_subplot(111)
+    # mask = np.zeros_like(W_corr, dtype=np.bool)
+    # mask[np.triu_indices_from(mask)] = True
+    
+    htmap2 = sns.clustermap ( W_corr_inputs, cmap=cmap, square=True )
+    #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
+    #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
+    
+    pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+    pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+    
+    pp.savefig( self.viz_hidden_weights + "_corr_heatmap_inputs.png", fmt="png", bbox_inches = "tight") 
+
+    f3 = pp.figure(figsize=(16,12))
+    ax3=f.add_subplot(111)
+    # mask = np.zeros_like(W_corr, dtype=np.bool)
+    # mask[np.triu_indices_from(mask)] = True
+    
+    htmap3 = sns.clustermap ( W_all, cmap=cmap, square=False )
+    #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
+    #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
+    
+    pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+    pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+    
+    pp.savefig( self.viz_hidden_weights + "_weights_heatmap.png", fmt="png", bbox_inches = "tight") 
+        
+
+        
+    #pdb.set_trace() 
+    # 
+    
+          
   def VizModel( self, sess, info_dict ): 
     print "** VIZ Model"
     
     #self.VizWeightsGeneric(sess, info_dict )
-    self.VizInputScales(sess, info_dict )
+    #self.VizInputScales(sess, info_dict )
+    self.VizRecHidden( sess, info_dict )
     #self.model_store.open()
     #keys = self.model_store.keys()
     #print keys
