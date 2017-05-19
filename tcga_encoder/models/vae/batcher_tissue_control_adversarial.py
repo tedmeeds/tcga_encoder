@@ -90,6 +90,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       batch_observed *= cohort_observed
       #pdb.set_trace()
       batch[ layer_name ] = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool)
+      self.dna_uses_cohorts = True
       #nbr_observed = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool).sum()
     elif layer_name == "dropped_source_observations":
       ids = [self.observed_source2idx[ source ] for source in self.arch_dict["input_sources"]]
@@ -570,8 +571,19 @@ class TCGABatcherAdversarial( TCGABatcher ):
     dna_observed_val   = dna_observed_query.loc[self.validation_barcodes]
     
     dna_observed_train_barcodes = dna_observed_train[dna_observed_train.values].index.values
-    dna_observed_val_barcodes   = dna_observed_val[dna_observed_val.values].index.values
+
     
+    dna_observed_val_barcodes   = dna_observed_val[dna_observed_val.values].index.values
+    val_cohorts = np.unique( np.array( [s.split("_")[0] for s in dna_observed_val_barcodes] ) )
+    
+    train_cohorts = np.array( [s.split("_")[0] for s in dna_observed_train_barcodes] )
+    #if self.dna_uses_cohorts is True:
+    new_cohorts = []
+    for cohort in val_cohorts:
+      I = pp.find( train_cohorts==cohort )
+      new_cohorts.extend( dna_observed_train_barcodes[I] )
+    dna_observed_train_barcodes = np.array(new_cohorts)
+      
     #pdb.set_trace()
     val_predictions   = self.fill_store["/Fill/VAL/DNA"].loc[dna_observed_val_barcodes]
     train_predictions = self.fill_store["/Fill/TRAIN/DNA"].loc[dna_observed_train_barcodes]
@@ -581,6 +593,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     val_targets   = self.dna_store.loc[dna_observed_val_barcodes]
     train_targets = self.dna_store.loc[dna_observed_train_barcodes]
+    
+    #pdb.set_trace()
     #pdb.set_trace()
     n_train = len(train_targets)
     n_val   = len(val_targets)
@@ -783,7 +797,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     ax_pos_pred_no_bias.grid('off')
     
     
-    f.savefig( self.viz_tissue_predictions + "_%d.png"%(info_dict["epoch"]))
+    #f.savefig( self.viz_tissue_predictions + "_%d.png"%(info_dict["epoch"]))
     f.savefig( self.viz_tissue_predictions + ".png")
     pp.close()
     #pdb.set_trace()
@@ -1317,7 +1331,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     print "Running : InitializeAnythingYouWant"
     self.dna_aucs_all = []
     self.fill_z_input = True
-    
+    self.dna_uses_cohorts = False
     input_sources = ["METH","RNA","miRNA"] 
     layers = ["gen_meth_space_basic","gen_rna_space_basic","gen_mirna_space_basic"]
     
