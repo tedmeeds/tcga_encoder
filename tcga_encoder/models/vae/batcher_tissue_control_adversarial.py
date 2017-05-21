@@ -1350,7 +1350,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     idx=1
     
     W = {}
-    for w_idx, input_source in zip( range(n_sources), input_sources ):
+    for w_idx, input_source in zip( range(n_sources-1), input_sources[:-1] ):
       w = self.model_store[ "rec_hidden" + "/W/w%d"%(w_idx)].values
       #pdb.set_trace()
       
@@ -1360,18 +1360,27 @@ class TCGABatcherAdversarial( TCGABatcher ):
       columns = np.array( ["h_%d"%i for i in range(k)])
       if input_source == "RNA":
         rows = self.rna_genes
+        print input_source, w.shape, len(rows), len(columns)
+        W[ input_source ] = pd.DataFrame( w, index=rows, columns = columns )
         
       if input_source == "miRNA":
         rows = self.mirna_hsas
+        print input_source, w.shape, len(rows), len(columns)
+        W[ input_source ] = pd.DataFrame( w, index=rows, columns = columns )
         
       if input_source == "METH":
         rows = np.array( [ "M-%s"%g for g in self.meth_genes], dtype=str )
+        print input_source, w.shape, len(rows), len(columns)
+        W[ input_source ] = pd.DataFrame( w, index=rows, columns = columns )
         
       if input_source == "TISSUE":
         rows = self.tissue_names
+        print input_source, w.shape, len(rows), len(columns)
+        W[ input_source ] = pd.DataFrame( w, index=rows, columns = columns )
+      
+      #if input_source == "INPUT_observations": 
         
-      print input_source, w.shape, len(rows), len(columns)
-      W[ input_source ] = pd.DataFrame( w, index=rows, columns = columns )
+         
       
       # colors = "brgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgkmcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymcbrgymc"
       # for t_idx in range(n_tissues):
@@ -1398,7 +1407,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     W_corr_hidden = W_all.corr()
     W_corr_inputs = W_all.T.corr()
     
-    f = pp.figure(figsize=(16,12))
+    f = pp.figure(figsize=(32,24))
     ax=f.add_subplot(111)
     # mask = np.zeros_like(W_corr, dtype=np.bool)
     # mask[np.triu_indices_from(mask)] = True
@@ -1414,7 +1423,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     pp.savefig( self.viz_hidden_weights + "_corr_heatmap_hidden.png", fmt="png", bbox_inches = "tight") 
 
-    f2 = pp.figure(figsize=(16,12))
+    f2 = pp.figure(figsize=(32,24))
     ax2=f.add_subplot(111)
     # mask = np.zeros_like(W_corr, dtype=np.bool)
     # mask[np.triu_indices_from(mask)] = True
@@ -1430,7 +1439,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     pp.savefig( self.viz_hidden_weights + "_corr_heatmap_inputs.png", fmt="png", bbox_inches = "tight") 
 
-    f3 = pp.figure(figsize=(16,12))
+    f3 = pp.figure(figsize=(32,24))
     ax3=f.add_subplot(111)
     # mask = np.zeros_like(W_corr, dtype=np.bool)
     # mask[np.triu_indices_from(mask)] = True

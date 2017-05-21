@@ -190,7 +190,7 @@ def main(yaml_file):
     
     model_store.close()
     fill_store.close()
-    pdb.set_trace()
+    #pdb.set_trace()
    
   if len(weights) > 0:
     weights      = pd.concat(weights,axis=0) 
