@@ -1439,24 +1439,24 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     pp.savefig( self.viz_hidden_weights + "_corr_heatmap_inputs.png", fmt="png", bbox_inches = "tight") 
 
-    f3 = pp.figure(figsize=(32,24))
-    ax3=f.add_subplot(111)
-    # mask = np.zeros_like(W_corr, dtype=np.bool)
-    # mask[np.triu_indices_from(mask)] = True
-    
-    htmap3 = sns.clustermap ( W_all, cmap=cmap, square=False )
-    #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
-    #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
-    
-    pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-    pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-    pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
-    pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
-    
-    pp.savefig( self.viz_hidden_weights + "_weights_heatmap.png", fmt="png", bbox_inches = "tight") 
-        
-
-        
+    # f3 = pp.figure(figsize=(32,24))
+    # ax3=f.add_subplot(111)
+    # # mask = np.zeros_like(W_corr, dtype=np.bool)
+    # # mask[np.triu_indices_from(mask)] = True
+    #
+    # htmap3 = sns.clustermap ( W_all, cmap=cmap, square=False )
+    # #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
+    # #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
+    #
+    # pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    # pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    # pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+    # pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+    #
+    # pp.savefig( self.viz_hidden_weights + "_weights_heatmap.png", fmt="png", bbox_inches = "tight")
+    #
+    #
+    # 
     #pdb.set_trace() 
     # 
     
