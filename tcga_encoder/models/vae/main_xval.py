@@ -72,13 +72,13 @@ def run_dna_test_full( observations, Z ):
   Z_auc = np.zeros( (1,n_z), dtype=float )
   good_cohorts = []
   
-  y_i = observations.values
+  y_i = observations.values.sum(1)
   oks = pp.find( np.isnan(y_i) == False )
     
   y_i = y_i[oks]
   bcs_i = bcs[oks]
   z_i = Z.loc[ bcs_i]
-    
+  y_i = np.minimum(y_i,1)
   if np.sum( y_i ) > 0:
     #good_cohorts.append( cohort )
     for z_idx in range(n_z):
