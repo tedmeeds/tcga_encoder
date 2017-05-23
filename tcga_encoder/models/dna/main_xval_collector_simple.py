@@ -75,7 +75,7 @@ def decifer_weights( model_store, arch_dict, data_dict, weights, fold ):
 
           source_name = input.split("_")[0]
           if len(layer["inputs"])>1:
-            pdb.set_trace()
+            #pdb.set_trace()
             weight_names = ["%s_%s"%(source_name,s) for s in data_dict["store"]["/%s/FAIR"%(source_name)].columns]
           else:
             weight_names = data_dict["store"]["/%s/FAIR"%(source_name)].columns
@@ -172,6 +172,9 @@ def main(yaml_file):
   fold_fill_dna = []
   fold_loglik_dna = []
   weights = []
+  
+  
+  
   for fold in range(n_xval_folds):
     print "Gather XVAL = %d"%(fold)
     
@@ -183,6 +186,10 @@ def main(yaml_file):
     #print model_store
     fill_store = pd.HDFStore( os.path.join( fold_location_dir, "full_vae_fill.h5" ), "r" )
     
+    if fold == 0:
+      train_dna_predict = fill_store["/Fill/TRAIN/DNA"]
+      train_z = fill_store["/Z/TRAIN/Z/mu"]
+    #pdb.set_trace()
     #decifer_weights( model_store, arch_dict, data_dict, weights, fold )
     #print fill_store
     fold_fill_dna.append( fill_store["/Fill/VAL/DNA"] )
@@ -190,7 +197,7 @@ def main(yaml_file):
     
     model_store.close()
     fill_store.close()
-    #pdb.set_trace()
+    
    
   if len(weights) > 0:
     weights      = pd.concat(weights,axis=0) 
@@ -302,10 +309,11 @@ def main(yaml_file):
   data_store.close()
   #dna_data = data_store[]
   assert len(np.intersect1d( fill_barcodes, loglik_barcodes)) == len(loglik_barcodes), "should be the same"
+  
   if len(weights) > 0:
-    return fill_dna, loglik_dna, dna, results, [weights,mean_weights,std_weights]
+    return fill_dna, loglik_dna, dna, results, [weights,mean_weights,std_weights], [train_dna_predict,train_z]
   else:
-    return fill_dna, loglik_dna, dna, results, [None,None,None]
+    return fill_dna, loglik_dna, dna, results, [None,None,None], [train_dna_predict,train_z]
   
   
 ######################################################################################################
@@ -316,7 +324,7 @@ if __name__ == "__main__":
   
   
     
-  fill_dna, loglik_dna, dna,results,weights = main( yaml_file )
+  fill_dna, loglik_dna, dna,results, weights, train_dna_and_z = main( yaml_file )
 
   
   
