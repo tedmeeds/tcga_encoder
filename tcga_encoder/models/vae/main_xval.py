@@ -41,7 +41,7 @@ def run_dna_test( observations, Z ):
     except:
       print "skipping ",cohort
       continue
-    print cohort, np.sum(y_i), y_i
+    #print cohort, np.sum(y_i), y_i
     oks = pp.find( np.isnan(y_i) == False )
     
     y_i = y_i[oks]
@@ -112,8 +112,12 @@ if __name__ == "__main__":
     yaml_file = replace_template( yaml_template_file, fold+1 )
     if run is True:
       runner( yaml_file )
-      #s = "python tcga_encoder/models/vae/main.py %s "%(yaml_file)
+      
+      #s = "python tcga_encoder/models/dna/naive_bayes_by_gene.py %s %s %s %s %s %d %d %d 1 %s"%(data_file,results_location,dna_gene,source,method,n_folds,n_xval_repeats,n_permutations,diseases)
       #os.system(s)
+      
+      s = "python tcga_encoder/models/vae/main.py %s "%(yaml_file)
+      os.system(s)
     else:
       print "Run is OFF by default, pass argument 1 to turn on"
     
@@ -125,9 +129,12 @@ if __name__ == "__main__":
   train_dna_predictions = train_dna_and_z[0]
   train_z_mu = train_dna_and_z[1]
   
+  train_predictions_as_ints = pd.DataFrame( (train_dna_predictions>0.75).values.astype(int), index=train_dna_predictions.index, columns=train_dna_predictions.columns)
+  
   data = pd.HDFStore( os.path.join( HOME_DIR, template_yaml["data"]["location"] + "/data.h5" ) )
   
   dna_data = data["/DNA/channel/0"]
   
   dna_gene="TP53"
-  run_dna_test( dna_data[dna_gene], train_z_mu )
+  df_true = run_dna_test( dna_data[dna_gene], train_z_mu )
+  df_est  = run_dna_test( train_predictions_as_ints[dna_gene], train_z_mu )
