@@ -853,7 +853,7 @@ class BetaScaledLayer(object):
     self.mean = self.a / a_plus_b
     self.std  = tf.sqrt( (self.a*self.b)/( tf.square(a_plus_b)*(a_plus_b+1.0) ) )
     
-    self.tensor = ( tf.expand_dims( input_layer.tensor, -1 ) - self.mean )/self.std 
+    self.tensor = ( tf.expand_dims( input_layer.tensor, -1 ) - self.mean )/(0.01+self.std) 
       
     #pdb.set_trace()
     self.shape       = shape

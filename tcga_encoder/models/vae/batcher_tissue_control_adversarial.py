@@ -1038,8 +1038,10 @@ class TCGABatcherAdversarial( TCGABatcher ):
       if use_meth:
         drop_meth_ids = np.arange(drop_idx,self.dims_dict[METH],nbr_splits, dtype=int)
         batch_data = self.meth_store.loc[ barcodes ].values #self.data_store[self.METH_key].loc[ barcodes ]
+        nans = np.isnan( batch_data )
         if np.sum(nans)>0: 
           batch_data = self.fill_nans( batch_data, nans, METH, barcodes )
+          #pdb.set_trace()
         
         batch[ METH_INPUT ] = batch_data #.values
         #else:
@@ -1800,6 +1802,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
     X[I,:] = np.dot( tissues, expectation )
     
     #pdb.set_trace()
+    if np.sum( np.any(np.isnan(X)))>0:
+      pdb.set_trace()
     return X
         
   def AddDnaNoise( self, X, rate=0.5 ):

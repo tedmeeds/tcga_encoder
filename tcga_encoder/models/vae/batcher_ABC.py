@@ -160,9 +160,9 @@ class TCGABatcherABC( object ):
     elif self.miRNA_data == "READS":
       self.mirna_store = np.log( self.data_store[ self.miRNA_key ] + 1.0 )
     if self.METH_data == "FAIR":
-      self.meth_store = self.data_store[ self.miRNA_key ]
+      self.meth_store = self.data_store[ self.METH_key ]
     elif self.METH_data == "METH":
-      self.meth_store = np.log( self.data_store[ self.miRNA_key ] + 0.01 )
+      self.meth_store = np.log( self.data_store[ self.METH_key ] + 0.01 )
     
     self.rna_genes = self.data_store[self.RNA_key].columns
     self.mirna_hsas = self.data_store[self.miRNA_key].columns
