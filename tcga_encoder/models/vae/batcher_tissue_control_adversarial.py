@@ -98,7 +98,67 @@ class TCGABatcherAdversarial( TCGABatcher ):
       batch_data = batch[ "observed_sources" ][:,ids]  
       batch[ layer_name ]  = batch_data
       #pdb.set_trace()
+      
+  def InitializeAnythingYouWant(self, sess, network ):
+    print "Running : InitializeAnythingYouWant"
+    self.dna_aucs_all = []
+    self.fill_z_input = True
+    self.dna_uses_cohorts = False
+    input_sources = ["METH","RNA","miRNA"] 
+    input_datas = [self.METH_data, self.RNA_data, self.miRNA_data]
+    layers = ["gen_meth_space_basic","gen_rna_space_basic","gen_mirna_space_basic"]
+    
+    n_tissues = len(self.data_store[self.TISSUE_key].columns)
+    #self.data_store[self.TISSUE_key].loc[ batch_barcodes ]
+    
+    self.source2expectation_by_tissue = {}
+    # get log_alpha and log_beta values
+    for layer_name, input_name, input_data in zip( layers, input_sources, input_datas ):
+      n_dims = self.dims_dict[ input_name ]
+      
+      if input_data == "FAIR":
+        alpha = np.zeros( (n_tissues, n_dims ), dtype = float )
+        beta  = np.zeros( (n_tissues, n_dims ), dtype = float )
+      
+        self.source2expectation_by_tissue[input_name] = 0.5*np.ones((n_tissues, n_dims ), dtype = float )
+        for t_idx, tissue in zip( range( n_tissues), self.data_store[self.TISSUE_key].columns):
+        
+          n_samples = self.train_tissue[ tissue ].sum()
+          alpha[t_idx,:] = self.tissue_statistics[ tissue ][ input_name ][ "alpha"]
+          beta[t_idx,:] = self.tissue_statistics[ tissue ][ input_name ][ "beta"]
+      
+        log_alpha = np.log( alpha + 0.001 ).astype(np.float32)
+        log_beta = np.log( beta + 0.001).astype(np.float32)
+      
+        self.source2expectation_by_tissue[input_name] = (alpha+0.001) / (alpha+beta+0.002)
+        #layer = network.GetLayer( layer_name )
+      
+        #sess.run( tf.assign(layer.weights[0][0], log_alpha) )
+        #sess.run( tf.assign(layer.weights[1][0], log_beta) )
+        if network.HasLayer(layer_name ):
+          #pdb.set_trace()
+          network.GetLayer( layer_name ).SetWeights( sess, [log_alpha, log_beta ])
+          
+      elif input_data == "RSEM" or input_data == "READS" or input_data == "METH":      
+          
+        means     = np.zeros( (n_tissues, n_dims ), dtype = float )
+        log_vars  = np.zeros( (n_tissues, n_dims ), dtype = float )
+      
+        self.source2expectation_by_tissue[input_name] = np.zeros((n_tissues, n_dims ), dtype = float )
+        
+        for t_idx, tissue in zip( range( n_tissues), self.data_store[self.TISSUE_key].columns):
+        
+          n_samples = self.train_tissue[ tissue ].sum()
+          means[t_idx,:] = self.tissue_statistics[ tissue ][ input_name ][ "mean"]
+          log_vars[t_idx,:] = np.log( self.tissue_statistics[ tissue ][ input_name ][ "var"] + 1e-12)
+      
+        self.source2expectation_by_tissue[input_name] = means #(alpha+0.001) / (alpha+beta+0.002)
+        
+        if network.HasLayer(layer_name ):
+          #pdb.set_trace()
+          network.GetLayer( layer_name ).SetWeights( sess, [means, log_vars ])
 
+        
   def PreStepDoWhatYouWant( self, sess, epoch, network, cb_info, train_op ):
     train_ops = [train_op]
     
@@ -951,7 +1011,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       # -----
       if use_rna:
         drop_rna_ids = np.arange(drop_idx,self.dims_dict[RNA],nbr_splits, dtype=int)
-        batch_data = self.data_store[self.RNA_key].loc[ barcodes ]
+        batch_data = self.rna_store.loc[ barcodes ] #self.data_store[self.RNA_key].loc[ barcodes ]
         nans = np.isnan( batch_data.values )
         batch[ RNA_INPUT ] = drop_factor*self.NormalizeRnaInput( batch_data.fillna( 0 ).values )
         batch[ RNA_INPUT ][nans] = 0
@@ -965,7 +1025,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       # -----
       if use_mirna:
         drop_mirna_ids = np.arange(drop_idx,self.dims_dict[miRNA],nbr_splits, dtype=int)
-        batch_data = self.data_store[self.miRNA_key].loc[ barcodes ]
+        batch_data = self.mirna_store.loc[ barcodes ] #self.data_store[self.miRNA_key].loc[ barcodes ]
         nans = np.isnan( batch_data.values )
         batch[ miRNA_INPUT ] = drop_factor*self.NormalizemiRnaInput( batch_data.fillna( 0 ).values )
         batch[ miRNA_INPUT ][nans] = 0
@@ -993,7 +1053,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       # -----
       if use_meth:
         drop_meth_ids = np.arange(drop_idx,self.dims_dict[METH],nbr_splits, dtype=int)
-        batch_data = self.data_store[self.METH_key].loc[ barcodes ]
+        batch_data = self.meth_store.loc[ barcodes ] #self.data_store[self.METH_key].loc[ barcodes ]
         batch[ METH_INPUT ] = drop_factor*batch_data.fillna( 0 ).values
         batch[ METH_INPUT][:,drop_meth_ids] = 0
         tensor2fill.extend( [meth_expectation_tensor, meth_basic_expectation_tensor, loglikes_data_as_matrix["gen_meth_space"], loglikes_data_as_matrix["gen_meth_space_basic"] ] )
@@ -1059,26 +1119,26 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     #pdb.set_trace()   
     if use_rna:   
-      self.WriteRunFillExpectation( epoch, RNA, barcodes, self.rna_genes, rna_observed_query, rna_expectation, self.data_store[self.RNA_key].loc[ barcodes ].values, mode )
+      self.WriteRunFillExpectation( epoch, RNA, barcodes, self.rna_genes, rna_observed_query, rna_expectation, self.rna_store.loc[ barcodes ].values, mode )
       self.WriteRunFillLoglikelihood( epoch, RNA, barcodes[rna_observed_query], self.rna_genes, rna_loglikelihood, mode )
       
-      self.WriteRunFillExpectation( epoch, RNA+"_b", barcodes, self.rna_genes, rna_observed_query, rna_basic_expectation, self.data_store[self.RNA_key].loc[ barcodes ].values, mode )
+      self.WriteRunFillExpectation( epoch, RNA+"_b", barcodes, self.rna_genes, rna_observed_query, rna_basic_expectation, self.rna_store.loc[ barcodes ].values, mode )
       self.WriteRunFillLoglikelihood( epoch, RNA+"_b", barcodes[rna_observed_query], self.rna_genes, rna_basic_loglikelihood, mode )
 
     if use_meth:
-      self.WriteRunFillExpectation( epoch, METH, barcodes, self.meth_genes, meth_observed_query, meth_expectation, self.data_store[self.METH_key].loc[ barcodes ].values, mode )
+      self.WriteRunFillExpectation( epoch, METH, barcodes, self.meth_genes, meth_observed_query, meth_expectation, self.meth_store.loc[ barcodes ].values, mode )
       self.WriteRunFillLoglikelihood( epoch, METH, barcodes[meth_observed_query], self.meth_genes, meth_loglikelihood, mode )
 
-      self.WriteRunFillExpectation( epoch, METH+"_b", barcodes, self.meth_genes, meth_observed_query, meth_basic_expectation, self.data_store[self.METH_key].loc[ barcodes ].values, mode )
+      self.WriteRunFillExpectation( epoch, METH+"_b", barcodes, self.meth_genes, meth_observed_query, meth_basic_expectation, self.meth_store.loc[ barcodes ].values, mode )
       self.WriteRunFillLoglikelihood( epoch, METH+"_b", barcodes[meth_observed_query], self.meth_genes, meth_basic_loglikelihood, mode )
 
 
     if use_mirna:
       self.WriteRunFillLoglikelihood( epoch, miRNA, barcodes[mirna_observed_query], self.mirna_hsas, mirna_loglikelihood, mode )
-      self.WriteRunFillExpectation( epoch, miRNA, barcodes, self.mirna_hsas, mirna_observed_query, mirna_expectation, self.data_store[self.miRNA_key].loc[ barcodes ].values, mode )
+      self.WriteRunFillExpectation( epoch, miRNA, barcodes, self.mirna_hsas, mirna_observed_query, mirna_expectation, self.mirna_store.loc[ barcodes ].values, mode )
 
       self.WriteRunFillLoglikelihood( epoch, miRNA+"_b", barcodes[mirna_observed_query], self.mirna_hsas, mirna_basic_loglikelihood, mode )
-      self.WriteRunFillExpectation( epoch, miRNA+"_b", barcodes, self.mirna_hsas, mirna_observed_query, mirna_basic_expectation, self.data_store[self.miRNA_key].loc[ barcodes ].values, mode )
+      self.WriteRunFillExpectation( epoch, miRNA+"_b", barcodes, self.mirna_hsas, mirna_observed_query, mirna_basic_expectation, self.mirna_store.loc[ barcodes ].values, mode )
 
     
     if use_dna:
@@ -1473,42 +1533,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     #pdb.set_trace()
     #self.model_store.close()
 
-  def InitializeAnythingYouWant(self, sess, network ):
-    print "Running : InitializeAnythingYouWant"
-    self.dna_aucs_all = []
-    self.fill_z_input = True
-    self.dna_uses_cohorts = False
-    input_sources = ["METH","RNA","miRNA"] 
-    layers = ["gen_meth_space_basic","gen_rna_space_basic","gen_mirna_space_basic"]
-    
-    n_tissues = len(self.data_store[self.TISSUE_key].columns)
-    #self.data_store[self.TISSUE_key].loc[ batch_barcodes ]
-    
-    self.source2expectation_by_tissue = {}
-    # get log_alpha and log_beta values
-    for layer_name, input_name in zip( layers, input_sources ):
-      n_dims = self.dims_dict[ input_name ]
-      
-      alpha = np.zeros( (n_tissues, n_dims ), dtype = float )
-      beta  = np.zeros( (n_tissues, n_dims ), dtype = float )
-      
-      self.source2expectation_by_tissue[input_name] = 0.5*np.ones((n_tissues, n_dims ), dtype = float )
-      for t_idx, tissue in zip( range( n_tissues), self.data_store[self.TISSUE_key].columns):
-        
-        n_samples = self.train_tissue[ tissue ].sum()
-        alpha[t_idx,:] = self.tissue_statistics[ tissue ][ input_name ][ "alpha"]
-        beta[t_idx,:] = self.tissue_statistics[ tissue ][ input_name ][ "beta"]
-      
-      log_alpha = np.log( alpha + 0.001 ).astype(np.float32)
-      log_beta = np.log( beta + 0.001).astype(np.float32)
-      
-      self.source2expectation_by_tissue[input_name] = (alpha+0.001) / (alpha+beta+0.002)
-      #layer = network.GetLayer( layer_name )
-      
-      #sess.run( tf.assign(layer.weights[0][0], log_alpha) )
-      #sess.run( tf.assign(layer.weights[1][0], log_beta) )
-      if network.HasLayer(layer_name ):
-        network.GetLayer( layer_name ).SetWeights( sess, [log_alpha, log_beta ])
+
       #pdb.set_trace()
   
   def fill_nans( self, X, NaNs, source, barcodes ):

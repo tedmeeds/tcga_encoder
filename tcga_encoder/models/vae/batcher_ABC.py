@@ -124,18 +124,45 @@ class TCGABatcherABC( object ):
     self.batch_imputation_dict = {}
     self.batch_feed_dict       = {}
     
+    self.RNA_data = FAIR
+    self.miRNA_data = FAIR
+    self.METH_data = FAIR
+    
+    if self.data_dict.has_key( "RNA_data" ):
+      self.RNA_data = self.data_dict["RNA_data"] 
+    if self.data_dict.has_key( "miRNA_data" ):
+      self.miRNA_data = self.data_dict["miRNA_data"] 
+    if self.data_dict.has_key( "METH_data" ):
+      self.METH_data = self.data_dict["METH_data"] 
+      
     # store keys
     self.OBSERVED_key = CLINICAL+"/"+OBSERVED
     self.TISSUE_key   = CLINICAL+"/"+TISSUE
-    self.RNA_key      = RNA+"/"+FAIR
-    self.miRNA_key      = miRNA+"/"+FAIR
-    self.METH_key     = METH+"/"+FAIR
+    self.RNA_key      = RNA+"/"+self.RNA_data
+    self.miRNA_key      = miRNA+"/"+self.miRNA_data
+    self.METH_key     = METH+"/"+self.METH_data
     self.DNA_keys     = [DNA+"/"+CHANNEL+"/%d"%i for i in range(self.n_dna_channels)]
+    
+    print "RNA: ", self.RNA_key
+    print "miRNA: ", self.miRNA_key
+    print "METH: ", self.METH_key
     
     self.n_z            = self.var_dict[N_Z]
     self.z_columns = ["z%d"%z for z in range(self.n_z)]
     
     self.dna_store = self.data_store[ self.DNA_keys[0] ]
+    if self.RNA_data == "FAIR":
+      self.rna_store = self.data_store[ self.RNA_key ]
+    elif self.RNA_data == "RSEM":
+      self.rna_store = np.log( self.data_store[ self.RNA_key ] + 1.0 )
+    if self.miRNA_data == "FAIR":
+      self.mirna_store = self.data_store[ self.miRNA_key ]
+    elif self.miRNA_data == "READS":
+      self.mirna_store = np.log( self.data_store[ self.miRNA_key ] + 1.0 )
+    if self.METH_data == "FAIR":
+      self.meth_store = self.data_store[ self.miRNA_key ]
+    elif self.METH_data == "METH":
+      self.meth_store = np.log( self.data_store[ self.miRNA_key ] + 0.01 )
     
     self.rna_genes = self.data_store[self.RNA_key].columns
     self.mirna_hsas = self.data_store[self.miRNA_key].columns
@@ -328,12 +355,17 @@ class TCGABatcherABC( object ):
         
   def SummarizeData(self):
     print "Running : SummarizeData(self)"
-    self.rna_mean = self.data_store[self.RNA_key].mean(0)
-    self.rna_std = self.data_store[self.RNA_key].std(0)
-    self.mirna_mean = self.data_store[self.miRNA_key].mean(0)
-    self.mirna_std = self.data_store[self.miRNA_key].std(0)
-    self.meth_mean = self.data_store[self.METH_key].mean(0)
-    self.meth_std = self.data_store[self.METH_key].std(0)
+    #if self.RNA_data == "RSEM":
+    self.rna_mean = self.rna_store.mean(0) #self.data_store[self.RNA_key].mean(0)
+    self.rna_std = self.rna_store.std(0) #self.data_store[self.RNA_key].std(0)
+    #else:
+    #  self.rna_mean = self.data_store[self.RNA_key].mean(0)
+    #  self.rna_std = self.data_store[self.RNA_key].std(0)
+      
+    self.mirna_mean = self.mirna_store.mean(0) #self.data_store[self.miRNA_key].mean(0)
+    self.mirna_std = self.mirna_store.std(0) #self.data_store[self.miRNA_key].std(0)
+    self.meth_mean = self.meth_store.mean(0) #self.data_store[self.METH_key].mean(0)
+    self.meth_std = self.meth_store.std(0) #self.data_store[self.METH_key].std(0)
     
     self.rna_order = np.arange(len(self.rna_mean.values)) # np.argsort( self.rna_mean.values )
     self.mirna_order = np.arange(len(self.mirna_mean.values)) #np.argsort( self.mirna_mean.values )
@@ -356,34 +388,41 @@ class TCGABatcherABC( object ):
       self.tissue_statistics[ tissue ][ RNA ] = {}
       self.tissue_statistics[ tissue ][ miRNA ] = {}
       self.tissue_statistics[ tissue ][ METH ] = {}
-      self.tissue_statistics[ tissue ][ RNA ][ "mean"]   = self.data_store[self.RNA_key].mean(0).fillna(0)
-      self.tissue_statistics[ tissue ][ miRNA ][ "mean"] = self.data_store[self.miRNA_key].mean(0).fillna(0)
-      self.tissue_statistics[ tissue ][ METH ][ "mean"]  = self.data_store[self.METH_key].mean(0).fillna(0)
-      self.tissue_statistics[ tissue ][ RNA ][ "var"]   = self.data_store[self.RNA_key].var(0).fillna(0)
-      self.tissue_statistics[ tissue ][ miRNA ][ "var"] = self.data_store[self.miRNA_key].var(0).fillna(0)
-      self.tissue_statistics[ tissue ][ METH ][ "var"]  = self.data_store[self.METH_key].var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ RNA ][ "mean"]   = self.rna_store.mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ miRNA ][ "mean"] = self.mirna_store.mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ METH ][ "mean"]  = self.meth_store.mean(0).fillna(0)
+      self.tissue_statistics[ tissue ][ RNA ][ "var"]   = self.rna_store.var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ miRNA ][ "var"] = self.mirna_store.var(0).fillna(0)
+      self.tissue_statistics[ tissue ][ METH ][ "var"]  = self.meth_store.var(0).fillna(0)
+      # self.tissue_statistics[ tissue ][ RNA ][ "mean"]   = self.data_store[self.RNA_key].mean(0).fillna(0)
+      # self.tissue_statistics[ tissue ][ miRNA ][ "mean"] = self.data_store[self.miRNA_key].mean(0).fillna(0)
+      # self.tissue_statistics[ tissue ][ METH ][ "mean"]  = self.data_store[self.METH_key].mean(0).fillna(0)
+      # self.tissue_statistics[ tissue ][ RNA ][ "var"]   = self.data_store[self.RNA_key].var(0).fillna(0)
+      # self.tissue_statistics[ tissue ][ miRNA ][ "var"] = self.data_store[self.miRNA_key].var(0).fillna(0)
+      # self.tissue_statistics[ tissue ][ METH ][ "var"]  = self.data_store[self.METH_key].var(0).fillna(0)
 
       try:
-        rna=self.data_store[self.RNA_key].loc[ bcs ]
+        rna=self.rna_store.loc[ bcs ]
         self.tissue_statistics[ tissue ][ RNA ][ "mean"]   = rna.mean(0).fillna(0)
         self.tissue_statistics[ tissue ][ RNA ][ "var"]   = rna.var(0).fillna(0)
       except:
         print "No RNA for %s"%(tissue)
       
       try:
-        mirna=self.data_store[self.miRNA_key].loc[ bcs ]
+        mirna=self.mirna_store.loc[bcs] #self.data_store[self.miRNA_key].loc[ bcs ]
         self.tissue_statistics[ tissue ][ miRNA ][ "mean"] = mirna.mean(0).fillna(0)
         self.tissue_statistics[ tissue ][ miRNA ][ "var"] = mirna.var(0).fillna(0)
       except:
         print "No miRNA for %s"%(tissue)
         
       try:
-        meth=self.data_store[self.METH_key].loc[ bcs ]
+        meth=self.meth_store.loc[ bcs ] #self.data_store[self.METH_key].loc[ bcs ]
         self.tissue_statistics[ tissue ][ METH ][ "var"]  = meth.var(0).fillna(0)  
         self.tissue_statistics[ tissue ][ METH ][ "mean"]  = meth.mean(0).fillna(0)    
       except:
         print "No METH for %s"%(tissue)
 
+      #pdb.set_trace()
       self.tissue_statistics[ tissue ][ RNA ][ "alpha"]   = compute_alpha( self.tissue_statistics[ tissue ][ RNA ][ "mean"], self.tissue_statistics[ tissue ][ RNA ][ "var"])
       self.tissue_statistics[ tissue ][ miRNA ][ "alpha"] = compute_alpha( self.tissue_statistics[ tissue ][ miRNA ][ "mean"], self.tissue_statistics[ tissue ][ miRNA ][ "var"])
       self.tissue_statistics[ tissue ][ METH ][ "alpha"]  = compute_alpha( self.tissue_statistics[ tissue ][ METH ][ "mean"], self.tissue_statistics[ tissue ][ METH ][ "var"])
@@ -395,7 +434,7 @@ class TCGABatcherABC( object ):
       #if tissue == "laml":
       #  pdb.set_trace()
       
-      #pdb.set_trace()
+    #pdb.set_trace()
     
     #self.tissue_statistics = pd.DataFrame()
     
@@ -841,7 +880,9 @@ class TCGABatcherABC( object ):
       # -----
       if use_rna:
         drop_rna_ids = np.arange(drop_idx,self.dims_dict[RNA],nbr_splits, dtype=int)
-        batch_data = self.data_store[self.RNA_key].loc[ barcodes ]
+        
+        batch_data = self.rna_store.loc[ barcodes ] #self.data_store[self.RNA_key].loc[ barcodes ]
+        
         nans = np.isnan( batch_data.values )
         batch[ RNA_INPUT ] = drop_factor*self.NormalizeRnaInput( batch_data.fillna( 0 ).values )
         batch[ RNA_INPUT ][nans] = 0
@@ -855,7 +896,7 @@ class TCGABatcherABC( object ):
       # -----
       if use_mirna:
         drop_mirna_ids = np.arange(drop_idx,self.dims_dict[miRNA],nbr_splits, dtype=int)
-        batch_data = self.data_store[self.miRNA_key].loc[ barcodes ]
+        batch_data = self.mirna_store.loc[ barcodes ] #self.data_store[self.miRNA_key].loc[ barcodes ]
         nans = np.isnan( batch_data.values )
         batch[ miRNA_INPUT ] = drop_factor*self.NormalizemiRnaInput( batch_data.fillna( 0 ).values )
         batch[ miRNA_INPUT ][nans] = 0
@@ -883,7 +924,7 @@ class TCGABatcherABC( object ):
       # -----
       if use_meth:
         drop_meth_ids = np.arange(drop_idx,self.dims_dict[METH],nbr_splits, dtype=int)
-        batch_data = self.data_store[self.METH_key].loc[ barcodes ]
+        batch_data = self.meth_store.loc[ barcodes ] #self.data_store[self.METH_key].loc[ barcodes ]
         batch[ METH_INPUT ] = drop_factor*batch_data.fillna( 0 ).values
         batch[ METH_INPUT][:,drop_meth_ids] = 0
         tensor2fill.extend( [meth_expectation_tensor, loglikes_data_as_matrix["gen_meth_space"] ] )
@@ -1627,7 +1668,7 @@ class TCGABatcherABC( object ):
     for layer_name, layer in self.network.layers.iteritems():
       #print layer_name, layer  
       if layer_name == RNA_INPUT:
-        batch_data = self.data_store[self.RNA_key].loc[ batch_barcodes ]
+        batch_data = self.rna_store.loc[ batch_barcodes ] #self.data_store[self.RNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
         batch_data_values = batch_data.values
         if mode == "BATCH":
@@ -1643,7 +1684,7 @@ class TCGABatcherABC( object ):
         #pdb.set_trace()
         
       elif layer_name == RNA_TARGET:
-        batch_data = self.data_store[self.RNA_key].loc[ batch_barcodes ]
+        batch_data = self.rna_store.loc[ batch_barcodes ] #self.data_store[self.RNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
         
         
@@ -1665,7 +1706,7 @@ class TCGABatcherABC( object ):
         nbr_observed = batch_observed[:,self.observed_source2idx[ RNA ]].astype(bool).sum()
       
       elif layer_name == miRNA_INPUT:
-        batch_data = self.data_store[self.miRNA_key].loc[ batch_barcodes ]
+        batch_data = self.mirna_store.loc[ batch_barcodes ] #self.data_store[self.miRNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
         batch_data_values = batch_data.values
         if mode == "BATCH":
@@ -1680,7 +1721,7 @@ class TCGABatcherABC( object ):
         #pdb.set_trace()
         
       elif layer_name == miRNA_TARGET:
-        batch_data = self.data_store[self.miRNA_key].loc[ batch_barcodes ]
+        batch_data = self.mirna_store.loc[ batch_barcodes ] #self.data_store[self.miRNA_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
         
         batch_data_values = batch_data.values
@@ -1714,7 +1755,7 @@ class TCGABatcherABC( object ):
         batch[ layer_name ] = np.minimum(1.0,dna_data)
         
       elif layer_name == METH_INPUT :
-        batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
+        batch_data = self.meth_store.loc[ batch_barcodes ] #self.data_store[self.METH_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
 
         batch_data_values = batch_data.values
@@ -1731,7 +1772,7 @@ class TCGABatcherABC( object ):
         #pdb.set_trace()
         
       elif layer_name == METH_TARGET:
-        batch_data = self.data_store[self.METH_key].loc[ batch_barcodes ]
+        batch_data = self.meth_store.loc[ batch_barcodes ] #self.data_store[self.METH_key].loc[ batch_barcodes ]
         nans = np.isnan( batch_data.values )
         batch_data_values = batch_data.values
           

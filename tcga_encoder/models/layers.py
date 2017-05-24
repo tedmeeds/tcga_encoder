@@ -349,6 +349,14 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     layer = layer_class( shape, input_layer, beta_layer, name )
 
         
+  elif layer_class == GaussianScaledLayer:
+    assert len(input_layers)==2, "must have 2 only"
+    shape = layer_specs[SHAPE]
+    input_layer = input_layers[0]
+    gaussian_layer  = input_layers[1]
+    
+    layer = layer_class( shape, input_layer, gaussian_layer, name )
+  
   elif layer_class == SumLayer:
     layer = layer_class( input_layers, name )
     
@@ -403,6 +411,37 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     
     layer = layer_class( shape, prior, name=name )
 
+  elif layer_class == BetaModelLayer:
+    shape           = layer_specs[SHAPE]
+    prior           = layer_specs[PRIOR]
+    has_biases = True
+    if layer_specs.has_key("biases"):
+      has_biases = layer_specs["biases"]
+    
+    
+    weights_log_a, biases_log_a =  MakeWeights( input_layers, shape, name+"_log_a", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 0, layer_specs=layer_specs  )
+    
+    weights_log_b,  biases_log_b = MakeWeights( input_layers, shape, name+"_log_b", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 1, layer_specs=layer_specs  )
+
+    a, a_input          = ForwardPropagate( input_layers, weights_log_a, biases_log_a, \
+                                                     transfer_function=tf.exp, name=name+"_"+A, layer_specs=layer_specs )
+                                                     
+    b, b_input          = ForwardPropagate( input_layers, weights_log_b, biases_log_b, \
+                                                     transfer_function=tf.exp, name=name+"_"+B, layer_specs=layer_specs )
+
+    #pdb.set_trace()
+    a_clipped = tf.clip_by_value( a, 0.00001, 1000.0 )
+    b_clipped = tf.clip_by_value( b, 0.00001, 1000.0 )
+    
+    model     = { A: a_clipped,  \
+                  B: b_clipped,     \
+                  WEIGHTS:[weights_log_a,weights_log_b], \
+                  BIASES:[biases_log_a,biases_log_b], 
+                  PRIOR:prior }
+    
+    layer = layer_class( shape, model, name=name )
+
+
   elif layer_class == GaussianModelLayer:
     shape           = layer_specs[SHAPE]
 
@@ -410,15 +449,19 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     if layer_specs.has_key("biases"):
       has_biases = layer_specs["biases"]
 
-    
-    if shared_layers is None:
-      weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases, layer_specs=layer_specs )
-      weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases, layer_specs=layer_specs )
-    else:
-      weights_mu    = shared_weights.weights[0]
-      weights_var   = shared_weights.weights[1]
-      biases_mu     = shared_weights.biases[0]
-      biases_var    = shared_weights.biases[1]
+
+    weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases, shared_layers=shared_layers, shared_idx = 0, layer_specs=layer_specs )
+    weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases, shared_layers=shared_layers, shared_idx = 1, layer_specs=layer_specs )
+
+          
+    # if shared_layers is None:
+    #   weights_mu,  biases_mu  = MakeWeights( input_layers, shape, name+"_"+MU, has_biases=has_biases, layer_specs=layer_specs )
+    #   weights_var, biases_var = MakeWeights( input_layers, shape, name+"_"+VAR, has_biases=has_biases, layer_specs=layer_specs )
+    # else:
+    #   weights_mu    = shared_weights.weights[0]
+    #   weights_var   = shared_weights.weights[1]
+    #   biases_mu     = shared_weights.biases[0]
+    #   biases_var    = shared_weights.biases[1]
     
     z_mu, z_mu_input    = ForwardPropagate( input_layers, weights_mu, biases_mu, \
                                                      transfer_function=None, name=name+"_"+MU, layer_specs=layer_specs )
@@ -585,35 +628,6 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     
     layer = layer_class( shape, {MU:mu, VAR:var}, name=name )
     
-  elif layer_class == BetaModelLayer:
-    shape           = layer_specs[SHAPE]
-    prior           = layer_specs[PRIOR]
-    has_biases = True
-    if layer_specs.has_key("biases"):
-      has_biases = layer_specs["biases"]
-    
-    
-    weights_log_a, biases_log_a =  MakeWeights( input_layers, shape, name+"_log_a", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 0, layer_specs=layer_specs  )
-    
-    weights_log_b,  biases_log_b = MakeWeights( input_layers, shape, name+"_log_b", has_biases=has_biases, shared_layers=shared_layers, shared_idx = 1, layer_specs=layer_specs  )
-
-    a, a_input          = ForwardPropagate( input_layers, weights_log_a, biases_log_a, \
-                                                     transfer_function=tf.exp, name=name+"_"+A, layer_specs=layer_specs )
-                                                     
-    b, b_input          = ForwardPropagate( input_layers, weights_log_b, biases_log_b, \
-                                                     transfer_function=tf.exp, name=name+"_"+B, layer_specs=layer_specs )
-
-    #pdb.set_trace()
-    a_clipped = tf.clip_by_value( a, 0.00001, 1000.0 )
-    b_clipped = tf.clip_by_value( b, 0.00001, 1000.0 )
-    
-    model     = { A: a_clipped,  \
-                  B: b_clipped,     \
-                  WEIGHTS:[weights_log_a,weights_log_b], \
-                  BIASES:[biases_log_a,biases_log_b], 
-                  PRIOR:prior }
-    
-    layer = layer_class( shape, model, name=name )
     
   elif layer_class == BetaGivenModelLayer:
     assert len(input_layers) == 2, "must only have 2 input layers"
@@ -855,7 +869,42 @@ class BetaScaledLayer(object):
     
   def EvalBiases(self):
     return []
-        
+
+class GaussianScaledLayer(object):
+  #shape, input_layer, weights_location, weights_scale, name, transfer
+  def __init__( self, shape, input_layer, gaussian_layer, name = "" ):
+      
+    #self.weights_location = weights_location
+    #self.weights_scale = weights_scale
+    
+    #pdb.set_trace()
+    self.mean = tf.transpose( gaussian_layer.mu_weights[0] )
+    self.std = tf.sqrt( tf.exp( tf.transpose( gaussian_layer.var_weights[0] ) ) )
+    
+    res = [1]
+    res.extend(shape)
+    self.weights = [ tf.transpose( gaussian_layer.mu_weights[0] ), tf.transpose( gaussian_layer.var_weights[0] )]
+    #a_plus_b = self.a+self.b
+    #self.mean = self.a / a_plus_b
+    #self.std  = tf.sqrt( (self.a*self.b)/( tf.square(a_plus_b)*(a_plus_b+1.0) ) )
+    
+    self.tensor = ( tf.expand_dims( input_layer.tensor, -1 ) - self.mean )/self.std 
+      
+    #pdb.set_trace()
+    self.shape       = shape
+    self.batch_shape = MakeBatchShape(shape)
+    self.name        = name
+    #self.weights = beta_layer.weights
+
+  def EvalWeights(self):
+    if self.weights.__class__ == list:
+      return [w.eval() for w in self.weights]
+    else:
+      return self.weights.eval()
+    
+  def EvalBiases(self):
+    return []
+            
 class DifLayer(object):
   def __init__( self, input_layers, name = "" ):
       
