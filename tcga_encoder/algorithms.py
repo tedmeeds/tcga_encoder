@@ -73,13 +73,13 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
 
   elif p.has_key("gradient_clipping"):
     print "USING GRADIENT CLIPPING!!!"
-    optimizer = optimizer( learning_rate=learning_rate_placeholder, momentum=0.001 )
+    optimizer = optimizer( learning_rate=learning_rate_placeholder, momentum=0.01 )
     gvs = optimizer.compute_gradients(data_cost)
     capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
     train_op = optimizer.apply_gradients(capped_gvs)
     
   else:
-    train_op  = optimizer( learning_rate=learning_rate_placeholder ).minimize(data_cost)
+    train_op  = optimizer( learning_rate=learning_rate_placeholder, momentum=0.01 ).minimize(data_cost)
 
   call_backs, call_back_rates = PrepareCallbacks( p[CALL_BACKS] )
   n_train             = int(data_dict[N_TRAIN])
