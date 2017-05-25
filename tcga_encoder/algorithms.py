@@ -79,7 +79,7 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
     train_op = optimizer.apply_gradients(capped_gvs)
     
   else:
-    train_op  = optimizer( learning_rate=learning_rate_placeholder, momentum=0.99 ).minimize(data_cost)
+    train_op  = optimizer( learning_rate=learning_rate_placeholder ).minimize(data_cost)
 
   call_backs, call_back_rates = PrepareCallbacks( p[CALL_BACKS] )
   n_train             = int(data_dict[N_TRAIN])
