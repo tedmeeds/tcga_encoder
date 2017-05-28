@@ -13,7 +13,76 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 #from mutation_variants.helpers import *
+def run_dna_test( observations, Z ):
+  
+  z_names = Z.columns
+  n_z = len(z_names)
+  
+  bcs = Z.index.values
+  cohorts = np.array(  [s.split("_")[0] for s in bcs] )
+  u_cohorts = np.unique( cohorts )
+  n_cohorts = len(u_cohorts)
+  
+  Z_auc = np.zeros( (n_cohorts,n_z), dtype=float )
+  good_cohorts = []
+  for i_cohort, cohort in zip( range(n_cohorts), u_cohorts ):
+    I = cohorts == cohort
+    
+    bcs_i = bcs[I]
+    z_i = Z.loc[bcs_i]
+    try:
+      y_i = observations.loc[bcs_i].values
+    except:
+      print "skipping ",cohort
+      continue
+    #print cohort, np.sum(y_i), y_i
+    oks = pp.find( np.isnan(y_i) == False )
+    
+    y_i = y_i[oks]
+    bcs_i = bcs_i[oks]
+    z_i = z_i.loc[ bcs_i]
+    
+    if np.sum( y_i ) > 0:
+      good_cohorts.append( cohort )
+      for z_idx in range(n_z):
+        auc = roc_auc_score( y_i, z_i.values[:,z_idx] )
+        
+        Z_auc[i_cohort,z_idx] = auc
+        
+  
+  df =  pd.DataFrame( Z_auc, index = u_cohorts, columns = z_names ).loc[good_cohorts]
+  return df
 
+def run_dna_test_full( observations, Z ):
+  
+  z_names = Z.columns
+  n_z = len(z_names)
+  
+  bcs = Z.index.values
+  # cohorts = np.array(  [s.split("_")[0] for s in bcs] )
+  # u_cohorts = np.unique( cohorts )
+  # n_cohorts = len(u_cohorts)
+  
+  Z_auc = np.zeros( (1,n_z), dtype=float )
+  good_cohorts = []
+  
+  y_i = observations.values.sum(1)
+  oks = pp.find( np.isnan(y_i) == False )
+    
+  y_i = y_i[oks]
+  bcs_i = bcs[oks]
+  z_i = Z.loc[ bcs_i]
+  y_i = np.minimum(y_i,1)
+  if np.sum( y_i ) > 0:
+    #good_cohorts.append( cohort )
+    for z_idx in range(n_z):
+      auc = roc_auc_score( y_i, z_i.values[:,z_idx] )
+      
+      Z_auc[0,z_idx] = auc
+        
+  
+  df =  pd.DataFrame( Z_auc, index = ["ALL"], columns = z_names )
+  return df
 
 def viz_weights_vertical( w, names  ):
   order = np.argsort( -w )
@@ -149,7 +218,7 @@ def load_architecture( arch_dict, data_dict ):
 #     networks[ arch[NAME] ] = load_architecture( arch, data )
 #   return networks
 
-def main(yaml_file):
+def main(yaml_file, n_xval_folds):
   y = load_yaml( yaml_file)
   
   logging_dict = {}
@@ -160,7 +229,7 @@ def main(yaml_file):
   data_dict = y[DATA] #{N_TRAIN:4000}
   logging_dict = y[LOGGING]
   
-  n_xval_folds = algo_dict["n_xval_folds"]
+  #n_xval_folds = algo_dict["n_xval_folds"]
   
   logging_dict[SAVEDIR] = os.path.join( HOME_DIR, os.path.join( logging_dict[LOCATION], logging_dict[EXPERIMENT] ) )
   
@@ -320,12 +389,29 @@ def main(yaml_file):
 if __name__ == "__main__":
   assert len(sys.argv) >= 2, "Must pass yaml file."
   yaml_file = sys.argv[1]
+  n_xval_folds = int(sys.argv[2])
   print "Running: ",yaml_file
   
   
     
-  fill_dna, loglik_dna, dna,results, weights, train_dna_and_z = main( yaml_file )
+  fill_dna, loglik_dna, dna,results, weights, train_dna_and_z = main( yaml_file, n_xval_folds )
 
-  
+  # fold_weights = weights[0]
+  # mean_weights = weights[1]
+  #
+  # train_dna_predictions = train_dna_and_z[0]
+  # train_z_mu = train_dna_and_z[1]
+  #
+  # train_predictions_as_ints = pd.DataFrame( (train_dna_predictions>0.75).values.astype(int), index=train_dna_predictions.index, columns=train_dna_predictions.columns)
+  #
+  # data = pd.HDFStore( os.path.join( HOME_DIR, template_yaml["data"]["location"] + "/data.h5" ) )
+  #
+  # dna_data = data["/DNA/channel/0"]
+  #
+  # dna_gene="TP53"
+  # df_true = run_dna_test( dna_data[dna_gene], train_z_mu )
+  # df_est  = run_dna_test( train_predictions_as_ints[dna_gene], train_z_mu )
+  #
+  # print df_est
   
   
