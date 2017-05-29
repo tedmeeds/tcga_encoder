@@ -128,7 +128,7 @@ def main( data_location, results_location ):
     Z_values = Z_tissue[z_names].values
     
     n_tissue = len(bcs)
-    if n_tissue < 40:
+    if n_tissue < 20:
       continue
       
     half  = int(n_tissue/2.0)
