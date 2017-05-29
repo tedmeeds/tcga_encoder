@@ -187,6 +187,16 @@ def main( data_location, results_location ):
   pp.ylabel("Pr(p_value)")
   pp.title("Comparison between p-values using latent space and random splits")
   pp.savefig( survival_dir + "/p_values_comparison_50bins.png", format='png', dpi=300 )
+
+  pp.figure()
+  pp.hist( p_values_third.values.flatten(), 100, range=(0,1),normed=True, histtype="step", lw=3 )
+  pp.hist( p_values_third_random.values.flatten(), 100, range=(0,1), normed=True, histtype="step", lw=3 )
+  pp.legend( ["Z","random"])
+  pp.xlabel("p-value logrank test")
+  pp.ylabel("Pr(p_value)")
+  pp.title("Comparison between p-values using latent space and random splits")
+  pp.savefig( survival_dir + "/p_values_comparison_100bins.png", format='png', dpi=300 )
+
   pp.close('all')
   #pdb.set_trace()
   
