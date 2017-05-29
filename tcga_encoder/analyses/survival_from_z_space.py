@@ -14,8 +14,8 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  tsne_dir = os.path.join( results_path, "survival" )
-  check_and_mkdir(tsne_dir)
+  survival_dir = os.path.join( results_path, "survival" )
+  check_and_mkdir(survival_dir)
   
   print "HOME_DIR: ", HOME_DIR
   print "data_filename: ", data_filename
@@ -29,12 +29,15 @@ def main( data_location, results_location ):
   Z_val = fill_store["/Z/VAL/Z/mu"]
   
   Z = np.vstack( (Z_train.values, Z_val.values) )
+  n_z = Z.shape[1]
   #pdb.set_trace()
-  Z = pd.DataFrame( Z, index = np.hstack( (Z_train.index.values, Z_val.index.values)), columns = ["z_%d"%z_idx for z_idx in range(Z.shape[1])])
+  z_names = ["z_%d"%z_idx for z_idx in range(Z.shape[1])]
+  Z = pd.DataFrame( Z, index = np.hstack( (Z_train.index.values, Z_val.index.values)), columns = z_names )
   
   barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
   
   Z=Z.loc[barcodes]
+  
   tissues = data_store["/CLINICAL/TISSUE"].loc[barcodes]
   #Overall Survival (OS) The event call is derived from "vital status" parameter. The time_to_event is in days, equals to days_to_death if patient deceased; in the case of a patient is still living, the time variable is the maximum(days_to_last_known_alive, days_to_last_followup).  This pair of clinical parameters are called _EVENT and _TIME_TO_EVENT on the cancer browser. 
   
@@ -94,14 +97,69 @@ def main( data_location, results_location ):
   from lifelines import CoxPHFitter
   from lifelines.datasets import load_regression_dataset
   from lifelines.utils import k_fold_cross_validation
-  cf = CoxPHFitter()
-  cf.fit( Z, 'T', event_col='E', strata=['Tissue'])
-
-  cf.print_summary()
+  from lifelines import KaplanMeierFitter
+  from lifelines.statistics import logrank_test
+  # cf = CoxPHFitter()
+  # cf.fit( Z, 'T', event_col='E', strata=['Tissue'])
+  #
+  # cf.print_summary()
   # S = np.hstack( [])
   # survival_data = pd.DataFrame( X)
+  n_tissues = len(tissue_names)
+  n_trials = 2*n_z
+  trial_names = ["r_%d"%(trial_idx) for trial_idx in range(n_trials)]
   
-  pdb.set_trace()
+  p_values_half  = np.ones( (n_tissues,n_z), dtype=float)
+  p_values_third_random  = np.ones( (n_tissues,n_trials), dtype=float)
+  p_values_third = np.ones( (n_tissues,n_z), dtype=float)
+  
+  for t_idx in range(n_tissues):
+    t_ids = tissue_idx == t_idx
+    tissue_name = tissue_names[t_idx]
+    
+    print "working %s"%(tissue_name)
+    bcs = barcodes[t_ids]
+    Z_tissue = Z.loc[ bcs ]
+    
+    events = Z_tissue["E"]
+    times  = Z_tissue["T"]
+    Z_values = Z_tissue[z_names].values
+    
+    n_tissue = len(bcs)
+    if n_tissue < 10:
+      continue
+      
+    half  = int(n_tissue/2.0)
+    third = int(n_tissue/3.0)
+    for z_idx in range(n_z):
+      z = Z_values[:,z_idx]
+      I = np.argsort(z)
+      z1_half = I[:half]
+      z2_half = I[half:]
+      z1_third = I[:third]
+      z2_third = I[-third:]
+      
+      #kmf = KaplanMeierFitter()
+      #kmf.fit(times[z1_half], event_observed=z1_half[I] )
+      
+      #results_half = logrank_test(times[z1_half], times[z2_half], events[z1_half], events[z2_half], alpha=.99 )
+      #p_values_half[t_idx,z_idx] = results_half.p_value
+      results_third = logrank_test(times[z1_third], times[z2_third], events[z1_third], events[z2_third], alpha=.99 )
+      p_values_third[t_idx,z_idx] = results_third.p_value
+      #pdb.set_trace()
+    
+    for trial_idx in range(n_trials):
+      I = np.random.permutation(n_tissue)
+      z1_third = I[:third]
+      z2_third = I[-third:]
+      results_third = logrank_test(times[z1_third], times[z2_third], events[z1_third], events[z2_third], alpha=.99 )
+      p_values_third_random[t_idx,trial_idx] = results_third.p_value
+    #events = Z["E"].loc[]
+  
+  #p_values_half  = pd.DataFrame( p_values_half, index = tissue_names, columns=z_names )
+  p_values_third = pd.DataFrame( p_values_third, index = tissue_names, columns=z_names )
+  p_values_third_random = pd.DataFrame( p_values_third_random, index = tissue_names, columns=trial_names )
+  #pdb.set_trace()
   #
   #
   # tissue_names = tissues.columns
@@ -109,7 +167,27 @@ def main( data_location, results_location ):
   #
   # pdb.set_trace()
   # pp.savefig( tsne_dir + "/tsne_perplexity_%d.png"%(perplexity), format='png', dpi=300 )
+  p_values_third.to_csv( survival_dir + "/p_values_third.csv" )
+  p_values_third_random.to_csv( survival_dir + "/p_values_third_random.csv" )
   
+  pp.figure()
+  pp.hist( p_values_third.values.flatten(), 20, range=(0,1), normed=True, histtype="step", lw=3 )
+  pp.hist( p_values_third_random.values.flatten(), 20, range=(0,1), normed=True, histtype="step", lw=3 )
+  pp.legend( ["Z","random"])
+  pp.xlabel("p-value logrank test")
+  pp.ylabel("Pr(p_value)")
+  pp.title("Comparison between p-values using latent space and random splits")
+  pp.savefig( survival_dir + "/p_values_comparison_20bins.png", format='png', dpi=300 )
+  
+  pp.figure()
+  pp.hist( p_values_third.values.flatten(), 50, range=(0,1),normed=True, histtype="step", lw=3 )
+  pp.hist( p_values_third_random.values.flatten(), 50, range=(0,1), normed=True, histtype="step", lw=3 )
+  pp.legend( ["Z","random"])
+  pp.xlabel("p-value logrank test")
+  pp.ylabel("Pr(p_value)")
+  pp.title("Comparison between p-values using latent space and random splits")
+  pp.savefig( survival_dir + "/p_values_comparison_50bins.png", format='png', dpi=300 )
+  pp.close('all')
   #pdb.set_trace()
   
 if __name__ == "__main__":
