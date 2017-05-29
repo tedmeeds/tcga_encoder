@@ -112,6 +112,8 @@ def main( data_location, results_location ):
   p_values_half  = np.ones( (n_tissues,n_z), dtype=float)
   p_values_third_random  = np.ones( (n_tissues,n_trials), dtype=float)
   p_values_third = np.ones( (n_tissues,n_z), dtype=float)
+  p_values_fifth = np.ones( (n_tissues,n_z), dtype=float)
+  p_values_tenth = np.ones( (n_tissues,n_z), dtype=float)
   
   for t_idx in range(n_tissues):
     t_ids = tissue_idx == t_idx
@@ -126,11 +128,14 @@ def main( data_location, results_location ):
     Z_values = Z_tissue[z_names].values
     
     n_tissue = len(bcs)
-    if n_tissue < 10:
+    if n_tissue < 40:
       continue
       
     half  = int(n_tissue/2.0)
     third = int(n_tissue/3.0)
+    third = int(n_tissue/3.0)
+    fifth = int(n_tissue/5.0)
+    tenth = int(n_tissue/10.0)
     for z_idx in range(n_z):
       z = Z_values[:,z_idx]
       I = np.argsort(z)
@@ -138,27 +143,39 @@ def main( data_location, results_location ):
       z2_half = I[half:]
       z1_third = I[:third]
       z2_third = I[-third:]
+      z1_fifth = I[:fifth]
+      z2_fifth = I[-fifth:]
+      z1_tenth = I[:tenth]
+      z2_tenth = I[-tenth:]
       
       #kmf = KaplanMeierFitter()
       #kmf.fit(times[z1_half], event_observed=z1_half[I] )
       
-      #results_half = logrank_test(times[z1_half], times[z2_half], events[z1_half], events[z2_half], alpha=.99 )
-      #p_values_half[t_idx,z_idx] = results_half.p_value
+      results_half = logrank_test(times[z1_half], times[z2_half], events[z1_half], events[z2_half], alpha=.99 )
+      p_values_half[t_idx,z_idx] = results_half.p_value
       results_third = logrank_test(times[z1_third], times[z2_third], events[z1_third], events[z2_third], alpha=.99 )
       p_values_third[t_idx,z_idx] = results_third.p_value
+      
+      results_fifth = logrank_test(times[z1_fifth], times[z2_fifth], events[z1_fifth], events[z2_fifth], alpha=.99 )
+      p_values_fifth[t_idx,z_idx] = results_fifth.p_value
+      results_tenth = logrank_test(times[z1_tenth], times[z2_tenth], events[z1_tenth], events[z2_tenth], alpha=.99 )
+      p_values_tenth[t_idx,z_idx] = results_tenth.p_value
       #pdb.set_trace()
     
-    for trial_idx in range(n_trials):
-      I = np.random.permutation(n_tissue)
-      z1_third = I[:third]
-      z2_third = I[-third:]
-      results_third = logrank_test(times[z1_third], times[z2_third], events[z1_third], events[z2_third], alpha=.99 )
-      p_values_third_random[t_idx,trial_idx] = results_third.p_value
+    # for trial_idx in range(n_trials):
+    #   I = np.random.permutation(n_tissue)
+    #   z1_third = I[:third]
+    #   z2_third = I[-third:]
+    #   results_third = logrank_test(times[z1_third], times[z2_third], events[z1_third], events[z2_third], alpha=.99 )
+    #   p_values_third_random[t_idx,trial_idx] = results_third.p_value
     #events = Z["E"].loc[]
   
-  #p_values_half  = pd.DataFrame( p_values_half, index = tissue_names, columns=z_names )
+  #
+  p_values_half  = pd.DataFrame( p_values_half, index = tissue_names, columns=z_names )
   p_values_third = pd.DataFrame( p_values_third, index = tissue_names, columns=z_names )
-  p_values_third_random = pd.DataFrame( p_values_third_random, index = tissue_names, columns=trial_names )
+  p_values_fifth = pd.DataFrame( p_values_fifth, index = tissue_names, columns=z_names )
+  p_values_tenth = pd.DataFrame( p_values_tenth, index = tissue_names, columns=z_names )
+  #p_values_third_random = pd.DataFrame( p_values_third_random, index = tissue_names, columns=trial_names )
   #pdb.set_trace()
   #
   #
@@ -167,35 +184,26 @@ def main( data_location, results_location ):
   #
   # pdb.set_trace()
   # pp.savefig( tsne_dir + "/tsne_perplexity_%d.png"%(perplexity), format='png', dpi=300 )
+  p_values_half.to_csv( survival_dir + "/p_values_half.csv" )
   p_values_third.to_csv( survival_dir + "/p_values_third.csv" )
-  p_values_third_random.to_csv( survival_dir + "/p_values_third_random.csv" )
+  p_values_fifth.to_csv( survival_dir + "/p_values_fifth.csv" )
+  p_values_tenth.to_csv( survival_dir + "/p_values_tenth.csv" )
+  #p_values_third_random.to_csv( survival_dir + "/p_values_third_random.csv" )
   
-  pp.figure()
-  pp.hist( p_values_third.values.flatten(), 20, range=(0,1), normed=True, histtype="step", lw=3 )
-  pp.hist( p_values_third_random.values.flatten(), 20, range=(0,1), normed=True, histtype="step", lw=3 )
-  pp.legend( ["Z","random"])
-  pp.xlabel("p-value logrank test")
-  pp.ylabel("Pr(p_value)")
-  pp.title("Comparison between p-values using latent space and random splits")
-  pp.savefig( survival_dir + "/p_values_comparison_20bins.png", format='png', dpi=300 )
-  
-  pp.figure()
-  pp.hist( p_values_third.values.flatten(), 50, range=(0,1),normed=True, histtype="step", lw=3 )
-  pp.hist( p_values_third_random.values.flatten(), 50, range=(0,1), normed=True, histtype="step", lw=3 )
-  pp.legend( ["Z","random"])
-  pp.xlabel("p-value logrank test")
-  pp.ylabel("Pr(p_value)")
-  pp.title("Comparison between p-values using latent space and random splits")
-  pp.savefig( survival_dir + "/p_values_comparison_50bins.png", format='png', dpi=300 )
-
-  pp.figure()
-  pp.hist( p_values_third.values.flatten(), 100, range=(0,1),normed=True, histtype="step", lw=3 )
-  pp.hist( p_values_third_random.values.flatten(), 100, range=(0,1), normed=True, histtype="step", lw=3 )
-  pp.legend( ["Z","random"])
-  pp.xlabel("p-value logrank test")
-  pp.ylabel("Pr(p_value)")
-  pp.title("Comparison between p-values using latent space and random splits")
-  pp.savefig( survival_dir + "/p_values_comparison_100bins.png", format='png', dpi=300 )
+  pv = p_values_third
+  splits = "1/3"
+  split_word="third"
+  binses = [20,50,100]
+  for pv,splits,split_word in zip( [p_values_half,p_values_third,p_values_fifth,p_values_tenth],["1/2","1/3","1/5","1/10"],["half","third","fifth","tenth"]):
+    for bins in binses:
+      pp.figure()
+      pp.hist( pv.values.flatten(), bins, range=(0,1), normed=True, histtype="step", lw=3 )
+      pp.plot( [0,1],[1,1], 'r-', lw=3)
+      pp.legend( ["Z","random"])
+      pp.xlabel("p-value logrank test")
+      pp.ylabel("Pr(p_value)")
+      pp.title("Comparison between p-values using latent space (%s splits)"%splits)
+      pp.savefig( survival_dir + "/p_values_comparison_%s_%dbins.png"%(split_word,bins), format='png', dpi=300 )
 
   pp.close('all')
   #pdb.set_trace()
