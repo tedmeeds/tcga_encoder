@@ -87,47 +87,48 @@ def main( data_location, results_location ):
   # mask = np.zeros_like(W_corr, dtype=np.bool)
   # mask[np.triu_indices_from(mask)] = True
   
-  htmap = sns.clustermap ( W_corr_hidden, cmap=cmap, square=True, figsize=(size,size) )
-  #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
-  #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
-  
-  pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-  pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-  pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
-  pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
-  
-  pp.savefig( weights_dir + "/corr_heatmap_hidden.png", fmt="png", bbox_inches = "tight") 
-  
+  # htmap = sns.clustermap ( W_corr_hidden, cmap=cmap, square=True, figsize=(size,size) )
+  # #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
+  # #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
+  #
+  # pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  # pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  # pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  # pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  #
+  # pp.savefig( weights_dir + "/corr_heatmap_hidden.png", fmt="png", bbox_inches = "tight")
+  #
   n_inputs = len(W_corr_inputs)
-  size = max( int( n_inputs*size_per_unit ), 12 )
-  print "SIZE=",size
-  f2 = pp.figure(figsize=(size,size))
-  ax2=f.add_subplot(111)
-  
-  
-  htmap2 = sns.clustermap ( W_corr_inputs, cmap=cmap, square=True, figsize=(size,size) )
-  
-  pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-  pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-  pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
-  pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
-  
-  pp.savefig( weights_dir + "/corr_heatmap_inputs.png", fmt="png", bbox_inches = "tight") 
-  
-  ax3=f.add_subplot(111)
-  size1 = max( int( n_hidden*size_per_unit ), 12 )
-  size2 = max( int( n_inputs*size_per_unit ), 12 )
-  htmap3 = sns.clustermap ( W_all, cmap=cmap, square=True, figsize=(size1,size2) )
-  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
-  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
-  
-  pp.savefig( weights_dir + "/weights_heatmap.png", fmt="png", bbox_inches = "tight")
+  # size = max( int( n_inputs*size_per_unit ), 12 )
+  # print "SIZE=",size
+  # f2 = pp.figure(figsize=(size,size))
+  # ax2=f.add_subplot(111)
+  #
+  #
+  # htmap2 = sns.clustermap ( W_corr_inputs, cmap=cmap, square=True, figsize=(size,size) )
+  #
+  # pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  # pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  # pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  # pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  #
+  # pp.savefig( weights_dir + "/corr_heatmap_inputs.png", fmt="png", bbox_inches = "tight")
+  #
+  # ax3=f.add_subplot(111)
+  # size1 = max( int( n_hidden*size_per_unit ), 12 )
+  # size2 = max( int( n_inputs*size_per_unit ), 12 )
+  # htmap3 = sns.clustermap ( W_all, cmap=cmap, square=True, figsize=(size1,size2) )
+  # pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  # pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  # pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  # pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  #
+  # pp.savefig( weights_dir + "/weights_heatmap.png", fmt="png", bbox_inches = "tight")
 
   ax3=f.add_subplot(111)
   size1 = max( int( n_hidden*size_per_unit ), 12 )
   size2 = max( int( n_inputs*size_per_unit ), 12 )
+  cmap = sns.palplot(sns.light_palette((260, 75, 60), input="husl"))
   htmap3 = sns.clustermap ( np.abs(W_all), cmap=cmap, square=True, figsize=(size1,size2) )
   pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
   pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
