@@ -161,16 +161,18 @@ def main( data_location, results_location ):
       results_fifth = logrank_test(times[z1_fifth], times[z2_fifth], events[z1_fifth], events[z2_fifth], alpha=.99 )
       results_tenth = logrank_test(times[z1_tenth], times[z2_tenth], events[z1_tenth], events[z2_tenth], alpha=.99 )
       
-      if half > min_half:
+      if events[z1_half].sum() + events[z2_half].sum() > 2 and half > min_half:
         p_values_half[t_idx,z_idx]  = results_half.p_value
       
-      if third > min_third:
+      if events[z1_third].sum() + events[z2_third].sum() > 2 and third > min_third:
         p_values_third[t_idx,z_idx] = results_third.p_value
         
-      if fifth > min_fifth:
+      if events[z1_fifth].sum() + events[z2_fifth].sum() > 2 and fifth > min_fifth:
         p_values_fifth[t_idx,z_idx] = results_fifth.p_value
         
-      if tenth > min_tenth:
+      if events[z1_tenth].sum() + events[z2_tenth].sum() > 2 and tenth > min_tenth:
+        #if results_tenth.p_value == 1:
+        #  pdb.set_trace()
         p_values_tenth[t_idx,z_idx] = results_tenth.p_value
       #pdb.set_trace()
     
