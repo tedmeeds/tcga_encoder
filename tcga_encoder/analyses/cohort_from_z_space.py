@@ -86,12 +86,12 @@ def main( data_location, results_location ):
   aucs_true.to_csv( tissue_dir + "/aucs_true.csv" )
   aucs_random.to_csv( tissue_dir + "/aucs_random.csv" )
   
-  binses = [20,50,100]
+  binses = [20,50,100,500]
   for bins in binses:
     pp.figure()
     pp.hist( aucs_true.values.flatten(), bins, range=(0,1), normed=True, histtype="step", lw=3, label="True" )
-    pp.hist( aucs_random.values.flatten(), 10, range=(0,1), normed=True, histtype="step", lw=3, label="Random" )
-    pp.plot( [0,1.0],[0.5,0.5], 'r-', lw=3)
+    pp.hist( aucs_random.values.flatten(), bins, color="red",range=(0,1), normed=True, histtype="step", lw=3, label="Random" )
+    #pp.plot( [0,1.0],[0.5,0.5], 'r-', lw=3)
     pp.legend()
     pp.xlabel("Area Under the ROC")
     pp.ylabel("Pr(AUC)")
