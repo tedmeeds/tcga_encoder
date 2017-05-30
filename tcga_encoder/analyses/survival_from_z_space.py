@@ -109,11 +109,16 @@ def main( data_location, results_location ):
   n_trials = 2*n_z
   trial_names = ["r_%d"%(trial_idx) for trial_idx in range(n_trials)]
   
-  p_values_half  = np.ones( (n_tissues,n_z), dtype=float)
+  min_half = 10
+  min_third = 10
+  min_fifth = 10
+  min_tenth = 10
+  
+  p_values_half          = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   p_values_third_random  = np.ones( (n_tissues,n_trials), dtype=float)
-  p_values_third = np.ones( (n_tissues,n_z), dtype=float)
-  p_values_fifth = np.ones( (n_tissues,n_z), dtype=float)
-  p_values_tenth = np.ones( (n_tissues,n_z), dtype=float)
+  p_values_third         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
+  p_values_fifth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
+  p_values_tenth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   
   for t_idx in range(n_tissues):
     t_ids = tissue_idx == t_idx
@@ -128,8 +133,8 @@ def main( data_location, results_location ):
     Z_values = Z_tissue[z_names].values
     
     n_tissue = len(bcs)
-    if n_tissue < 10:
-      continue
+    #if n_tissue < 10:
+    #  continue
       
     half  = int(n_tissue/2.0)
     third = int(n_tissue/3.0)
@@ -152,14 +157,21 @@ def main( data_location, results_location ):
       #kmf.fit(times[z1_half], event_observed=z1_half[I] )
       
       results_half = logrank_test(times[z1_half], times[z2_half], events[z1_half], events[z2_half], alpha=.99 )
-      p_values_half[t_idx,z_idx] = results_half.p_value
       results_third = logrank_test(times[z1_third], times[z2_third], events[z1_third], events[z2_third], alpha=.99 )
-      p_values_third[t_idx,z_idx] = results_third.p_value
-      
       results_fifth = logrank_test(times[z1_fifth], times[z2_fifth], events[z1_fifth], events[z2_fifth], alpha=.99 )
-      p_values_fifth[t_idx,z_idx] = results_fifth.p_value
       results_tenth = logrank_test(times[z1_tenth], times[z2_tenth], events[z1_tenth], events[z2_tenth], alpha=.99 )
-      p_values_tenth[t_idx,z_idx] = results_tenth.p_value
+      
+      if half > min_half:
+        p_values_half[t_idx,z_idx]  = results_half.p_value
+      
+      if third > min_third:
+        p_values_third[t_idx,z_idx] = results_third.p_value
+        
+      if fifth > min_fifth:
+        p_values_fifth[t_idx,z_idx] = results_fifth.p_value
+        
+      if tenth > min_tenth:
+        p_values_tenth[t_idx,z_idx] = results_tenth.p_value
       #pdb.set_trace()
     
     # for trial_idx in range(n_trials):
@@ -197,7 +209,10 @@ def main( data_location, results_location ):
   for pv,splits,split_word in zip( [p_values_half,p_values_third,p_values_fifth,p_values_tenth],["1/2","1/3","1/5","1/10"],["half","third","fifth","tenth"]):
     for bins in binses:
       pp.figure()
-      pp.hist( pv.values.flatten(), bins, range=(0,1), normed=True, histtype="step", lw=3 )
+      v = pv.values.flatten()
+      ok = pp.find( np.isnan(v) == False )
+      v = v[ok]
+      pp.hist( v, bins, range=(0,1), normed=True, histtype="step", lw=3 )
       pp.plot( [0,1],[1,1], 'r-', lw=3)
       pp.legend( ["Z","random"])
       pp.xlabel("p-value logrank test")
