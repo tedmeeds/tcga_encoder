@@ -32,8 +32,10 @@ def main( data_location, results_location ):
   model_store = pd.HDFStore( model_filename, "r" )
   
   input_sources = ["METH","RNA","miRNA"] 
-  f = pp.figure()
+  #f = pp.figure()
   n_sources = 3
+  
+  size_per_unit = 0.25
   
   post_fix = "_scaled"
   idx=1
@@ -78,31 +80,37 @@ def main( data_location, results_location ):
   W_corr_hidden = W_all.corr()
   W_corr_inputs = W_all.T.corr()
   
-  f = pp.figure(figsize=(32,24))
+  n_hidden = len(W_corr_hidden)
+  size = max( int( n_hidden*size_per_unit ), 12 )
+  f = pp.figure(figsize=(size,size))
   ax=f.add_subplot(111)
   # mask = np.zeros_like(W_corr, dtype=np.bool)
   # mask[np.triu_indices_from(mask)] = True
   
-  htmap = sns.clustermap ( W_corr_hidden, cmap=cmap, square=True )
+  htmap = sns.clustermap ( W_corr_hidden, cmap=cmap, square=True, figsize=(size,size) )
   #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
   #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
   
   pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
   pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-  pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
-  pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+  pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
   
   pp.savefig( weights_dir + "/corr_heatmap_hidden.png", fmt="png", bbox_inches = "tight") 
-
-  f2 = pp.figure(figsize=(32,24))
+  
+  n_inputs = len(W_corr_inputs)
+  size = max( int( n_inputs*size_per_unit ), 12 )
+  print "SIZE=",size
+  f2 = pp.figure(figsize=(size,size))
   ax2=f.add_subplot(111)
   
-  htmap2 = sns.clustermap ( W_corr_inputs, cmap=cmap, square=True )
+  
+  htmap2 = sns.clustermap ( W_corr_inputs, cmap=cmap, square=True, figsize=(size,size) )
   
   pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
   pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-  pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
-  pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+  pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
   
   pp.savefig( weights_dir + "/corr_heatmap_inputs.png", fmt="png", bbox_inches = "tight") 
   #
