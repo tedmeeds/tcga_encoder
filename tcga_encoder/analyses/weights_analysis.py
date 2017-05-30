@@ -137,6 +137,11 @@ def main( data_location, results_location ):
   
   pp.savefig( weights_dir + "/weights_abs_heatmap.png", fmt="png", bbox_inches = "tight")
 
+  W_order = np.argsort(-np.abs(W_all),0)
+  rownames = np.array(rownames, dtype=str)
+  for h in range(n_hidden):
+    #pdb.set_trace()
+    print "k=%d"%(h+1) , W_order["h_%d"%(h)].sort_values()[:5].index.values
   #
   #
   #
