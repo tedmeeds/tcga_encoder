@@ -124,6 +124,18 @@ def main( data_location, results_location ):
   pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
   
   pp.savefig( weights_dir + "/weights_heatmap.png", fmt="png", bbox_inches = "tight")
+
+  ax3=f.add_subplot(111)
+  size1 = max( int( n_hidden*size_per_unit ), 12 )
+  size2 = max( int( n_inputs*size_per_unit ), 12 )
+  htmap3 = sns.clustermap ( np.abs(W_all), cmap=cmap, square=True, figsize=(size1,size2) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  
+  pp.savefig( weights_dir + "/weights_abs_heatmap.png", fmt="png", bbox_inches = "tight")
+
   #
   #
   #
