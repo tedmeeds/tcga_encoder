@@ -129,7 +129,7 @@ def main( data_location, results_location ):
   size1 = max( int( n_hidden*size_per_unit ), 12 )
   size2 = max( int( n_inputs*size_per_unit ), 12 )
   cmap = sns.palplot(sns.light_palette((260, 75, 60), input="husl"))
-  htmap3 = sns.clustermap ( np.abs(W_all), z_score=1,cmap=cmap, square=True, figsize=(size1,size2) )
+  htmap3 = sns.clustermap ( pow(np.argsort(-np.abs(W_all),0)/float(len(W_all)),2),cmap=cmap, square=True, figsize=(size1,size2) )
   pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
   pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
   pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
