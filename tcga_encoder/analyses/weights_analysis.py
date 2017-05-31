@@ -139,9 +139,28 @@ def main( data_location, results_location ):
 
   W_order = np.argsort(-np.abs(W_all),0)
   rownames = np.array(rownames, dtype=str)
-  for h in range(n_hidden):
+  S = []
+  C = pd.DataFrame( [] )
+  i = 0
+  for h in range(50):
     #pdb.set_trace()
-    print "k=%d"%(h+1) , W_order["h_%d"%(h)].sort_values()[:5].index.values
+    
+    w_order = W_order["h_%d"%(h)].sort_values()
+    
+    names = w_order.index.values
+    w_values = W_all["h_%d"%(h)][ names ]
+    print "k=%d"%(h+1) , w_order[:5].index.values
+    s = pd.Series( w_values, index = names )
+    S.append(s)
+    
+    for j in range(5):
+      C[i] = pd.Series( [names[j], "h_%d"%h, w_values[j], np.sign(w_values[j])], index = ["source","target","weight","sign"] )
+      i += 1
+  C=C.T
+  S = pd.concat(S,axis=1)  
+  #W_cytoscape = np.sign(W_all[W_order])*W_order
+  C.to_csv( weights_dir + "/weights_cytoscape.csv" )
+  #pdb.set_trace()
   #
   #
   #
