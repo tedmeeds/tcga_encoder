@@ -213,8 +213,17 @@ def main( data_location, results_location, alpha=0.02 ):
     cols = reduced_.sum(0)[ reduced_.sum(0)>0 ].index.values
     reduced_ = reduced_.loc[rows]
     reduced_ = reduced_[cols]
-    f = sns.clustermap( reduced_, figsize=(12,10) )
-    pp.savefig( dna_dir + "/z_for_dna_clustermap_sig_%s.png"%(dna_gene), format="png")
+    size_per_unit = 0.25
+    size1 = max( int( len(rows)*size_per_unit ), 12 )
+    size2 = max( int( len(cols)*size_per_unit ), 12 )
+    f = sns.clustermap( reduced_, square=False, figsize=(size1,size2) )
+    
+    pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+    pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+    
+    pp.savefig( dna_dir + "/z_for_dna_clustermap_sig_%s.png"%(dna_gene), format="png", dpi=300)
     
     
     sorted_pan_sig.append(auc_sigs[dna_gene].sum(0))
@@ -226,11 +235,22 @@ def main( data_location, results_location, alpha=0.02 ):
   sorted_pan_sig = pd.concat(sorted_pan_sig,axis=1)
   sorted_pan_sig.columns = dna_genes
   sorted_pan_sig.to_csv( dna_dir + "/pan_sig_z_for_dna.csv" )
+  size1 = max( int( n_z*size_per_unit ), 12 )
+  size2 = max( int( len(dna_genes)*size_per_unit ), 12 )
+  f = sns.clustermap( sorted_pan.T, figsize=(size1,size2) )
   
-  f = sns.clustermap( sorted_pan.T, figsize=(12,10) )
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
   pp.savefig( dna_dir + "/z_for_dna_clustermap_logpval.png", format="png")
   
-  f = sns.clustermap( sorted_pan_sig.T, figsize=(12,10) )
+  f = sns.clustermap( sorted_pan_sig.T, figsize=(size1,size2) )
+  
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
   pp.savefig( dna_dir + "/z_for_dna_clustermap_sig.png", format="png")
   #pdb.set_trace()
         
