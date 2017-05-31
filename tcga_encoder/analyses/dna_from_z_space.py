@@ -20,7 +20,7 @@ def auc_standard_error( theta, nA, nN ):
   
   return SE
   
-def main( data_location, results_location ):
+def main( data_location, results_location, alpha=0.02 ):
   data_path    = os.path.join( HOME_DIR ,data_location ) #, "data.h5" )
   results_path = os.path.join( HOME_DIR, results_location )
   
@@ -139,6 +139,8 @@ def main( data_location, results_location ):
   
   print "summarizing..."
   sorted_pan = []
+  sorted_pan_sig=[]
+  auc_sigs = {}
   for dna_gene in dna_genes:   
     aucs =  aucs_true[dna_gene]
     ses  =  se_auc_true[dna_gene]
@@ -199,18 +201,32 @@ def main( data_location, results_location ):
       pp.title( "Predicting %s on cohort %s"%(dna_gene,tissue_name ) )#,n_1,n_0,n_1+n_0) )
       pp.xlabel( "Ranked z")
       pp.ylabel( "AUC")
-      pp.savefig( aucs_dir + "/auc_tests_%s_%s"%(dna_gene,tissue_name))
+      if np.any(p_values<alpha):
+        pp.savefig( aucs_dir + "/auc_tests_%s_%s"%(dna_gene,tissue_name))
       pp.close('all')
       #pp.show()
     auc_pvalues[dna_gene] = pd.DataFrame( auc_pvalues[dna_gene], index=tissue_names, columns = z_names )
+    auc_sigs[dna_gene] = pd.DataFrame( (auc_pvalues[dna_gene].values<alpha).astype(int), index=tissue_names, columns = z_names )
+    auc_sigs[dna_gene].to_csv( dna_dir + "/pan_sig_z_for_dna_%s.csv"%(dna_gene) )
+    f = sns.clustermap( auc_sigs[dna_gene], figsize=(12,10) )
+    pp.savefig( dna_dir + "/z_for_dna_clustermap_sig_%s.png"%(dna_gene), format="png")
     
+    
+    sorted_pan_sig.append(auc_sigs[dna_gene].sum(0))
     sorted_pan.append( np.log( auc_pvalues[dna_gene] + 1e-12 ).sum(0) ) #.sort_values()
   sorted_pan = pd.concat(sorted_pan,axis=1)
   sorted_pan.columns = dna_genes
-  sorted_pan.to_csv( dna_dir + "/pan_sig_z_for_dna.csv" )
+  sorted_pan.to_csv( dna_dir + "/pan_logpvals_z_for_dna.csv" )
+  
+  sorted_pan_sig = pd.concat(sorted_pan_sig,axis=1)
+  sorted_pan_sig.columns = dna_genes
+  sorted_pan_sig.to_csv( dna_dir + "/pan_sig_z_for_dna.csv" )
   
   f = sns.clustermap( sorted_pan.T, figsize=(12,10) )
-  pp.savefig( dna_dir + "/sig_z_for_dna_clustermap.png", format="png")
+  pp.savefig( dna_dir + "/z_for_dna_clustermap_logpval.png", format="png")
+  
+  f = sns.clustermap( sorted_pan_sig.T, figsize=(12,10) )
+  pp.savefig( dna_dir + "/z_for_dna_clustermap_sig.png", format="png")
   #pdb.set_trace()
         
   #   #events = Z["E"].loc[]
