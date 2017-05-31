@@ -208,7 +208,12 @@ def main( data_location, results_location, alpha=0.02 ):
     auc_pvalues[dna_gene] = pd.DataFrame( auc_pvalues[dna_gene], index=tissue_names, columns = z_names )
     auc_sigs[dna_gene] = pd.DataFrame( (auc_pvalues[dna_gene].values<alpha).astype(int), index=tissue_names, columns = z_names )
     auc_sigs[dna_gene].to_csv( dna_dir + "/pan_sig_z_for_dna_%s.csv"%(dna_gene) )
-    f = sns.clustermap( auc_sigs[dna_gene], figsize=(12,10) )
+    reduced_ = auc_sigs[dna_gene]
+    rows = reduced_.sum(1)[ reduced_.sum(1)>0 ].index.values
+    cols = reduced_.sum(0)[ reduced_.sum(0)>0 ].index.values
+    reduced_ = reduced_.loc[rows]
+    reduced_ = reduced_[cols]
+    f = sns.clustermap( reduced_, figsize=(12,10) )
     pp.savefig( dna_dir + "/z_for_dna_clustermap_sig_%s.png"%(dna_gene), format="png")
     
     
