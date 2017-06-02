@@ -30,7 +30,8 @@ def main( data_location, results_location ):
   
   save_dir = os.path.join( results_path, "input_clustering" )
   check_and_mkdir(save_dir)
-  
+  z_dir = os.path.join( save_dir, "z_pics" )
+  check_and_mkdir(z_dir)
   print "HOME_DIR: ", HOME_DIR
   print "data_filename: ", data_filename
   print "fill_filename: ", fill_filename
@@ -116,6 +117,18 @@ def main( data_location, results_location ):
     Z_keep_mirna.append( keep_mirna )
     Z_keep_meth.append( keep_meth )
     
+    f = pp.figure( figsize = (12,4))
+    ax1 = f.add_subplot(131);ax2 = f.add_subplot(132);ax3 = f.add_subplot(133)
+    
+    h1=keep_rna.plot(kind='bar',ax=ax1); h1.set_ylim(-1,1); ax1.set_title("RNA")
+    h2=keep_mirna.plot(kind='bar',ax=ax2);h2.set_ylim(-1,1);ax2.set_title("miRNA")
+    h3=keep_meth.plot(kind='bar',ax=ax3);h3.set_ylim(-1,1);ax3.set_title("METH")
+    #f.suptitle( "z %d"%(z_idx) ); 
+    f.subplots_adjust(bottom=0.3);
+    pp.savefig( z_dir + "/z%d.png"%(z_idx), format="png", dpi=300 )
+    #print h
+    pp.close('all')
+    #pdb.set_trace()
     #kept_rna = pd.DataFrame( rna_sorted[keep_rna.index], index=rna_sorted.index, columns = keep_rna.index )
     #kept_mirna = pd.DataFrame( mirna_sorted[keep_mirna.index], index=mirna_sorted.index, columns = keep_mirna.index )
     #kept_meth = pd.DataFrame( meth_sorted[keep_meth.index], index=meth_sorted.index, columns = keep_meth.index )
