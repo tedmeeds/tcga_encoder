@@ -122,7 +122,7 @@ def main( data_location, results_location ):
   p_values_fifth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   p_values_tenth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   
-  alpha = 1e-4
+  alpha = 1e-3
   
   sig_half = np.zeros( (n_tissues,n_z), dtype=float)
   sig_third = np.zeros( (n_tissues,n_z), dtype=float)
@@ -172,27 +172,27 @@ def main( data_location, results_location ):
         
         if p_values_half[t_idx,z_idx] < alpha:
           sig_half[t_idx,z_idx] = 1
-          f=pp.figure()
-          ax = f.add_subplot(111)
-          kmf = KaplanMeierFitter()
-          
-          kmf.fit(times[z1_half], event_observed=events[z1_half], label="q=1/2"  )
-          ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='blue')
-          kmf.fit(times[z2_half], event_observed=events[z2_half], label="q=2/2"  )
-          ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
-          pp.title( "%s z%d splits 1/2 v 2/2 p-value = %g"%( tissue_name, z_idx, p_values_half[t_idx,z_idx]) )
-          pp.savefig( survival_curves_dir + "/z%d_q_half_%s.png"%(z_idx, tissue_name), format="png", dpi=300)
-          
-          #pp.savefig( survival_curves_dir + "/%s_p_%0.5f_z%d_q_half.png"%(tissue_name,p_values_half[t_idx,z_idx],z_idx), format="png", dpi=300)
-          pp.close('all')
-          #pp.show()
-          #pdb.set_trace()
+          # f=pp.figure()
+          # ax = f.add_subplot(111)
+          # kmf = KaplanMeierFitter()
+          #
+          # kmf.fit(times[z1_half], event_observed=events[z1_half], label="q=1/2"  )
+          # ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='blue')
+          # kmf.fit(times[z2_half], event_observed=events[z2_half], label="q=2/2"  )
+          # ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
+          # pp.title( "%s z%d splits 1/2 v 2/2 p-value = %g"%( tissue_name, z_idx, p_values_half[t_idx,z_idx]) )
+          # pp.savefig( survival_curves_dir + "/z%d_q_half_%s.png"%(z_idx, tissue_name), format="png", dpi=300)
+          #
+          # #pp.savefig( survival_curves_dir + "/%s_p_%0.5f_z%d_q_half.png"%(tissue_name,p_values_half[t_idx,z_idx],z_idx), format="png", dpi=300)
+          # pp.close('all')
+          # #pp.show()
+          # #pdb.set_trace()
           
       
       if events[z1_third].sum() + events[z2_third].sum() > 2 and third > min_third:
         p_values_third[t_idx,z_idx] = results_third.p_value
         
-        if p_values_third[t_idx,z_idx] < alpha:
+        if p_values_half[t_idx,z_idx] < alpha and p_values_third[t_idx,z_idx] < alpha:
           sig_third[t_idx,z_idx] = 1
           f=pp.figure()
           ax = f.add_subplot(111)
@@ -204,6 +204,7 @@ def main( data_location, results_location ):
           ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
           pp.title( "%s z%d  splits 1/3 v 3/3 p-value = %g"%( tissue_name, z_idx, p_values_third[t_idx,z_idx]) )
           pp.savefig( survival_curves_dir + "/z%d_q_third_%s.png"%(z_idx, tissue_name), format="png", dpi=300)
+          pp.savefig( survival_curves_dir + "/%s_z%d_q_third.png"%(tissue_name,z_idx), format="png", dpi=300)
           pp.close('all')
           
         
