@@ -7,6 +7,20 @@ from tcga_encoder.definitions.locations import *
 import seaborn as sns
 from sklearn.manifold import TSNE, locally_linear_embedding
 
+def find_keepers(z, X, name, nbr2keep):
+  inner = pd.Series( np.dot( z, X ), index = X.columns, name=name )
+  inner.sort_values(inplace=True)
+  inner = inner / np.max(np.abs(inner))
+  #signed = np.sign( inner )
+  abs_inner = np.abs( inner )
+  ordered = np.argsort( -abs_inner.values )
+  ordered = pd.Series( inner.values[ordered], index =inner.index[ordered],name=name )
+  
+  keepers = ordered[:nbr2keep]
+  keepers = keepers.sort_values()
+  
+  return keepers
+  
 def main( data_location, results_location ):
   data_path    = os.path.join( HOME_DIR ,data_location ) #, "data.h5" )
   results_path = os.path.join( HOME_DIR, results_location )
@@ -72,14 +86,70 @@ def main( data_location, results_location ):
     X /= X.std(0)
     meth_normed[t_query] = X
     
-  
-  for z_idx in range(5):
+  nbr = 10
+  Z_keep_rna=[]
+  Z_keep_mirna=[]
+  Z_keep_meth=[]
+  for z_idx in range(n_z):
     z_values = Z_values[:,z_idx]
     order_z = np.argsort(z_values)
     rna_sorted = pd.DataFrame( rna_normed.values[order_z,:], index = barcodes[order_z], columns = rna.columns )
     mirna_sorted = pd.DataFrame( mirna_normed.values[order_z,:], index = barcodes[order_z], columns = mirna.columns )
     meth_sorted = pd.DataFrame( meth_normed.values[order_z,:], index = barcodes[order_z], columns = meth.columns )
-    pdb.set_trace()
+    #
+    # inner_rna = pd.Series( np.dot( z_values, rna_normed ), index = rna_normed.columns, name="rna" )
+    # inner_rna.sort_values(inplace=True)
+    # inner_rna = inner_rna / np.max(np.abs(inner_rna))
+    # sign_rna = np.sign( inner_rna )
+    # abs_rna = np.abs( inner_rna )
+    # ordered_rna = np.argsort( -abs_rna.values )
+    # ordered_rna = pd.Series( inner_rna.values[ordered_rna], index =inner_rna.index[ordered_rna],name="rna" )
+    #
+    # keep_rna = ordered_rna[:nbr]
+    # keep_rna = keep_rna.sort_values()
+    
+    keep_rna = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), nbr )
+    keep_mirna = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), nbr )
+    keep_meth = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), nbr )
+    
+    Z_keep_rna.append( keep_rna )
+    Z_keep_mirna.append( keep_mirna )
+    Z_keep_meth.append( keep_meth )
+    
+    #kept_rna = pd.DataFrame( rna_sorted[keep_rna.index], index=rna_sorted.index, columns = keep_rna.index )
+    #kept_mirna = pd.DataFrame( mirna_sorted[keep_mirna.index], index=mirna_sorted.index, columns = keep_mirna.index )
+    #kept_meth = pd.DataFrame( meth_sorted[keep_meth.index], index=meth_sorted.index, columns = keep_meth.index )
+  merged_rna   = pd.concat(Z_keep_rna,axis=1) 
+  merged_mirna = pd.concat(Z_keep_mirna,axis=1) 
+  merged_meth  = pd.concat(Z_keep_meth,axis=1)  
+  
+  merged_rna.to_csv( save_dir + "/z_to_rna.csv" )
+  merged_mirna.to_csv( save_dir + "/z_to_mirna.csv" )
+  merged_meth.to_csv( save_dir + "/z_to_meth.csv" )
+  
+  f = sns.clustermap(merged_rna.fillna(0), figsize=(8,6))
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+  pp.savefig( save_dir + "/clustermap_z_to_rna.png", format="png", dpi=300 )
+  f = sns.clustermap(merged_mirna.fillna(0), figsize=(8,6))
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+  pp.savefig( save_dir + "/clustermap_z_to_mirna.png", format="png", dpi=300 )
+  
+  f = sns.clustermap(merged_meth.fillna(0), figsize=(8,6))
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(f.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+  pp.setp(f.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+  pp.savefig( save_dir + "/clustermap_z_to_meth.png", format="png", dpi=300 )
+  
+  
+  #pdb.set_trace()
+    #pdb.set_trace()
   #
   # binses = [20,50,100,500]
   # for bins in binses:
