@@ -16,6 +16,8 @@ def main( data_location, results_location ):
   
   survival_dir = os.path.join( results_path, "survival" )
   check_and_mkdir(survival_dir)
+  survival_curves_dir = os.path.join( survival_dir, "sig_curves" )
+  check_and_mkdir(survival_curves_dir)
   
   print "HOME_DIR: ", HOME_DIR
   print "data_filename: ", data_filename
@@ -120,6 +122,10 @@ def main( data_location, results_location ):
   p_values_fifth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   p_values_tenth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   
+  alpha = 1e-4
+  
+  sig_half = np.zeros( (n_tissues,n_z), dtype=float)
+  sig_third = np.zeros( (n_tissues,n_z), dtype=float)
   for t_idx in range(n_tissues):
     t_ids = tissue_idx == t_idx
     tissue_name = tissue_names[t_idx]
@@ -163,9 +169,43 @@ def main( data_location, results_location ):
       
       if events[z1_half].sum() + events[z2_half].sum() > 2 and half > min_half:
         p_values_half[t_idx,z_idx]  = results_half.p_value
+        
+        if p_values_half[t_idx,z_idx] < alpha:
+          sig_half[t_idx,z_idx] = 1
+          f=pp.figure()
+          ax = f.add_subplot(111)
+          kmf = KaplanMeierFitter()
+          
+          kmf.fit(times[z1_half], event_observed=events[z1_half], label="q=1/2"  )
+          ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='blue')
+          kmf.fit(times[z2_half], event_observed=events[z2_half], label="q=2/2"  )
+          ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
+          pp.title( "%s z%d splits 1/2 v 2/2 p-value = %g"%( tissue_name, z_idx, p_values_half[t_idx,z_idx]) )
+          pp.savefig( survival_curves_dir + "/z%d_q_half_%s.png"%(z_idx, tissue_name), format="png", dpi=300)
+          
+          #pp.savefig( survival_curves_dir + "/%s_p_%0.5f_z%d_q_half.png"%(tissue_name,p_values_half[t_idx,z_idx],z_idx), format="png", dpi=300)
+          pp.close('all')
+          #pp.show()
+          #pdb.set_trace()
+          
       
       if events[z1_third].sum() + events[z2_third].sum() > 2 and third > min_third:
         p_values_third[t_idx,z_idx] = results_third.p_value
+        
+        if p_values_third[t_idx,z_idx] < alpha:
+          sig_third[t_idx,z_idx] = 1
+          f=pp.figure()
+          ax = f.add_subplot(111)
+          kmf = KaplanMeierFitter()
+          
+          kmf.fit(times[z1_third], event_observed=events[z1_third], label="q=1/3"  )
+          ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='blue')
+          kmf.fit(times[z2_third], event_observed=events[z2_third], label="q=3/3"  )
+          ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
+          pp.title( "%s z%d  splits 1/3 v 3/3 p-value = %g"%( tissue_name, z_idx, p_values_third[t_idx,z_idx]) )
+          pp.savefig( survival_curves_dir + "/z%d_q_third_%s.png"%(z_idx, tissue_name), format="png", dpi=300)
+          pp.close('all')
+          
         
       if events[z1_fifth].sum() + events[z2_fifth].sum() > 2 and fifth > min_fifth:
         p_values_fifth[t_idx,z_idx] = results_fifth.p_value
@@ -185,6 +225,8 @@ def main( data_location, results_location ):
     #events = Z["E"].loc[]
   
   #
+  sig_half =  pd.DataFrame( sig_half, index = tissue_names, columns=z_names )
+  sig_third =  pd.DataFrame( sig_third, index = tissue_names, columns=z_names )
   p_values_half  = pd.DataFrame( p_values_half, index = tissue_names, columns=z_names )
   p_values_third = pd.DataFrame( p_values_third, index = tissue_names, columns=z_names )
   p_values_fifth = pd.DataFrame( p_values_fifth, index = tissue_names, columns=z_names )
@@ -198,6 +240,9 @@ def main( data_location, results_location ):
   #
   # pdb.set_trace()
   # pp.savefig( tsne_dir + "/tsne_perplexity_%d.png"%(perplexity), format='png', dpi=300 )
+  sig_half.to_csv( survival_dir + "/sig_half.csv" )
+  sig_third.to_csv( survival_dir + "/sig_third.csv" )
+  
   p_values_half.to_csv( survival_dir + "/p_values_half.csv" )
   p_values_third.to_csv( survival_dir + "/p_values_third.csv" )
   p_values_fifth.to_csv( survival_dir + "/p_values_fifth.csv" )
