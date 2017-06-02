@@ -1629,7 +1629,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.model_store.close()
 
   def VizRecHidden(self, sess, info_dict ):
-    
+    return
     
     
     if self.network.HasLayer( "rec_hidden" ):
