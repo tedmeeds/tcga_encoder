@@ -122,7 +122,7 @@ def main( data_location, results_location ):
   p_values_fifth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   p_values_tenth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   
-  alpha = 1e-3
+  alpha = 1e-2
   
   sig_half = np.zeros( (n_tissues,n_z), dtype=float)
   sig_third = np.zeros( (n_tissues,n_z), dtype=float)
@@ -153,11 +153,11 @@ def main( data_location, results_location ):
       z1_half = I[:half]
       z2_half = I[half:]
       z1_third = I[:third]
-      z2_third = I[-third:]
+      z2_third = I[third:]
       z1_fifth = I[:fifth]
-      z2_fifth = I[-fifth:]
+      z2_fifth = I[fifth:]
       z1_tenth = I[:tenth]
-      z2_tenth = I[-tenth:]
+      z2_tenth = I[tenth:]
       
       #kmf = KaplanMeierFitter()
       #kmf.fit(times[z1_half], event_observed=z1_half[I] )
