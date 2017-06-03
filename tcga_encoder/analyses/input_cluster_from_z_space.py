@@ -1,5 +1,6 @@
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
+from tcga_encoder.data.pathway_data import Pathways
 from tcga_encoder.definitions.tcga import *
 #from tcga_encoder.definitions.nn import *
 from tcga_encoder.definitions.locations import *
@@ -22,6 +23,7 @@ def find_keepers(z, X, name, nbr2keep):
   return keepers
   
 def main( data_location, results_location ):
+  pathway_info = Pathways()
   data_path    = os.path.join( HOME_DIR ,data_location ) #, "data.h5" )
   results_path = os.path.join( HOME_DIR, results_location )
   
@@ -113,18 +115,34 @@ def main( data_location, results_location ):
     keep_mirna = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), nbr )
     keep_meth = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), nbr )
     
+    keep_rna_big = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), 3*nbr )
+    keep_mirna_big = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), 3*nbr )
+    keep_meth_big = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), 3*nbr )
+    
     Z_keep_rna.append( keep_rna )
     Z_keep_mirna.append( keep_mirna )
     Z_keep_meth.append( keep_meth )
     
-    f = pp.figure( figsize = (12,4))
-    ax1 = f.add_subplot(131);ax2 = f.add_subplot(132);ax3 = f.add_subplot(133)
+    f = pp.figure( figsize = (14,8))
+    ax1 = f.add_subplot(234);ax2 = f.add_subplot(235);ax3 = f.add_subplot(236)
+    ax_pie1 = f.add_subplot(231); ax_pie3 = f.add_subplot(233)
     
     h1=keep_rna.plot(kind='bar',ax=ax1); h1.set_ylim(-1,1); ax1.set_title("RNA")
     h2=keep_mirna.plot(kind='bar',ax=ax2);h2.set_ylim(-1,1);ax2.set_title("miRNA")
     h3=keep_meth.plot(kind='bar',ax=ax3);h3.set_ylim(-1,1);ax3.set_title("METH")
+    
+    rna_kegg,rna_readable = pathway_info.Enrichment(keep_rna_big.index)
+    meth_kegg,meth_readable = pathway_info.Enrichment(keep_meth_big.index)
+    
+    rna_readable.name=""
+    meth_readable.name=""
+    rna_readable[:8].plot.pie( ax=ax_pie1, fontsize=8 )
+    meth_readable[:8].plot.pie( ax=ax_pie3, fontsize =8 )
+    #pp.show()
+    #pdb.set_trace()
+    
     #f.suptitle( "z %d"%(z_idx) ); 
-    f.subplots_adjust(bottom=0.3);
+    f.subplots_adjust(bottom=0.5);
     pp.savefig( z_dir + "/z%d.png"%(z_idx), format="png", dpi=300 )
     #print h
     pp.close('all')
