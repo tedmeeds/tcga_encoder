@@ -138,11 +138,11 @@ def main( data_location, results_location ):
     meth_readable.name=""
     rna_readable[:8].plot.pie( ax=ax_pie1, fontsize=8 )
     meth_readable[:8].plot.pie( ax=ax_pie3, fontsize =8 )
-    #pp.show()
-    #pdb.set_trace()
+    pp.show()
+    pdb.set_trace()
     
     #f.suptitle( "z %d"%(z_idx) ); 
-    f.subplots_adjust(bottom=0.5);
+    f.subplots_adjust(bottom=0.25);
     pp.savefig( z_dir + "/z%d.png"%(z_idx), format="png", dpi=300 )
     #print h
     pp.close('all')
