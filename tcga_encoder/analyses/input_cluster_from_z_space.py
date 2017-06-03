@@ -131,13 +131,15 @@ def main( data_location, results_location ):
     h2=keep_mirna.plot(kind='bar',ax=ax2);h2.set_ylim(-1,1);ax2.set_title("miRNA")
     h3=keep_meth.plot(kind='bar',ax=ax3);h3.set_ylim(-1,1);ax3.set_title("METH")
     
-    rna_kegg,rna_readable = pathway_info.Enrichment(keep_rna_big.index)
-    meth_kegg,meth_readable = pathway_info.Enrichment(keep_meth_big.index)
+    rna_kegg,rna_readable = pathway_info.CancerEnrichment(keep_rna_big.index)
+    meth_kegg,meth_readable = pathway_info.CancerEnrichment(keep_meth_big.index)
     
     rna_readable.name=""
     meth_readable.name=""
-    rna_readable[:8].plot.pie( ax=ax_pie1, fontsize=8 )
-    meth_readable[:8].plot.pie( ax=ax_pie3, fontsize =8 )
+    if len(rna_readable)>0:
+      rna_readable[:8].plot.pie( ax=ax_pie1, fontsize=8 )
+    if len(meth_readable)>0:
+      meth_readable[:8].plot.pie( ax=ax_pie3, fontsize =8 )
     #pp.show()
     #pdb.set_trace()
     
