@@ -123,7 +123,7 @@ def main( data_location, results_location ):
     Z_keep_mirna.append( keep_mirna )
     Z_keep_meth.append( keep_meth )
     
-    f = pp.figure( figsize = (14,8))
+    f = pp.figure( figsize = (14,10))
     ax1 = f.add_subplot(234);ax2 = f.add_subplot(235);ax3 = f.add_subplot(236)
     ax_pie1 = f.add_subplot(231); ax_pie3 = f.add_subplot(233)
     
@@ -138,8 +138,8 @@ def main( data_location, results_location ):
     meth_readable.name=""
     rna_readable[:8].plot.pie( ax=ax_pie1, fontsize=8 )
     meth_readable[:8].plot.pie( ax=ax_pie3, fontsize =8 )
-    pp.show()
-    pdb.set_trace()
+    #pp.show()
+    #pdb.set_trace()
     
     #f.suptitle( "z %d"%(z_idx) ); 
     f.subplots_adjust(bottom=0.25);
