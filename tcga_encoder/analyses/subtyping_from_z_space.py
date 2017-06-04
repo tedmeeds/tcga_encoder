@@ -81,6 +81,9 @@ def main( data_location, results_location ):
     
     Z_cohort = Z_quantized[ t_ids_cohort ]
     
+    bcs = barcodes[t_ids_cohort]
+    #data_store["/CLINICAL/TISSUE"].loc[barcodes]
+    pdb.set_trace()
     f = pp.figure()
     ax = f.add_subplot(111)
 
