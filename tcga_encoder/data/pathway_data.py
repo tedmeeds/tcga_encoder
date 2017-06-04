@@ -11,6 +11,12 @@ class Pathways( object ):
     self.kegg_dir = os.path.join( HOME_DIR, kegg_location )
     self.hgnc_dir = os.path.join( HOME_DIR, hgnc_location )
     
+    taboo = ["hsa05210","hsa05212","hsa05214","hsa05216",\
+             "hsa05221","hsa05220","hsa05217","hsa05218",\
+             "hsa05211","hsa05219","hsa05215","hsa05213",\
+             "hsa05222","hsa05223"]
+    self.taboo = dict( zip(taboo,range(len(taboo))))
+    
     print "Loading Hugo"
     self.LoadGenes()
     print "Loading Cancer Kegg"
@@ -34,11 +40,12 @@ class Pathways( object ):
   def LoadCancerXml(self):
     self.xmldoc = minidom.parse(self.kegg_dir + "/hsa05200.xml")
     #self.e = xml.etree.ElementTree.parse( self.kegg_dir + "/hsa05200.xml").getroot()
+
     self.cancer_paths = []
     for entry in self.xmldoc.getElementsByTagName("pathway")[0].getElementsByTagName("entry"):
       if entry.attributes["type"].value == "map":
         pathway = entry.attributes["name"].value.split(":")[1]
-        if pathway[:3] == "hsa":
+        if pathway[:3] == "hsa" and self.taboo.has_key(pathway) is False:
           self.cancer_paths.append( entry.attributes["name"].value.split(":")[1] )
       
     #for atype in self.e.findall('path'):
@@ -58,13 +65,20 @@ class Pathways( object ):
       hsa_gene = symbols[0].split(":")[1]
       pathways = symbols[1:]; pathways[-1] = pathways[-1].rstrip("\n")
       
+      new_pathways = []
+      for pathway in pathways:
+        if self.taboo.has_key(pathway) is False:
+          new_pathways.append(pathway)
+      pathways = new_pathways
+      
       self.hsa2pathway[hsa_gene] = pathways
       
       for pathway in pathways:
-        if self.pathway2hsa.has_key(pathway):
-          self.pathway2hsa[pathway].append( hsa_gene )
-        else:
-          self.pathway2hsa[pathway] = [hsa_gene]
+        if self.taboo.has_key(pathway) is False:
+          if self.pathway2hsa.has_key(pathway):
+            self.pathway2hsa[pathway].append( hsa_gene )
+          else:
+            self.pathway2hsa[pathway] = [hsa_gene]
           
     self.cancer_pathway2hsa = OrderedDict()
     self.hsa2cancer_pathway = OrderedDict()
@@ -133,15 +147,22 @@ class Pathways( object ):
       
       if self.hugo2pathway.has_key( hugo ):
         pathways = self.hugo2pathway[ hugo ]
-        path_weights = w*np.ones(len(pathways))/len(pathways)
+        path_weights = w*np.ones(len(pathways))#/len(pathways)
         
         # restrict to cancer pathways
         c_pathways = []
         c_weights = []
+        has_cancer = False
         for pathway, p_weight in zip( pathways, path_weights ):
           if self.cancer_pathway2hugo.has_key( pathway ):
             c_pathways.append( pathway )
             c_weights.append(p_weight )
+            has_cancer = True
+        if has_cancer is False:
+          for pathway, p_weight in zip( pathways, path_weights ):
+            c_pathways.append( pathway )
+            c_weights.append(p_weight )
+          
         c.update( dict( zip(c_pathways, c_weights ) ) )
     
     most_common = pd.Series( c.values(), index = c.keys(), name="kegg")

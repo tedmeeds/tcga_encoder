@@ -7,7 +7,50 @@ from tcga_encoder.definitions.locations import *
 #from tcga_encoder.algorithms import *
 import seaborn as sns
 from sklearn.manifold import TSNE, locally_linear_embedding
+from scipy import stats
 
+def find_keepers_over_groups( z, groups, name, nbr2keep):
+  inners = []; p_inners=[]
+  mx_inner = 0.0
+  norm_z = np.linalg.norm(z)
+  for X in groups:
+    
+    pearsons = np.zeros( X.shape[1] )
+    pvalues  = np.zeros( X.shape[1] )
+    for x,x_idx in zip( X.values.T, range(X.shape[1])):
+      pearsons[x_idx], pvalues[x_idx] = stats.pearsonr( z, x )
+      
+    #norms = norm_z*np.linalg.norm( X, axis=0 )
+    
+    #inner = pd.Series( np.dot( z, X )/norms, index = X.columns, name=name )
+    inner = pd.Series( pearsons, index = X.columns, name=name )
+    #pdb.set_trace()
+    p_inner = pd.Series( pvalues, index = X.columns, name=name )
+    
+    inners.append(inner)
+    p_inners.append(p_inner)
+    
+    this_mx = np.max(np.abs(inner))
+    if this_mx > mx_inner:
+      mx_inner = this_mx
+  all_keepers = []
+  #all_pvalues = []
+  for inner,p_inner in zip(inners,p_inners):
+    #inner.sort_values(inplace=True)
+    #inner = inner / mx_inner
+    
+    #abs_inner = np.abs( inner )
+    ordered = np.argsort( -inner.values )
+    
+    ordered = pd.DataFrame( np.vstack( (inner.values[ordered],p_inner.values[ordered] ) ).T, index =inner.index[ordered],columns=["r","p"] )
+    #pdb.set_trace()
+    keepers = pd.concat( [ordered[:nbr2keep], ordered[-nbr2keep:]], axis=0 )
+    #pdb.set_trace()
+    #keepers = keepers.sort_values()
+    all_keepers.append(keepers)
+  
+  return all_keepers
+  
 def find_keepers(z, X, name, nbr2keep):
   inner = pd.Series( np.dot( z, X ), index = X.columns, name=name )
   inner.sort_values(inplace=True)
@@ -70,7 +113,7 @@ def main( data_location, results_location ):
   n = len(Z)
   n_tissues = len(tissue_names)
   
-  rna_normed = rna; mirna_normed = mirna; meth_normed = meth
+  rna_normed = rna; mirna_normed = mirna; meth_normed = meth; dna_normed=dna#2*dna-1
   for t_idx in range(n_tissues):
     t_query = tissue_idx == t_idx
     
@@ -89,16 +132,18 @@ def main( data_location, results_location ):
     X /= X.std(0)
     meth_normed[t_query] = X
     
-  nbr = 10
+  nbr = 5
   Z_keep_rna=[]
   Z_keep_mirna=[]
   Z_keep_meth=[]
+  Z_keep_dna = []
   for z_idx in range(n_z):
     z_values = Z_values[:,z_idx]
     order_z = np.argsort(z_values)
     rna_sorted = pd.DataFrame( rna_normed.values[order_z,:], index = barcodes[order_z], columns = rna.columns )
     mirna_sorted = pd.DataFrame( mirna_normed.values[order_z,:], index = barcodes[order_z], columns = mirna.columns )
     meth_sorted = pd.DataFrame( meth_normed.values[order_z,:], index = barcodes[order_z], columns = meth.columns )
+    dna_sorted = pd.DataFrame( dna_normed.values[order_z,:], index = barcodes[order_z], columns = dna.columns )
     #
     # inner_rna = pd.Series( np.dot( z_values, rna_normed ), index = rna_normed.columns, name="rna" )
     # inner_rna.sort_values(inplace=True)
@@ -110,36 +155,100 @@ def main( data_location, results_location ):
     #
     # keep_rna = ordered_rna[:nbr]
     # keep_rna = keep_rna.sort_values()
+    keep_rna,keep_mirna,keep_meth,keep_dna = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), nbr)
     
-    keep_rna = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), nbr )
-    keep_mirna = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), nbr )
-    keep_meth = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), nbr )
+    # keep_rna = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), nbr )
+    # keep_mirna = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), nbr )
+    # keep_meth = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), nbr )
     
-    keep_rna_big = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), 3*nbr )
-    keep_mirna_big = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), 3*nbr )
-    keep_meth_big = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), 3*nbr )
+    keep_rna_big,keep_mirna_big,keep_meth_big,keep_dna_big = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), 10*nbr)
+    
+    # keep_rna_big = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), 3*nbr )
+    # keep_mirna_big = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), 3*nbr )
+    # keep_meth_big = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), 3*nbr )
     
     Z_keep_rna.append( keep_rna )
     Z_keep_mirna.append( keep_mirna )
     Z_keep_meth.append( keep_meth )
+    Z_keep_dna.append( keep_dna )
     
-    f = pp.figure( figsize = (14,10))
-    ax1 = f.add_subplot(234);ax2 = f.add_subplot(235);ax3 = f.add_subplot(236)
-    ax_pie1 = f.add_subplot(231); ax_pie3 = f.add_subplot(233)
+    f = pp.figure( figsize = (12,8))
+    ax1 = f.add_subplot(421);ax2 = f.add_subplot(423);ax3 = f.add_subplot(425);ax4 = f.add_subplot(427)
+    ax_pie1 = f.add_subplot(422); ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
     
-    h1=keep_rna.plot(kind='bar',ax=ax1); h1.set_ylim(-1,1); ax1.set_title("RNA")
-    h2=keep_mirna.plot(kind='bar',ax=ax2);h2.set_ylim(-1,1);ax2.set_title("miRNA")
-    h3=keep_meth.plot(kind='bar',ax=ax3);h3.set_ylim(-1,1);ax3.set_title("METH")
+    h1=keep_rna[["r"]].plot(kind='barh',ax=ax1,color="red",legend=False,title=None); h1.set_xlim(-0.25,0.25); ax1.set_title(""); h1.set_xticklabels([]); ax1.legend(["RNA"])
+    h2=keep_mirna[["r"]].plot(kind='barh',ax=ax4,color="black",legend=False,title=None);h2.set_xlim(-0.25,0.25);ax4.set_title(""); ax4.legend(["miRNA"])
+    h3=keep_meth[["r"]].plot(kind='barh',ax=ax3,color="blue",legend=False,title=None);h3.set_xlim(-0.25,0.25);ax3.set_title(""); h1.set_xticklabels([]); ax3.legend(["METH"])
+    h4=keep_dna[["r"]].plot(kind='barh',ax=ax2,color="green",legend=False,title=None);h4.set_xlim(-0.25,0.25);ax2.set_title(""); h1.set_xticklabels([]); ax2.legend(["DNA"])
     
-    rna_kegg,rna_readable = pathway_info.CancerEnrichment(keep_rna_big.index, np.abs( keep_rna_big.values ) )
-    meth_kegg,meth_readable = pathway_info.CancerEnrichment(keep_meth_big.index, np.abs( keep_meth_big.values ) )
+    neg_dna = pp.find( keep_dna_big.values[:,0]<0) ; pos_dna = pp.find( keep_dna_big.values[:,0]>0)
+    neg_rna = pp.find( keep_rna_big.values[:,0]<0) ; pos_rna = pp.find( keep_rna_big.values[:,0]>0)
+    neg_meth = pp.find( keep_meth_big.values[:,0]<0) ; pos_meth = pp.find( keep_meth_big.values[:,0]>0) 
     
-    rna_readable.name=""
-    meth_readable.name=""
-    if len(rna_readable)>0:
-      rna_readable[:8].plot.pie( ax=ax_pie1, fontsize=8 )
-    if len(meth_readable)>0:
-      meth_readable[:8].plot.pie( ax=ax_pie3, fontsize =8 )
+    dna_kegg,dna_readable = pathway_info.CancerEnrichment(keep_dna_big.index, np.abs( np.log2(keep_dna_big.values[:,1]) ) )
+    rna_kegg,rna_readable = pathway_info.CancerEnrichment(keep_rna_big.index, np.abs( np.log2(keep_rna_big.values[:,1]) ) )
+    meth_kegg,meth_readable = pathway_info.CancerEnrichment(keep_meth_big.index, np.abs( np.log2(keep_meth_big.values[:,1]) ) )
+    
+    dna_kegg_p,dna_readable_p   = pathway_info.CancerEnrichment(keep_dna_big.index[pos_dna], (np.abs( np.log2(keep_dna_big.values[pos_dna,1]) )>-np.log2(0.01)).astype(float) )
+    rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(keep_rna_big.index[pos_rna], (np.abs( np.log2(keep_rna_big.values[pos_rna,1]) )>-np.log2(0.01)).astype(float) )
+    meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(keep_meth_big.index[pos_meth], (np.abs( np.log2(keep_meth_big.values[pos_meth,1]) )>-np.log2(0.01)).astype(float) )
+
+    dna_kegg_n,dna_readable_n   = pathway_info.CancerEnrichment(keep_dna_big.index[neg_dna], (np.abs( np.log2(keep_dna_big.values[neg_dna,1]) )>-np.log2(0.01)).astype(float) )
+    rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(keep_rna_big.index[neg_rna], (np.abs( np.log2(keep_rna_big.values[neg_rna,1]) )>-np.log2(0.01)).astype(float) )
+    meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(keep_meth_big.index[neg_meth], (np.abs( np.log2(keep_meth_big.values[neg_meth,1]) )>-np.log2(0.01)).astype(float) )
+    
+    dna_readable_n=-dna_readable_n
+    rna_readable_n=-rna_readable_n
+    meth_readable_n=-meth_readable_n
+    
+    
+    rna_readable_p.name="rna_p"
+    meth_readable_p.name="meth_p"
+    dna_readable_p.name="dna_p"
+    rna_readable_n.name="rna_n"
+    meth_readable_n.name="meth_n"
+    dna_readable_n.name="dna_n"
+    joined = pd.concat( [rna_readable_p[:10],rna_readable_n[:10],dna_readable_p[:10],dna_readable_n[:10],meth_readable_n[:10],meth_readable_p[:10]], axis=1 )
+    
+    maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
+    joined=joined.loc[maxvalues]
+    joined = joined[:20]
+    
+    br = joined[["rna_p","rna_n"]].plot(kind="bar",ax=ax_pie1,color="red",legend=False); br.set_xticklabels([]); ax_pie1.legend(["RNA"])
+    br = joined[["meth_p","meth_n"]].plot(kind="bar",ax=ax_pie4,color="blue",legend=False);  ax_pie4.legend(["METH"])
+    br = joined[["dna_p","dna_n"]].plot(kind="bar",ax=ax_pie3,color="green",legend=False); br.set_xticklabels([]);  ax_pie3.legend(["DNA"])
+    
+    #joined[["rna_n","meth_n","dna_n"]].plot(kind="bar",ax=ax_pie1,color="red")
+    # if len(rna_readable_p)>0:
+    #   rna_readable_p[:12].plot( kind="barh",ax=ax_pie1, fontsize=8, color="green" )
+    # if len(rna_readable_n)>0:
+    #   rna_readable_n[:12].plot( kind="barh",ax=ax_pie1, fontsize=8, color="red" )
+    #
+    # if len(meth_readable_p)>0:
+    #   meth_readable_p[:12].plot( kind="barh",ax=ax_pie1, fontsize=8, color="blue" )
+    # if len(meth_readable_n)>0:
+    #   meth_readable_n[:12].plot( kind="barh",ax=ax_pie1, fontsize=8, color="purple" )
+    #
+    # if len(dna_readable_p)>0:
+    #   dna_readable_p[:12].plot( kind="barh",ax=ax_pie1, fontsize=8, color="yellow" )
+    # if len(dna_readable_n)>0:
+    #   dna_readable_n[:12].plot( kind="barh",ax=ax_pie1, fontsize=8, color="black" )
+    #
+    #   #rna_readable[:12].plot.pie( ax=ax_pie1, fontsize=8 )
+    # if len(meth_readable)>0:
+    #   #meth_readable[:12].plot.pie( ax=ax_pie3, fontsize =8 )
+    # if len(dna_readable)>0:
+    #   3dna_readable[:12].plot.pie( ax=ax_pie4, fontsize=8 )
+    #pp.show()
+    #pdb.set_trace()
+    #assert False
+    #print "normaize over meth and rna anr mirna"
+    #print "include dna"
+    #print "up and down pie charts"
+    #print "add other pathways if not in cancer"
+    #print "put counts in pies"
+    print "survival: best per cohort, also double sided on third, go to fifth if enough events"
+    
     #pp.show()
     #pdb.set_trace()
     
