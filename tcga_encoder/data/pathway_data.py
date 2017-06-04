@@ -54,7 +54,9 @@ class Pathways( object ):
       
   def LoadKegg(self):
     self.sets_kgmls = pd.read_csv( self.kegg_dir + "/sets_kgmls.txt", sep="\t", index_col="ID" )
-    
+    self.sets_kgmls = self.sets_kgmls.append( pd.Series(["DUMMY",1,"zilch"],index=self.sets_kgmls.columns,name="zilch"))
+    #pdb.set_trace()
+    #self.sets_kgmls["Zilch"] = pd.Series()
     pathway_lines = open( self.kegg_dir + "/gene_pathway.txt", "r" ).readlines()
     
     self.pathway2hsa = OrderedDict()
@@ -150,7 +152,7 @@ class Pathways( object ):
       if self.hugo2pathway.has_key( hugo ):
         total_w+=w
         pathways = self.hugo2pathway[ hugo ]
-        path_weights = w*np.ones(len(pathways)) #/len(hugo_list)
+        path_weights = w*np.ones(len(pathways))/len(pathways)
         
         # restrict to cancer pathways
         c_pathways = []
@@ -161,10 +163,11 @@ class Pathways( object ):
             c_pathways.append( pathway )
             c_weights.append(p_weight )
             has_cancer = True
-        # if has_cancer is False:
+            
+        if has_cancer is False:
         #   for pathway, p_weight in zip( pathways, path_weights ):
-        #     c_pathways.append( pathway )
-        #     c_weights.append(p_weight )
+          c_pathways.append( "zilch" )
+          c_weights.append(w )
           
         c.update( dict( zip(c_pathways, c_weights ) ) )
     
