@@ -179,10 +179,10 @@ def main( data_location, results_location ):
     #ax_pie1 = f.add_subplot(422); ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
     ax_pie1 = f.add_subplot(222); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
     
-    h1=keep_rna[["r"]].plot(kind='barh',ax=ax1,color="red",legend=False,title=None,fontsize=8); h1.set_xlim(-0.25,0.25); ax1.set_title(""); h1.set_xticklabels([]); ax1.legend(["RNA"])
-    h2=keep_mirna[["r"]].plot(kind='barh',ax=ax4,color="black",legend=False,title=None,fontsize=8);h2.set_xlim(-0.25,0.25);ax4.set_title(""); ax4.legend(["miRNA"])
-    h3=keep_meth[["r"]].plot(kind='barh',ax=ax3,color="blue",legend=False,title=None,fontsize=8);h3.set_xlim(-0.25,0.25);ax3.set_title(""); h3.set_xticklabels([]); ax3.legend(["METH"])
-    h4=keep_dna[["r"]].plot(kind='barh',ax=ax2,color="green",legend=False,title=None,fontsize=8);h4.set_xlim(-0.25,0.25);ax2.set_title(""); h4.set_xticklabels([]); ax2.legend(["DNA"])
+    h1=keep_rna[["r"]].plot(kind='barh',ax=ax1,color="red",legend=False,title=None,fontsize=8); h1.set_xlim(-0.5,0.5); ax1.set_title(""); h1.set_xticklabels([]); ax1.legend(["RNA"])
+    h2=keep_mirna[["r"]].plot(kind='barh',ax=ax4,color="black",legend=False,title=None,fontsize=8);h2.set_xlim(-0.5,0.5);ax4.set_title(""); ax4.legend(["miRNA"])
+    h3=keep_meth[["r"]].plot(kind='barh',ax=ax3,color="blue",legend=False,title=None,fontsize=8);h3.set_xlim(-0.5,0.5);ax3.set_title(""); h3.set_xticklabels([]); ax3.legend(["METH"])
+    h4=keep_dna[["r"]].plot(kind='barh',ax=ax2,color="green",legend=False,title=None,fontsize=8);h4.set_xlim(-0.5,0.5);ax2.set_title(""); h4.set_xticklabels([]); ax2.legend(["DNA"])
     
     neg_dna = pp.find( keep_dna_big.values[:,0]<0) ; pos_dna = pp.find( keep_dna_big.values[:,0]>0)
     neg_rna = pp.find( keep_rna_big.values[:,0]<0) ; pos_rna = pp.find( keep_rna_big.values[:,0]>0)
