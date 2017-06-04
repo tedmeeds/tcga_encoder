@@ -254,7 +254,8 @@ def main( data_location, results_location ):
     #br = joined[["meth_p","meth_n"]].plot(kind="bar",ax=ax_pie4,color=["blue","red"],legend=False,stacked=True);  ax_pie4.set_ylabel("METH")
     #br = joined[["dna_p","dna_n"]].plot(kind="bar",ax=ax_pie3,color=["blue","red"],legend=False,stacked=True); br.set_xticklabels([]);  ax_pie3.set_ylabel("DNA")
     #pdb.set_trace()
-    br = joined[["rna","dna","meth"]].plot(kind="bar",ax=ax_pie1,color=["red","green","blue"],legend=False,stacked=True, sort_columns=False); ax_pie1.legend(["RNA","DNA","METH"])
+    
+    br = joined.plot(kind="bar",ax=ax_pie1,color=["red","green","blue"],legend=True,stacked=True, sort_columns=False); # ax_pie1.legend(["RNA","DNA","METH"])
     #br = joined[["meth_p","meth_n"]].plot(kind="bar",ax=ax_pie4,color=["blue","red"],legend=False,stacked=True);  ax_pie4.set_ylabel("METH")
     #br = joined[["dna_p","dna_n"]].plot(kind="bar",ax=ax_pie3,color=["blue","red"],legend=False,stacked=True); br.set_xticklabels([]);  ax_pie3.set_ylabel("DNA")
     
