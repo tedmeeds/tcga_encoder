@@ -239,7 +239,7 @@ def main( data_location, results_location ):
               pp.savefig( survival_curves_dir + "/z%d_q_fifth_%s_%g.png"%(z_idx, tissue_name,p_values_fifth[t_idx,z_idx]), format="png", dpi=300)
               pp.savefig( survival_curves_dir + "/%s_z%d_q_fifth_%g.png"%(tissue_name,z_idx, p_values_fifth[t_idx,z_idx]), format="png", dpi=300)
               pp.close('all')
-            else:
+            elif p_values_third[t_idx,z_idx]<alpha:
               f = pp.figure()
               ax= f.add_subplot(111)
               kmf = KaplanMeierFitter()
@@ -251,7 +251,7 @@ def main( data_location, results_location ):
               pp.savefig( survival_curves_dir + "/z%d_q_third_%s.png"%(z_idx, tissue_name), format="png", dpi=300)
               pp.savefig( survival_curves_dir + "/%s_z%d_q_third.png"%(tissue_name,z_idx), format="png", dpi=300)
               pp.close('all')
-        else:
+        elif p_values_half[t_idx,z_idx] < alpha:
             f = pp.figure()
             ax= f.add_subplot(111)
             kmf = KaplanMeierFitter()
@@ -260,8 +260,8 @@ def main( data_location, results_location ):
             kmf.fit(times[z2_half], event_observed=events[z2_half], label="q=rest"  )
             ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
             pp.title( "%s z%d  splits 1/2 v rest p-value = %g"%( tissue_name, z_idx, p_values_half[t_idx,z_idx]) )
-            pp.savefig( survival_curves_dir + "/z%d_q_half_%s.png"%(z_idx, tissue_name), format="png", dpi=300)
-            pp.savefig( survival_curves_dir + "/%s_z%d_q_half.png"%(tissue_name,z_idx), format="png", dpi=300)
+            pp.savefig( survival_curves_dir + "/z%d_q_half_%s_%g.png"%(z_idx, tissue_name, p_values_half[t_idx,z_idx]), format="png", dpi=300)
+            pp.savefig( survival_curves_dir + "/%s_z%d_q_half_%g.png"%(tissue_name,z_idx, p_values_half[t_idx,z_idx]), format="png", dpi=300)
             pp.close('all')
               
 
