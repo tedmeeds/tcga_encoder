@@ -9,22 +9,70 @@ import seaborn as sns
 from sklearn.manifold import TSNE, locally_linear_embedding
 from scipy import stats
 
-def find_keepers_over_groups( z, groups, name, nbr2keep):
+def auc_standard_error( theta, nA, nN ):
+  # from: Hanley and McNeil (1982), The Meaning and Use of the Area under the ROC Curve
+  # theta: estimated AUC, can be 0.5 for a random test
+  # nA size of population A
+  # nN size of population N
+  
+  Q1=theta/(2.0-theta); Q2=2*theta*theta/(1+theta)
+  
+  SE = np.sqrt( (theta*(1-theta)+(nA-1)*(Q1-theta*theta) + (nN-1)*(Q2-theta*theta) )/(nA*nN) )
+  
+  return SE
+  
+def auc_test( true_y, est_y ):
+  n = len(true_y)
+  n_1 = true_y.sum()
+  n_0 = n - n_1 
+  
+  if n_1 == 0 or n_1 == n:
+    return 0.5, 0.0, 0.0, 1.0
+    
+    
+  auc = roc_auc_score( true_y, est_y )
+  difference = auc - 0.5
+
+  if difference < 0:
+    # switch labels
+    se  = auc_standard_error( auc, n_0, n_1 )
+    se_null  = auc_standard_error( 0.5, n_0, n_1 )
+  else:
+    se  = auc_standard_error( 1-auc, n_1, n_0 )
+    se_null  = auc_standard_error( 0.5, n_1, n_0 )
+    
+  se_combined = np.sqrt( se**2 + se_null**2 )
+  
+  z_value = np.abs(difference) / se_combined 
+  p_value = 1.0 - stats.norm.cdf( np.abs(z_value) )
+  
+  return auc, se, z_value, p_value
+  
+  
+def find_keepers_over_groups( z, groups, name, nbr2keep, stats2use ):
   inners = []; p_inners=[]
   mx_inner = 0.0
   norm_z = np.linalg.norm(z)
-  for X in groups:
+  for X, stat in zip( groups, stats2use ):
     
     pearsons = np.zeros( X.shape[1] )
     pvalues  = np.zeros( X.shape[1] )
     for x,x_idx in zip( X.values.T, range(X.shape[1])):
-      pearsons[x_idx], pvalues[x_idx] = stats.pearsonr( z, x )
+      
+      if stat == "pearson":
+        pearsons[x_idx], pvalues[x_idx] = stats.pearsonr( z, x )
+      elif stat == "auc":
+        true_y = (x>0).astype(int)
+        auc, se, zvalue, pvalue = auc_test( true_y, z ) #np.sqrt( ses_tissue**2 + se_r_tissue**2 )
+          
+        pearsons[x_idx] = auc-0.5
+        pvalues[x_idx] = pvalue
+        #pdb.set_trace()
       
     #norms = norm_z*np.linalg.norm( X, axis=0 )
     
     #inner = pd.Series( np.dot( z, X )/norms, index = X.columns, name=name )
     inner = pd.Series( pearsons, index = X.columns, name=name )
-    #pdb.set_trace()
     p_inner = pd.Series( pvalues, index = X.columns, name=name )
     
     inners.append(inner)
@@ -157,13 +205,13 @@ def main( data_location, results_location ):
     #
     # keep_rna = ordered_rna[:nbr]
     # keep_rna = keep_rna.sort_values()
-    keep_rna,keep_mirna,keep_meth,keep_dna = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), nbr)
+    keep_rna,keep_mirna,keep_meth,keep_dna = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), nbr, stats2use=["pearson","pearson","pearson","auc"])
     
     # keep_rna = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), nbr )
     # keep_mirna = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), nbr )
     # keep_meth = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), nbr )
     
-    keep_rna_big,keep_mirna_big,keep_meth_big,keep_dna_big = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), 2*nbr)
+    keep_rna_big,keep_mirna_big,keep_meth_big,keep_dna_big = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), 2*nbr, stats2use=["pearson","pearson","pearson","auc"])
     
     # keep_rna_big = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), 3*nbr )
     # keep_mirna_big = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), 3*nbr )
