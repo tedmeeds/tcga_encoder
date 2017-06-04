@@ -83,7 +83,7 @@ def main( data_location, results_location ):
     
     bcs = barcodes[t_ids_cohort]
     #data_store["/CLINICAL/TISSUE"].loc[barcodes]
-    pdb.set_trace()
+    #pdb.set_trace()
     f = pp.figure()
     ax = f.add_subplot(111)
 

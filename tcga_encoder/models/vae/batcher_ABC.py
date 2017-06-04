@@ -182,7 +182,8 @@ class TCGABatcherABC( object ):
     
     self.required_sources = self.arch_dict["required_sources"]
     self.optional_sources = self.arch_dict["optional_sources"]
-       
+    self.extra_sources    = self.arch_dict["extra_sources"]
+    
     self.MakeBarcodes()
     
     self.observed_batch_order = OrderedDict()
@@ -248,6 +249,7 @@ class TCGABatcherABC( object ):
     n_obs = len(self.data_store[self.OBSERVED_key])
     self.required_query = np.ones( (n_obs,1), dtype = bool )
     self.optional_query = np.ones( (n_obs,1), dtype = bool )
+    #self.extra_query    = np.ones( (n_obs,1), dtype = bool )
     self.used_sources = []
     for source in self.required_sources:
       self.required_query &= self.data_store[self.OBSERVED_key].values[:,self.observed_source2idx[source]].astype(bool).reshape((n_obs,1))
@@ -262,7 +264,9 @@ class TCGABatcherABC( object ):
       
     elif len(self.required_sources) == 0:
       assert len(self.required_sources) >0, "need some required sources"
-      
+    
+    #if len(self.extra_sources):
+    self.used_sources.extend( self.extra_sources )   
     self.used_sources = np.unique( np.array(self.used_sources,dtype=str))
     self.usable_query   = self.optional_query & self.required_query
     #pdb.set_trace()
