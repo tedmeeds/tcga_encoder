@@ -236,8 +236,8 @@ def main( data_location, results_location ):
               kmf.fit(times[z2_fifth], event_observed=events[z2_fifth], label="rest"  )
               ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
               pp.title( "%s z%d  splits 1/5 v rest p-value = %g"%( tissue_name, z_idx, p_values_fifth[t_idx,z_idx]) )
-              pp.savefig( survival_curves_dir + "/z%d_%s_q_fifth_%0.8f.png"%(z_idx, tissue_name,p_values_fifth[t_idx,z_idx]), format="png", dpi=300)
-              pp.savefig( survival_curves_dir + "/%s_z%d_q_fifth_%0.8f.png"%(tissue_name,z_idx, p_values_fifth[t_idx,z_idx]), format="png", dpi=300)
+              pp.savefig( survival_curves_dir + "/z%d_%0.8f_%s_q_fifth.png"%(z_idx,p_values_fifth[t_idx,z_idx], tissue_name), format="png", dpi=300)
+              pp.savefig( survival_curves_dir + "/%s_%0.8f_z%d_q_fifth.png"%(tissue_name, p_values_fifth[t_idx,z_idx],z_idx), format="png", dpi=300)
               pp.savefig( survival_curves_dir + "/%0.8f_z%d_%s_q_fifth.png"%(p_values_fifth[t_idx,z_idx],z_idx,tissue_name), format="png", dpi=300)
               pp.close('all')
             elif p_values_third[t_idx,z_idx]<alpha:
@@ -249,8 +249,8 @@ def main( data_location, results_location ):
               kmf.fit(times[z2_third], event_observed=events[z2_third], label="rest"  )
               ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
               pp.title( "%s z%d  splits 1/3 v rest p-value = %g"%( tissue_name, z_idx, p_values_third[t_idx,z_idx]) )
-              pp.savefig( survival_curves_dir + "/z%d_%s_q_third_%0.8f.png"%(z_idx, tissue_name,p_values_third[t_idx,z_idx]), format="png", dpi=300)
-              pp.savefig( survival_curves_dir + "/%s_z%d_q_third_%0.8f.png"%(tissue_name,z_idx,p_values_third[t_idx,z_idx]), format="png", dpi=300)
+              pp.savefig( survival_curves_dir + "/z%d_%0.8f_%s_q_third.png"%(z_idx, p_values_third[t_idx,z_idx], tissue_name), format="png", dpi=300)
+              pp.savefig( survival_curves_dir + "/%s_%0.8f_z%d_q_third.png"%(tissue_name,p_values_third[t_idx,z_idx],z_idx), format="png", dpi=300)
               pp.savefig( survival_curves_dir + "/%0.8f_z%d_%s_q_third.png"%(p_values_third[t_idx,z_idx],z_idx,tissue_name), format="png", dpi=300)
               pp.close('all')
         elif p_values_half[t_idx,z_idx] < alpha:
@@ -262,8 +262,8 @@ def main( data_location, results_location ):
             kmf.fit(times[z2_half], event_observed=events[z2_half], label="q=rest"  )
             ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
             pp.title( "%s z%d  splits 1/2 v rest p-value = %g"%( tissue_name, z_idx, p_values_half[t_idx,z_idx]) )
-            pp.savefig( survival_curves_dir + "/z%d_%s_q_half_%0.8f.png"%(z_idx, tissue_name, p_values_half[t_idx,z_idx]), format="png", dpi=300)
-            pp.savefig( survival_curves_dir + "/%s_z%d_q_half_%0.8f.png"%(tissue_name,z_idx, p_values_half[t_idx,z_idx]), format="png", dpi=300)
+            pp.savefig( survival_curves_dir + "/z%d_%0.8f_%s_q_half.png"%(z_idx, p_values_half[t_idx,z_idx], tissue_name), format="png", dpi=300)
+            pp.savefig( survival_curves_dir + "/%s_%0.8f_z%d_q_half.png"%(tissue_name, p_values_half[t_idx,z_idx],z_idx), format="png", dpi=300)
             pp.savefig( survival_curves_dir + "/%0.8f_z%d_%s_q_half.png"%(p_values_half[t_idx,z_idx],z_idx,tissue_name), format="png", dpi=300)
             pp.close('all')
               
