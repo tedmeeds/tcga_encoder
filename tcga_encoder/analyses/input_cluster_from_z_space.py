@@ -292,12 +292,15 @@ def main( data_location, results_location ):
                          meth_readable[:20]], axis=1 )
     
     maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
-    joined=joined.loc[maxvalues]
-    joined = joined[:20]
     
-    pathways = joined.index.values
-    pathways = pathways[ np.argsort(pathways)]
-    joined=joined.loc[pathways]
+    #pdb.set_trace()
+    joined=joined.loc[maxvalues]
+    joined = joined[:25]
+    
+    #pathways = joined.index.values
+    #pathways = pathways[ np.argsort(pathways)]
+    #joined=joined.loc[pathways]
+    
     #br = joined[["rna_p","rna_n"]].plot(kind="bar",ax=ax_pie1,color=["blue","red"],legend=False,stacked=True); br.set_xticklabels([]); ax_pie1.set_ylabel("RNA")
     #br = joined[["meth_p","meth_n"]].plot(kind="bar",ax=ax_pie4,color=["blue","red"],legend=False,stacked=True);  ax_pie4.set_ylabel("METH")
     #br = joined[["dna_p","dna_n"]].plot(kind="bar",ax=ax_pie3,color=["blue","red"],legend=False,stacked=True); br.set_xticklabels([]);  ax_pie3.set_ylabel("DNA")
