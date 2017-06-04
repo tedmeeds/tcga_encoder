@@ -40,11 +40,13 @@ def find_keepers_over_groups( z, groups, name, nbr2keep):
     #inner = inner / mx_inner
     
     #abs_inner = np.abs( inner )
-    ordered = np.argsort( -inner.values )
+    #ordered = np.argsort( -inner.values )
+    ordered = np.argsort( p_inner.values )
     
     ordered = pd.DataFrame( np.vstack( (inner.values[ordered],p_inner.values[ordered] ) ).T, index =inner.index[ordered],columns=["r","p"] )
     #pdb.set_trace()
-    keepers = pd.concat( [ordered[:nbr2keep], ordered[-nbr2keep:]], axis=0 )
+    #keepers = pd.concat( [ordered[:nbr2keep], ordered[-nbr2keep:]], axis=0 )
+    keepers = ordered[:nbr2keep]
     #pdb.set_trace()
     #keepers = keepers.sort_values()
     all_keepers.append(keepers)
@@ -113,7 +115,7 @@ def main( data_location, results_location ):
   n = len(Z)
   n_tissues = len(tissue_names)
   
-  rna_normed = rna; mirna_normed = mirna; meth_normed = meth; dna_normed=dna#2*dna-1
+  rna_normed = rna; mirna_normed = mirna; meth_normed = meth; dna_normed=2*dna-1
   for t_idx in range(n_tissues):
     t_query = tissue_idx == t_idx
     
@@ -132,7 +134,7 @@ def main( data_location, results_location ):
     X /= X.std(0)
     meth_normed[t_query] = X
     
-  nbr = 5
+  nbr = 15
   Z_keep_rna=[]
   Z_keep_mirna=[]
   Z_keep_meth=[]
@@ -161,7 +163,7 @@ def main( data_location, results_location ):
     # keep_mirna = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), nbr )
     # keep_meth = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), nbr )
     
-    keep_rna_big,keep_mirna_big,keep_meth_big,keep_dna_big = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), 10*nbr)
+    keep_rna_big,keep_mirna_big,keep_meth_big,keep_dna_big = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), 2*nbr)
     
     # keep_rna_big = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), 3*nbr )
     # keep_mirna_big = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), 3*nbr )
@@ -174,33 +176,58 @@ def main( data_location, results_location ):
     
     f = pp.figure( figsize = (12,8))
     ax1 = f.add_subplot(421);ax2 = f.add_subplot(423);ax3 = f.add_subplot(425);ax4 = f.add_subplot(427)
-    ax_pie1 = f.add_subplot(422); ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
+    #ax_pie1 = f.add_subplot(422); ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
+    ax_pie1 = f.add_subplot(222); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
     
-    h1=keep_rna[["r"]].plot(kind='barh',ax=ax1,color="red",legend=False,title=None); h1.set_xlim(-0.25,0.25); ax1.set_title(""); h1.set_xticklabels([]); ax1.legend(["RNA"])
-    h2=keep_mirna[["r"]].plot(kind='barh',ax=ax4,color="black",legend=False,title=None);h2.set_xlim(-0.25,0.25);ax4.set_title(""); ax4.legend(["miRNA"])
-    h3=keep_meth[["r"]].plot(kind='barh',ax=ax3,color="blue",legend=False,title=None);h3.set_xlim(-0.25,0.25);ax3.set_title(""); h1.set_xticklabels([]); ax3.legend(["METH"])
-    h4=keep_dna[["r"]].plot(kind='barh',ax=ax2,color="green",legend=False,title=None);h4.set_xlim(-0.25,0.25);ax2.set_title(""); h1.set_xticklabels([]); ax2.legend(["DNA"])
+    h1=keep_rna[["r"]].plot(kind='barh',ax=ax1,color="red",legend=False,title=None,fontsize=8); h1.set_xlim(-0.25,0.25); ax1.set_title(""); h1.set_xticklabels([]); ax1.legend(["RNA"])
+    h2=keep_mirna[["r"]].plot(kind='barh',ax=ax4,color="black",legend=False,title=None,fontsize=8);h2.set_xlim(-0.25,0.25);ax4.set_title(""); ax4.legend(["miRNA"])
+    h3=keep_meth[["r"]].plot(kind='barh',ax=ax3,color="blue",legend=False,title=None,fontsize=8);h3.set_xlim(-0.25,0.25);ax3.set_title(""); h3.set_xticklabels([]); ax3.legend(["METH"])
+    h4=keep_dna[["r"]].plot(kind='barh',ax=ax2,color="green",legend=False,title=None,fontsize=8);h4.set_xlim(-0.25,0.25);ax2.set_title(""); h4.set_xticklabels([]); ax2.legend(["DNA"])
     
     neg_dna = pp.find( keep_dna_big.values[:,0]<0) ; pos_dna = pp.find( keep_dna_big.values[:,0]>0)
     neg_rna = pp.find( keep_rna_big.values[:,0]<0) ; pos_rna = pp.find( keep_rna_big.values[:,0]>0)
     neg_meth = pp.find( keep_meth_big.values[:,0]<0) ; pos_meth = pp.find( keep_meth_big.values[:,0]>0) 
     
-    dna_kegg,dna_readable = pathway_info.CancerEnrichment(keep_dna_big.index, np.abs( np.log2(keep_dna_big.values[:,1]) ) )
-    rna_kegg,rna_readable = pathway_info.CancerEnrichment(keep_rna_big.index, np.abs( np.log2(keep_rna_big.values[:,1]) ) )
-    meth_kegg,meth_readable = pathway_info.CancerEnrichment(keep_meth_big.index, np.abs( np.log2(keep_meth_big.values[:,1]) ) )
+    #dna_kegg,dna_readable = pathway_info.CancerEnrichment(keep_dna_big.index, np.abs( np.log2(keep_dna_big.values[:,1]) ) )
+    #rna_kegg,rna_readable = pathway_info.CancerEnrichment(keep_rna_big.index, np.abs( np.log2(keep_rna_big.values[:,1]) ) )
+    #meth_kegg,meth_readable = pathway_info.CancerEnrichment(keep_meth_big.index, np.abs( np.log2(keep_meth_big.values[:,1]) ) )
     
-    dna_kegg_p,dna_readable_p   = pathway_info.CancerEnrichment(keep_dna_big.index[pos_dna], (np.abs( np.log2(keep_dna_big.values[pos_dna,1]) )>-np.log2(0.01)).astype(float) )
-    rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(keep_rna_big.index[pos_rna], (np.abs( np.log2(keep_rna_big.values[pos_rna,1]) )>-np.log2(0.01)).astype(float) )
-    meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(keep_meth_big.index[pos_meth], (np.abs( np.log2(keep_meth_big.values[pos_meth,1]) )>-np.log2(0.01)).astype(float) )
+    dna_kegg,dna_readable = pathway_info.CancerEnrichment(keep_dna_big.index, np.abs(keep_dna_big.values[:,0])  )
+    rna_kegg,rna_readable = pathway_info.CancerEnrichment(keep_rna_big.index, np.abs( keep_rna_big.values[:,0])  )
+    meth_kegg,meth_readable = pathway_info.CancerEnrichment(keep_meth_big.index, np.abs( keep_meth_big.values[:,0] ) )
+    
+    # dna_kegg_p,dna_readable_p   = pathway_info.CancerEnrichment(keep_dna_big.index[pos_dna], (np.abs( np.log2(keep_dna_big.values[pos_dna,1]) )>-np.log2(0.01)).astype(float) )
+    # rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(keep_rna_big.index[pos_rna], (np.abs( np.log2(keep_rna_big.values[pos_rna,1]) )>-np.log2(0.01)).astype(float) )
+    # meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(keep_meth_big.index[pos_meth], (np.abs( np.log2(keep_meth_big.values[pos_meth,1]) )>-np.log2(0.01)).astype(float) )
+    #
+    # dna_kegg_n,dna_readable_n   = pathway_info.CancerEnrichment(keep_dna_big.index[neg_dna], (np.abs( np.log2(keep_dna_big.values[neg_dna,1]) )>-np.log2(0.01)).astype(float) )
+    # rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(keep_rna_big.index[neg_rna], (np.abs( np.log2(keep_rna_big.values[neg_rna,1]) )>-np.log2(0.01)).astype(float) )
+    # meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(keep_meth_big.index[neg_meth], (np.abs( np.log2(keep_meth_big.values[neg_meth,1]) )>-np.log2(0.01)).astype(float) )
 
-    dna_kegg_n,dna_readable_n   = pathway_info.CancerEnrichment(keep_dna_big.index[neg_dna], (np.abs( np.log2(keep_dna_big.values[neg_dna,1]) )>-np.log2(0.01)).astype(float) )
-    rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(keep_rna_big.index[neg_rna], (np.abs( np.log2(keep_rna_big.values[neg_rna,1]) )>-np.log2(0.01)).astype(float) )
-    meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(keep_meth_big.index[neg_meth], (np.abs( np.log2(keep_meth_big.values[neg_meth,1]) )>-np.log2(0.01)).astype(float) )
+    # dna_kegg_p,dna_readable_p   = pathway_info.CancerEnrichment(keep_dna_big.index[pos_dna], 1.0-keep_dna_big.values[pos_dna,1] )
+    # rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(keep_rna_big.index[pos_rna], 1.0-keep_rna_big.values[pos_rna,1] )
+    # meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(keep_meth_big.index[pos_meth], 1.0-keep_meth_big.values[pos_meth,1])
+    #
+    # dna_kegg_n,dna_readable_n   = pathway_info.CancerEnrichment(keep_dna_big.index[neg_dna], 1.0-keep_dna_big.values[neg_dna,1] )
+    # rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(keep_rna_big.index[neg_rna], 1.0-keep_rna_big.values[neg_rna,1] )
+    # meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(keep_meth_big.index[neg_meth], 1.0-keep_meth_big.values[neg_meth,1] )
+
+
+    dna_kegg_p,dna_readable_p   = pathway_info.CancerEnrichment(keep_dna_big.index[pos_dna], np.abs( keep_dna_big.values[pos_dna,0] ) )
+    rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(keep_rna_big.index[pos_rna], np.abs( keep_rna_big.values[pos_rna,0]) ) 
+    meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(keep_meth_big.index[pos_meth], np.abs( keep_meth_big.values[pos_meth,0]))
+
+    dna_kegg_n,dna_readable_n   = pathway_info.CancerEnrichment(keep_dna_big.index[neg_dna], np.abs( keep_dna_big.values[neg_dna,0] ) )
+    rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(keep_rna_big.index[neg_rna], np.abs( keep_rna_big.values[neg_rna,0] ) )
+    meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(keep_meth_big.index[neg_meth], np.abs( keep_meth_big.values[neg_meth,0]) )
+
     
-    dna_readable_n=-dna_readable_n
-    rna_readable_n=-rna_readable_n
-    meth_readable_n=-meth_readable_n
-    
+    # dna_readable_n=-dna_readable_n
+    # rna_readable_n=-rna_readable_n
+    # meth_readable_n=-meth_readable_n
+    rna_readable.name="rna"
+    meth_readable.name="meth"
+    dna_readable.name="dna"    
     
     rna_readable_p.name="rna_p"
     meth_readable_p.name="meth_p"
@@ -208,15 +235,28 @@ def main( data_location, results_location ):
     rna_readable_n.name="rna_n"
     meth_readable_n.name="meth_n"
     dna_readable_n.name="dna_n"
-    joined = pd.concat( [rna_readable_p[:10],rna_readable_n[:10],dna_readable_p[:10],dna_readable_n[:10],meth_readable_n[:10],meth_readable_p[:10]], axis=1 )
+    # joined = pd.concat( [rna_readable_p[:20],rna_readable_n[:20],\
+    #                      dna_readable_p[:20],dna_readable_n[:20],\
+    #                      meth_readable_n[:20],meth_readable_p[:20]], axis=1 )
+                         
+    joined = pd.concat( [rna_readable[:20],\
+                         dna_readable[:20],\
+                         meth_readable[:20]], axis=1 )
     
     maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
     joined=joined.loc[maxvalues]
     joined = joined[:20]
     
-    br = joined[["rna_p","rna_n"]].plot(kind="bar",ax=ax_pie1,color="red",legend=False); br.set_xticklabels([]); ax_pie1.legend(["RNA"])
-    br = joined[["meth_p","meth_n"]].plot(kind="bar",ax=ax_pie4,color="blue",legend=False);  ax_pie4.legend(["METH"])
-    br = joined[["dna_p","dna_n"]].plot(kind="bar",ax=ax_pie3,color="green",legend=False); br.set_xticklabels([]);  ax_pie3.legend(["DNA"])
+    pathways = joined.index.values
+    pathways = pathways[ np.argsort(pathways)]
+    joined=joined.loc[pathways]
+    #br = joined[["rna_p","rna_n"]].plot(kind="bar",ax=ax_pie1,color=["blue","red"],legend=False,stacked=True); br.set_xticklabels([]); ax_pie1.set_ylabel("RNA")
+    #br = joined[["meth_p","meth_n"]].plot(kind="bar",ax=ax_pie4,color=["blue","red"],legend=False,stacked=True);  ax_pie4.set_ylabel("METH")
+    #br = joined[["dna_p","dna_n"]].plot(kind="bar",ax=ax_pie3,color=["blue","red"],legend=False,stacked=True); br.set_xticklabels([]);  ax_pie3.set_ylabel("DNA")
+    #pdb.set_trace()
+    br = joined[["rna","dna","meth"]].plot(kind="bar",ax=ax_pie1,color=["red","green","blue"],legend=False,stacked=True, sort_columns=False); ax_pie1.legend(["RNA","DNA","METH"])
+    #br = joined[["meth_p","meth_n"]].plot(kind="bar",ax=ax_pie4,color=["blue","red"],legend=False,stacked=True);  ax_pie4.set_ylabel("METH")
+    #br = joined[["dna_p","dna_n"]].plot(kind="bar",ax=ax_pie3,color=["blue","red"],legend=False,stacked=True); br.set_xticklabels([]);  ax_pie3.set_ylabel("DNA")
     
     #joined[["rna_n","meth_n","dna_n"]].plot(kind="bar",ax=ax_pie1,color="red")
     # if len(rna_readable_p)>0:
@@ -253,7 +293,7 @@ def main( data_location, results_location ):
     #pdb.set_trace()
     
     #f.suptitle( "z %d"%(z_idx) ); 
-    f.subplots_adjust(bottom=0.25);
+    #f.subplots_adjust(bottom=0.25);
     pp.savefig( z_dir + "/z%d.png"%(z_idx), format="png", dpi=300 )
     #print h
     pp.close('all')

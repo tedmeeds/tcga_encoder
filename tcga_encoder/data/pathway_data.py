@@ -143,9 +143,12 @@ class Pathways( object ):
     if weights is None:
       weights = np.ones( len(hugo_list) )
       
+    n = len(hugo_list)
+    total_w = 0.0
     for hugo,w in zip( hugo_list, weights ):
       
       if self.hugo2pathway.has_key( hugo ):
+        total_w+=w
         pathways = self.hugo2pathway[ hugo ]
         path_weights = w*np.ones(len(pathways))#/len(pathways)
         
@@ -158,15 +161,15 @@ class Pathways( object ):
             c_pathways.append( pathway )
             c_weights.append(p_weight )
             has_cancer = True
-        if has_cancer is False:
-          for pathway, p_weight in zip( pathways, path_weights ):
-            c_pathways.append( pathway )
-            c_weights.append(p_weight )
+        # if has_cancer is False:
+        #   for pathway, p_weight in zip( pathways, path_weights ):
+        #     c_pathways.append( pathway )
+        #     c_weights.append(p_weight )
           
         c.update( dict( zip(c_pathways, c_weights ) ) )
     
-    most_common = pd.Series( c.values(), index = c.keys(), name="kegg")
-    most_common_readable = pd.Series( c.values(), index = self.sets_kgmls.loc[c.keys()]["Symbol"], name="readable" )
+    most_common = pd.Series( np.array(c.values())/total_w, index = c.keys(), name="kegg")
+    most_common_readable = pd.Series( np.array(c.values())/total_w, index = self.sets_kgmls.loc[c.keys()]["Symbol"], name="readable" )
     #for mc in most_common:
     #  most_common_readable.append( (self.sets_kgmls.loc[mc[0]]["Symbol"], mc[1]) )    
     return most_common.sort_values(ascending=False), most_common_readable.sort_values(ascending=False)
