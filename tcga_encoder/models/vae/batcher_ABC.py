@@ -171,7 +171,7 @@ class TCGABatcherABC( object ):
     
     self.tissue_names = self.data_store[self.TISSUE_key].columns
 
-    #self.VerifyIntegrity()
+    self.VerifyIntegrity()
       
     self.StoreNames()
     
@@ -244,16 +244,21 @@ class TCGABatcherABC( object ):
     # check weights from tissue to hidden make sure there arent too many (figures)
     # compare training with just one tissue
   
-  
-  # def VerifyIntegrity(self):
-  #   for source in [RNA,miRNA,DNA,METH]:
-  #     observed_bcs = self.data_store[self.OBSERVED_key][source][ self.data_store[self.OBSERVED_key][source]==1].index
-  #     pdb.set_trace()
-  #     if source == RNA:
-  #       bad = np.isnan( self.rna_store.loc[observed_bcs].sum(1) )
-  #
-  #       if bad.sum()>0:
-  #         pdb.set_trace()
+
+  def VerifyIntegrity(self):
+    return
+    for source in [RNA,miRNA,DNA,METH]:
+      observed_bcs = self.data_store[self.OBSERVED_key][source][ self.data_store[self.OBSERVED_key][source]==1].index
+      self.kich = observed_bcs[3282:3348]
+      
+      if source == RNA:
+        print "KICH (%s) "%(source), np.any(np.isnan(self.rna_store.loc[self.kich].values))
+        self.rna_store.loc[self.kich].sum(1).plot(title="verify")
+        #pdb.set_trace()
+      #   bad = np.isnan( self.rna_store.loc[observed_bcs].sum(1) )
+      #
+      #   if bad.sum()>0:
+      #     pdb.set_trace()
     
   def MakeBarcodes(self):
     print "** Making Barcodes"
@@ -297,12 +302,13 @@ class TCGABatcherABC( object ):
     self.observation_tissues = np.array([s.split("_")[0] for s in self.observed_tissue_and_bcs])
     self.validation_obs_query = np.zeros( (n_obs,1), dtype=bool)
     
-    for tissue in ["ucs"]:
-      i=self.data_store["/CLINICAL/TISSUE"][tissue]==1
-      these_bcs = i[ i ].index
-      o = self.data_store["/CLINICAL/observed"].loc[ these_bcs ]
-      pdb.set_trace()
-      
+    #self.VerifyIntegrity()
+    # for tissue in ["kich"]:
+    #   i=self.data_store["/CLINICAL/TISSUE"][tissue]==1
+    #   these_bcs = i[ i ].index
+    #   o = self.data_store["/CLINICAL/observed"].loc[ these_bcs ]
+    #   pdb.set_trace()
+    #
     #coad_bc = "coad_tcga-t9-a92h"
     for tissue in self.validation_tissues:
       i=self.data_store["/CLINICAL/TISSUE"][tissue]==1
@@ -455,8 +461,9 @@ class TCGABatcherABC( object ):
       #if tissue == "laml":
       #  pdb.set_trace()
       
+    #
+    self.VerifyIntegrity()
     #pdb.set_trace()
-    
     #self.tissue_statistics = pd.DataFrame()
     
   def SplitValidationIntoXvalFold( self, fold, n_folds  ):
