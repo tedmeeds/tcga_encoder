@@ -151,6 +151,9 @@ class TCGABatcherAdversarial( TCGABatcher ):
           n_samples = self.train_tissue[ tissue ].sum()
           means[t_idx,:] = self.tissue_statistics[ tissue ][ input_name ][ "mean"]
           log_vars[t_idx,:] = np.log( self.tissue_statistics[ tissue ][ input_name ][ "var"] + 1e-12)
+          
+          # if tissue == "ucs":
+          #   pdb.set_trace()
       
         self.source2expectation_by_tissue[input_name] = means #(alpha+0.001) / (alpha+beta+0.002)
         

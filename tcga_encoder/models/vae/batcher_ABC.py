@@ -171,6 +171,7 @@ class TCGABatcherABC( object ):
     
     self.tissue_names = self.data_store[self.TISSUE_key].columns
 
+    #self.VerifyIntegrity()
       
     self.StoreNames()
     
@@ -244,6 +245,16 @@ class TCGABatcherABC( object ):
     # compare training with just one tissue
   
   
+  # def VerifyIntegrity(self):
+  #   for source in [RNA,miRNA,DNA,METH]:
+  #     observed_bcs = self.data_store[self.OBSERVED_key][source][ self.data_store[self.OBSERVED_key][source]==1].index
+  #     pdb.set_trace()
+  #     if source == RNA:
+  #       bad = np.isnan( self.rna_store.loc[observed_bcs].sum(1) )
+  #
+  #       if bad.sum()>0:
+  #         pdb.set_trace()
+    
   def MakeBarcodes(self):
     print "** Making Barcodes"
     n_obs = len(self.data_store[self.OBSERVED_key])
@@ -286,11 +297,11 @@ class TCGABatcherABC( object ):
     self.observation_tissues = np.array([s.split("_")[0] for s in self.observed_tissue_and_bcs])
     self.validation_obs_query = np.zeros( (n_obs,1), dtype=bool)
     
-    for tissue in ["laml"]:
+    for tissue in ["ucs"]:
       i=self.data_store["/CLINICAL/TISSUE"][tissue]==1
       these_bcs = i[ i ].index
       o = self.data_store["/CLINICAL/observed"].loc[ these_bcs ]
-      #pdb.set_trace()
+      pdb.set_trace()
       
     #coad_bc = "coad_tcga-t9-a92h"
     for tissue in self.validation_tissues:
