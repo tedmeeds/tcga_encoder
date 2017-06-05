@@ -123,12 +123,12 @@ def main( data_location, results_location ):
   p_values_tenth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   
   
-  small_alpha=0.0001
+  alpha=0.001
   sig_half = np.zeros( (n_tissues,n_z), dtype=float)
   sig_third = np.zeros( (n_tissues,n_z), dtype=float)
   sig_fifth = np.zeros( (n_tissues,n_z), dtype=float)
   for t_idx in range(n_tissues):
-    alpha = 0.05
+    #alpha = 0.05
     t_ids = tissue_idx == t_idx
     tissue_name = tissue_names[t_idx]
     
@@ -270,7 +270,7 @@ def main( data_location, results_location ):
             pp.savefig( survival_curves_dir + "/%s_%0.12f_z%d_q_half.png"%(tissue_name, p_values_half[t_idx,z_idx],z_idx), format="png", dpi=300)
             pp.savefig( survival_curves_dir + "/%0.12f_z%d_%s_q_half.png"%(p_values_half[t_idx,z_idx],z_idx,tissue_name), format="png", dpi=300)
             pp.close('all')
-            alpha=small_alpha
+            #alpha=small_alpha
               
 
               #results_fifth = logrank_test(times[z1_fifth], times[z2_fifth], events[z1_fifth], events[z2_fifth], alpha=.99 )
