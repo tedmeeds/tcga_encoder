@@ -123,7 +123,7 @@ def main( data_location, results_location ):
   p_values_tenth         = np.nan*np.ones( (n_tissues,n_z), dtype=float)
   
   
-  alpha=0.0001
+  alpha=0.001
   sig_half = np.zeros( (n_tissues,n_z), dtype=float)
   sig_third = np.zeros( (n_tissues,n_z), dtype=float)
   sig_fifth = np.zeros( (n_tissues,n_z), dtype=float)
