@@ -92,10 +92,10 @@ def main( data_location, results_location ):
     subtype_names = np.unique(cohort_subtypes.values)
     
     
-    subtype2new_name = {'nan':"", 'stage i':"..........", 'stage ii': '.....:::::', 'stage iib': '::::::::::', 'stage iii':'----------', 'stage iv':'==========', 'stage x':'XXXXXXXXXX'}
+    #subtype2new_name = {'nan':"", 'stage i':"..........", 'stage ii': '.....:::::', 'stage iib': '::::::::::', 'stage iii':'----------', 'stage iv':'==========', 'stage x':'XXXXXXXXXX'}
     #subtypes = cohort_subtypes.values
-    #subtype2colors = OrderedDict( zip(subtype_names,"wbrgkmcy") ) 
-    #subtype_colors = pd.Series( np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] ), index = bcs, name="subtype" )
+    subtype2colors = OrderedDict( zip(subtype_names,"wbrgkmcy") ) 
+    subtype_colors = pd.Series( np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] ), index = bcs, name="subtype" )
     
     subtype_names = np.array( [subtype2new_name[subtype] for subtype in cohort_subtypes.values] )
     #np.array([ x+"_"+y for x,y in tissue_barcodes])
@@ -110,7 +110,8 @@ def main( data_location, results_location ):
     size2 = 8 #min( max( int( n_tissue*size_per_unit ), 12 ), 50 )
     
     #pdb.set_trace()
-    h = sns.clustermap( subtype_pd, square=False, figsize=(size1,size2) )
+    #h = sns.clustermap( subtype_pd, square=False, figsize=(size1,size2) )
+    h = sns.clustermap( Z_cohort, square=False, figsize=(size1,size2), row_colors = subtype_colors.values  )
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
