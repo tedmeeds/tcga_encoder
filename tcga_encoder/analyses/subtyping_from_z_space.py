@@ -92,7 +92,7 @@ def main( data_location, results_location ):
     subtype_names = np.unique(cohort_subtypes.values)
     
     
-    subtype2new_name = {'nan':"", 'stage i':"..........", 'stage ii': '.....:::::', 'stage iii':'::::::::::', 'stage iv':'XXXXXXXXXX'}
+    subtype2new_name = {'nan':"", 'stage i':"..........", 'stage ii': '.....:::::', 'stage iii':'::::::::::', 'stage iv':'==========', 'stage x':'XXXXXXXXXX'}
     #subtypes = cohort_subtypes.values
     subtype2colors = OrderedDict( zip(subtype_names,"wbrgkmcy") ) 
     subtype_colors = pd.Series( np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] ), index = bcs, name="subtype" )
