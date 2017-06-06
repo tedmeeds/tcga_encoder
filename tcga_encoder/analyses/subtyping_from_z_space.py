@@ -94,7 +94,7 @@ def main( data_location, results_location ):
     
     #subtype2new_name = {'nan':"", 'stage i':"..........", 'stage ii': '.....:::::', 'stage iib': '::::::::::', 'stage iii':'----------', 'stage iv':'==========', 'stage x':'XXXXXXXXXX'}
     #subtypes = cohort_subtypes.values
-    subtype2colors = OrderedDict( zip(subtype_names,sns.color_palette("hls", len(subtype_names))) ) 
+    subtype2colors = OrderedDict( zip(subtype_names,sns.color_palette("Blues", len(subtype_names))) ) 
     subtype_colors = np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] ) 
     #pal = sns.color_palette("hls", len(subtype_names))
     
@@ -108,8 +108,9 @@ def main( data_location, results_location ):
     f = pp.figure()
     ax = f.add_subplot(111)
 
-    size1 = 6 #max( int( n_z*size_per_unit ), 12 )
-    size2 = 8 #min( max( int( n_tissue*size_per_unit ), 12 ), 50 )
+    size1 = max( int( n_z*size_per_unit ), 12 )
+    size2 = min( max( int( n_tissue*size_per_unit ), 12 ), 50 )
+    
     
     #pdb.set_trace()
     #h = sns.clustermap( subtype_pd, square=False, figsize=(size1,size2) )
@@ -118,6 +119,15 @@ def main( data_location, results_location ):
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+    
+    for label in subtype_names:
+        h.ax_row_dendrogram.bar(0, 0, color=subtype2colors[label],
+                                label=label, linewidth=0)
+    h.ax_row_dendrogram.legend(loc="center", ncol=6)
+    h.cax.set_position([.15, .2, .03, .45])
+    h.ax_row_dendrogram.set_visible(False)
+    h.ax_col_dendrogram.set_visible(False)
+    #pdb.set_trace()
     pp.savefig( save_dir + "/Z_clustermap_%s.png"%(tissue_name), fmt="png", dpi=300)
     pp.close('all')
     #pdb.set_trace()
