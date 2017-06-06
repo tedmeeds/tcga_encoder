@@ -53,6 +53,11 @@ def main( data_location, results_location ):
   Z_quantized = pd.DataFrame(Z_quantized, index=barcodes, columns=z_names )
   Z_quantized.to_csv( save_dir + "/Z_quantized.csv")
   
+  sub_bcs = np.array([ x+"_"+y for x,y in np.array(data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].index.tolist(),dtype=str)] )
+  sub_values = np.array( data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].values, dtype=str )
+  subtypes = pd.Series( sub_values, index = sub_bcs, name="subtypes")
+  
+  
   #pdb.set_trace()
   tissues = data_store["/CLINICAL/TISSUE"].loc[barcodes]
   
@@ -82,35 +87,38 @@ def main( data_location, results_location ):
     Z_cohort = Z_quantized[ t_ids_cohort ]
     
     bcs = barcodes[t_ids_cohort]
+    
+    cohort_subtypes = subtypes.loc[bcs]
+    subtype_names = np.unique(cohort_subtypes.values)
+    
+    
+    subtype2new_name = {'nan':"", 'stage i':"..........", 'stage ii': '.....:::::', 'stage iii':'::::::::::', 'stage iv':'XXXXXXXXXX'}
+    #subtypes = cohort_subtypes.values
+    subtype2colors = OrderedDict( zip(subtype_names,"wbrgkmcy") ) 
+    subtype_colors = pd.Series( np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] ), index = bcs, name="subtype" )
+    
+    subtype_names = np.array( [subtype2new_name[subtype] for subtype in cohort_subtypes.values] )
+    #np.array([ x+"_"+y for x,y in tissue_barcodes])
+    
+    subtype_pd = pd.DataFrame( Z_cohort.values, index = subtype_names, columns = Z_cohort.columns )
     #data_store["/CLINICAL/TISSUE"].loc[barcodes]
-    #pdb.set_trace()
+    
     f = pp.figure()
     ax = f.add_subplot(111)
 
-    size1 = max( int( n_z*size_per_unit ), 12 )
-    size2 = min( max( int( n_tissue*size_per_unit ), 12 ), 50 )
+    size1 = 6 #max( int( n_z*size_per_unit ), 12 )
+    size2 = 8 #min( max( int( n_tissue*size_per_unit ), 12 ), 50 )
     
-    h = sns.clustermap( Z_cohort, square=False, figsize=(size1,size2) )
+    #pdb.set_trace()
+    h = sns.clustermap( subtype_pd, square=False, figsize=(size1,size2) )
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
     pp.savefig( save_dir + "/Z_clustermap_%s.png"%(tissue_name), fmt="png", dpi=300)
     pp.close('all')
-  # binses = [20,50,100,500]
-  # for bins in binses:
-  #   pp.figure()
-  #   pp.hist( aucs_true.values.flatten(), bins, range=(0,1), normed=True, histtype="step", lw=3, label="True" )
-  #   pp.hist( aucs_random.values.flatten(), bins, color="red",range=(0,1), normed=True, histtype="step", lw=3, label="Random" )
-  #   #pp.plot( [0,1.0],[0.5,0.5], 'r-', lw=3)
-  #   pp.legend()
-  #   pp.xlabel("Area Under the ROC")
-  #   pp.ylabel("Pr(AUC)")
-  #   pp.title("Comparison between AUC using latent space and random")
-  #   pp.savefig( tissue_dir + "/auc_comparison_%dbins.png"%(bins), format='png', dpi=300 )
-  #
-  # pp.close('all')
-  #pdb.set_trace()
+    pdb.set_trace()
+
   
 if __name__ == "__main__":
   
