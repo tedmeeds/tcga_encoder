@@ -117,7 +117,7 @@ def main( data_location, results_location ):
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
     pp.savefig( save_dir + "/Z_clustermap_%s.png"%(tissue_name), fmt="png", dpi=300)
     pp.close('all')
-    pdb.set_trace()
+    #pdb.set_trace()
 
   
 if __name__ == "__main__":
