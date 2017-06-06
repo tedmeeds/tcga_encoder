@@ -35,7 +35,8 @@ def main( data_location, results_location ):
   Z = pd.DataFrame( Z, index = np.hstack( (Z_train.index.values, Z_val.index.values)), columns = z_names )
   
   barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
-  quantiles = (len(Z)*np.array( [0,0.2, 0.4,0.6,0.8,1.0] )).astype(int)
+  #quantiles = (len(Z)*np.array( [0,0.2, 0.4,0.6,0.8,1.0] )).astype(int)
+  quantiles = (len(Z)*np.array( [0,0.1, 0.2,0.3,0.4,0.6,0.7,0.8,0.9,1.0] )).astype(int)
   n_quantiles = len(quantiles)-1
   start_q_id = -(n_quantiles-1)/2
   Z=Z.loc[barcodes]
@@ -114,21 +115,26 @@ def main( data_location, results_location ):
     
     #pdb.set_trace()
     #h = sns.clustermap( subtype_pd, square=False, figsize=(size1,size2) )
-    h = sns.clustermap( Z_cohort, square=False, figsize=(size1,size2), row_colors = subtype_colors  )
+    if len(subtype_names)>1:
+      h = sns.clustermap( Z_cohort, square=False, figsize=(size1,size2), row_colors = subtype_colors  )
+    else:
+      h = sns.clustermap( Z_cohort, square=False, figsize=(size1,size2)  )
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
-    
-    for label in subtype_names:
-        h.ax_row_dendrogram.bar(0, 0, color=subtype2colors[label],
-                                label=label, linewidth=0)
-    h.ax_row_dendrogram.legend(loc="center", ncol=6)
-    h.cax.set_position([.15, .2, .03, .45])
     h.ax_row_dendrogram.set_visible(False)
     h.ax_col_dendrogram.set_visible(False)
+    h.cax.set_visible(False)
+    # for label in subtype_names:
+    #     h.ax_row_dendrogram.bar(0, 0, color=subtype2colors[label],
+    #                             label=label, linewidth=0)
+    # h.ax_row_dendrogram.legend(loc="center", ncol=6)
+    
+    #h.cax.set_position([.15, .2, .03, .45])
+
     #pdb.set_trace()
-    pp.savefig( save_dir + "/Z_clustermap_%s.png"%(tissue_name), fmt="png", dpi=300)
+    pp.savefig( save_dir + "/Z_clustermap_%s.png"%(tissue_name), fmt="png", dpi=300, bbox_inches='tight')
     pp.close('all')
     #pdb.set_trace()
 
