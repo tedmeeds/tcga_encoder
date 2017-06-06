@@ -94,13 +94,15 @@ def main( data_location, results_location ):
     
     #subtype2new_name = {'nan':"", 'stage i':"..........", 'stage ii': '.....:::::', 'stage iib': '::::::::::', 'stage iii':'----------', 'stage iv':'==========', 'stage x':'XXXXXXXXXX'}
     #subtypes = cohort_subtypes.values
-    subtype2colors = OrderedDict( zip(subtype_names,"wbrgkmcy") ) 
-    subtype_colors = pd.Series( np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] ), index = bcs, name="subtype" )
+    subtype2colors = OrderedDict( zip(subtype_names,sns.color_palette("hls", len(subtype_names))) ) 
+    subtype_colors = np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] ) 
+    #pal = sns.color_palette("hls", len(subtype_names))
     
-    subtype_names = np.array( [subtype2new_name[subtype] for subtype in cohort_subtypes.values] )
+    #pdb.set_trace()
+    #subtype_names = np.array( [subtype2new_name[subtype] for subtype in cohort_subtypes.values] )
     #np.array([ x+"_"+y for x,y in tissue_barcodes])
     
-    subtype_pd = pd.DataFrame( Z_cohort.values, index = subtype_names, columns = Z_cohort.columns )
+    #subtype_pd = pd.DataFrame( Z_cohort.values, index = subtype_names, columns = Z_cohort.columns )
     #data_store["/CLINICAL/TISSUE"].loc[barcodes]
     
     f = pp.figure()
@@ -111,7 +113,7 @@ def main( data_location, results_location ):
     
     #pdb.set_trace()
     #h = sns.clustermap( subtype_pd, square=False, figsize=(size1,size2) )
-    h = sns.clustermap( Z_cohort, square=False, figsize=(size1,size2), row_colors = subtype_colors.values  )
+    h = sns.clustermap( Z_cohort, square=False, figsize=(size1,size2), row_colors = subtype_colors  )
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
