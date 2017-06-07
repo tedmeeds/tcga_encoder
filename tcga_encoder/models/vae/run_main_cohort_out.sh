@@ -5,7 +5,7 @@ declare -i n_xval_folds
 declare -i run_it
 run_it="$2"
 main_script="tcga_encoder/models/vae/main_cohort_out.py"
-cohort_groups="tcga_encoder/data/disease_groups_short.txt"
+cohort_groups="tcga_encoder/data/disease_groups.txt"
 #collect_script="tcga_encoder/models/dna/main_cohort_out_collector_simple.py"
 
 echo "yaml script: $yaml_template_file"
