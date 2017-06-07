@@ -671,6 +671,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     train_weights = 0.0
     print "training random forests"
     ok_val = []
+    set_train_2_val = False
     for dna_gene in self.dna_genes:
       train_auc_rfc = 1.0
       train_cnt = np.sum(train_targets[dna_gene].values)
@@ -687,6 +688,8 @@ class TCGABatcherAdversarial( TCGABatcher ):
         val_rfc = 0#M.predict_proba(val_z)[:,1]
         train_auc_rfc = 0#roc_auc_score( train_targets[dna_gene].values, train_rfc )
         #pdb.set_trace()
+      else:
+        set_train_2_val = True
       
       val_auc = 1.0
       val_auc_rfc = 1.0
@@ -706,6 +709,11 @@ class TCGABatcherAdversarial( TCGABatcher ):
       else:
         groups0.append(dna_gene)
         ok_val.append(False)
+      if set_train_2_val is True:
+        train_auc = val_auc
+        train_cnt = val_cnt
+        n_train = n_val
+        train_auc_rfc = val_auc_rfc
       aucs.append([train_auc,val_auc, 1+1000*float(train_cnt)/n_train,1+1000*float(val_cnt)/n_val, train_auc_rfc, val_auc_rfc])
     aucs = np.array(aucs)
     
@@ -714,16 +722,25 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.dna_aucs = pd.DataFrame( aucs.T, index = ["Train","Val","Frequency","Frequency2","Train-rfc","Val-rfc"], columns = self.dna_genes )
     
     val_auc = roc_auc_score( val_targets.values.flatten(), val_predictions.values.flatten() )
-    train_auc = roc_auc_score( train_targets.values.flatten(), train_predictions.values.flatten() )
-    
     val_weighted_auc /= val_weights
-    train_weighted_auc /= train_weights
-    
     val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets.values.flatten(), val_predictions.values.flatten() )
-    tr_auc_fpr, tr_auc_tpr, thresholds = roc_curve( train_targets.values.flatten(), train_predictions.values.flatten() )
-    
     I_val   = np.argsort( -val_predictions.values.flatten() )
-    I_train = np.argsort( -train_predictions.values.flatten() )
+    
+    if set_train_2_val is True:
+      train_auc = val_auc
+      train_weighted_auc=val_weighted_auc
+      
+      train_weights=val_weights
+      train_auc_fpr=val_auc_fpr
+      train_auc_tpr=val_auc_tpr
+      tr_auc_fpr=val_auc_fpr
+      tr_auc_tpr=val_auc_tpr
+      I_train=I_val
+    else:
+      train_auc = roc_auc_score( train_targets.values.flatten(), train_predictions.values.flatten() )
+      train_weighted_auc /= train_weights
+      tr_auc_fpr, tr_auc_tpr, thresholds = roc_curve( train_targets.values.flatten(), train_predictions.values.flatten() )
+      I_train = np.argsort( -train_predictions.values.flatten() )
     
     self.dna_aucs["ALL"] = pd.Series( [train_auc,val_auc, 1000.0,1000.0,0,0], index = ["Train","Val","Frequency","Frequency2","Train-rfc","Val-rfc"])  
     print self.dna_aucs.T
@@ -761,19 +778,16 @@ class TCGABatcherAdversarial( TCGABatcher ):
     pp.xlim(0.0,1)
     pp.ylim(0.0,1)
     f.savefig( self.viz_filename_dna_aucs, dpi=300,  )
-    #pdb.set_trace()
-    f2 = pp.figure()
-    ax2 = f2.add_subplot(111)
-    ax2.semilogy( np.linspace(0,1,len(I_val)), val_predictions.values.flatten()[I_val], 'r', alpha=0.5 )
-    #ax2.hist(val_targets.values.flatten()[I_val],100,cumulative=False, normed=True, histtype="step",color='r',lw=2)
-    ax2.semilogy( np.linspace(0,1,len(I_val)), val_targets.values.flatten()[I_val][: : -1].cumsum()[: : -1]/val_weights, 'r--' )
-    #ax2.scatter( np.linspace(0,1,len(I_val)), 0.025+val_targets.values.flatten()[I_val], color='r', marker="+", alpha=0.5 )
-    ax2.semilogy( np.linspace(0,1,len(I_train)), train_predictions.values.flatten()[I_train], 'b', alpha=0.5 )
-    #ax2.scatter( np.linspace(0,1,len(I_train)), train_targets.values.flatten()[I_train], color='b', marker="+", alpha=0.5 )
-    ax2.semilogy( np.linspace(0,1,len(I_train)), train_targets.values.flatten()[I_train][: : -1].cumsum()[: : -1]/train_weights, 'b--' )
-    f2.savefig( self.viz_filename_dna_aucs+"_2.png", dpi=300,  )
-    pp.close('all')
-    self.dna_aucs.T.to_csv(self.aucs_save,sep=",")
+    
+    # f2 = pp.figure()
+    # ax2 = f2.add_subplot(111)
+    # ax2.semilogy( np.linspace(0,1,len(I_val)), val_predictions.values.flatten()[I_val], 'r', alpha=0.5 )
+    # ax2.semilogy( np.linspace(0,1,len(I_val)), val_targets.values.flatten()[I_val][: : -1].cumsum()[: : -1]/val_weights, 'r--' )
+    # ax2.semilogy( np.linspace(0,1,len(I_train)), train_predictions.values.flatten()[I_train], 'b', alpha=0.5 )
+    # ax2.semilogy( np.linspace(0,1,len(I_train)), train_targets.values.flatten()[I_train][: : -1].cumsum()[: : -1]/train_weights, 'b--' )
+    # f2.savefig( self.viz_filename_dna_aucs+"_2.png", dpi=300,  )
+    # pp.close('all')
+    # self.dna_aucs.T.to_csv(self.aucs_save,sep=",")
     self.fill_store.close()
     
   def PlotTissuePrediction(self,sess, info_dict):

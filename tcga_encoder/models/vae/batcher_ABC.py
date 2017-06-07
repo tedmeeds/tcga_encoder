@@ -197,14 +197,17 @@ class TCGABatcherABC( object ):
     
     self.Colors()
         
+        
     self.test_tissue  = self.data_store[self.TISSUE_key].loc[ self.test_barcodes ]
     self.train_tissue = self.data_store[self.TISSUE_key].loc[ self.train_barcodes ]
     self.val_tissue   = self.data_store[self.TISSUE_key].loc[ self.validation_barcodes ]
+    self.all_tissue = self.data_store[self.TISSUE_key].loc[ self.all_barcodes ]
   
     self.n_train = len(self.train_barcodes)
     self.n_test  = len(self.test_barcodes)
     self.n_val  = len(self.validation_barcodes)
-  
+    self.n_all = len(self.all_barcodes)
+    
     self.data_dict[N_TRAIN] = self.n_train
     self.data_dict[N_TEST]  = self.n_test
     
@@ -348,6 +351,8 @@ class TCGABatcherABC( object ):
     assert len(np.intersect1d( self.test_barcodes, self.validation_barcodes)) == 0, "test and validation are not mutually exclusive!!"
     assert len(np.intersect1d( self.train_barcodes, self.validation_barcodes)) == 0, "train and validation are not mutually exclusive!!"
 
+    self.all_barcodes = np.union1d( self.train_barcodes,self.validation_barcodes)
+    self.all_barcodes = np.union1d(self.all_barcodes,self.test_barcodes )
     self.PostInitInit()      
 
   def PostInitInit(self):
@@ -401,11 +406,12 @@ class TCGABatcherABC( object ):
     self.tissue_statistics = {}
     
     
-    tissue_names = self.train_tissue.columns
+    tissue_names = self.all_tissue.columns
     stats = np.zeros( (5,len(tissue_names)))
+    #pdb.set_trace()
     for t_idx, tissue in zip( range(len(tissue_names)),tissue_names ):
-      bcs = self.train_tissue.loc[self.train_tissue[tissue]==1].index.values
-      
+      #bcs = self.train_tissue.loc[self.train_tissue[tissue]==1].index.values
+      bcs = self.all_tissue.loc[self.all_tissue[tissue]==1].index.values
       #pdb.set_trace()
       
       #mirna=self.data_store[self.miRNA_key].loc[ bcs ]
