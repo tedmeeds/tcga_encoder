@@ -109,8 +109,8 @@ def main( data_location, results_location ):
     f = pp.figure()
     ax = f.add_subplot(111)
 
-    size1 = max( int( n_z*size_per_unit ), 12 )
-    size2 = min( max( int( n_tissue*size_per_unit ), 12 ), 50 )
+    size1 = max( int( n_z*size_per_unit ), 20 )
+    size2 = min( max( int( n_tissue*size_per_unit ), 12 ), 20 )
     
     
     #pdb.set_trace()
