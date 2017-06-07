@@ -72,6 +72,9 @@ def main( data_location, results_location ):
   
   aucs_true  = np.ones( (n_tissues,n_z), dtype=float)
   aucs_random  = np.ones( (n_tissues,n_trials), dtype=float)
+  import networkx as nx
+  #G = nx.Graph()
+  #G=nx.MultiGraph()
   
   true_y = np.ones(n, dtype=int)
   for t_idx in range(n_tissues):
@@ -104,7 +107,6 @@ def main( data_location, results_location ):
     csr = csr_matrix(np.triu(s_form))
     Tcsr = minimum_spanning_tree(csr)
     as_mat = Tcsr.toarray()
-    import networkx as nx
     G = nx.Graph()
     i=0
     for x in Tcsr:
@@ -119,8 +121,9 @@ def main( data_location, results_location ):
     pos=layout(G)    
     nx.draw(G,pos,
                 with_labels=True,
-                node_size=50
+                node_size=500
                 )
+    G.clear()
     pp.title("%s"%(tissue_name))
     pp.savefig(save_dir + "/%s_mwst.png"%(tissue_name), fmt='png',dpi=300)              
     #pdb.set_trace()
