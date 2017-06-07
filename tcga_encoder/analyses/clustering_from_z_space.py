@@ -107,6 +107,8 @@ def main( data_location, results_location ):
     csr = csr_matrix(np.triu(s_form))
     Tcsr = minimum_spanning_tree(csr)
     as_mat = Tcsr.toarray()
+    
+    pp.figure(figsize=(16,16))
     G = nx.Graph()
     i=0
     for x in Tcsr:
@@ -121,7 +123,7 @@ def main( data_location, results_location ):
     pos=layout(G)    
     nx.draw(G,pos,
                 with_labels=True,
-                node_size=500
+                node_size=1000, hold=False, node_color='b'
                 )
     G.clear()
     pp.title("%s"%(tissue_name))
