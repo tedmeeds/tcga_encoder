@@ -224,6 +224,19 @@ def main( data_location, results_location ):
     t_ids_cohort = tissue_idx == t_idx
     n_tissue = np.sum(t_ids_cohort)
  
+    if n_tissue < 50:
+      K_p = 2
+    elif n_tissue < 100:
+      K_p = 3
+    elif n_tissue < 200:
+      K_p =4 
+    elif n_tissue < 400:
+      K_p = 5
+    elif n_tissue < 800:
+      K_p = 6
+    else:
+      k_p = 7
+      
     if n_tissue < 1:
       continue
     
@@ -302,8 +315,9 @@ def main( data_location, results_location ):
       times = S_cohort_k["T"].values
       events = S_cohort_k["E"].values
     
-      kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
-      ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True)
+      if len(k_bcs) > 10:
+        kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
+        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True)
     #kmf.fit(times[z2_fifth], event_observed=events[z2_fifth], label="rest"  )
     #ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
     #pp.title( "%s z%d  splits 1/5 v rest p-value = %g"%( tissue_name, z_idx, p_values_fifth[t_idx,z_idx]) )
