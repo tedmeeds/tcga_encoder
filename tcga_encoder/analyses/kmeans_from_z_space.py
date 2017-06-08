@@ -322,7 +322,8 @@ def main( data_location, results_location ):
     
       if len(k_bcs) > 5:
         kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
-        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp])
+        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp],ci_show=False)
+        #pdb.set_trace()
     #kmf.fit(times[z2_fifth], event_observed=events[z2_fifth], label="rest"  )
     #ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
     #pp.title( "%s z%d  splits 1/5 v rest p-value = %g"%( tissue_name, z_idx, p_values_fifth[t_idx,z_idx]) )
