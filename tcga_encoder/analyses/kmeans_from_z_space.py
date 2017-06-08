@@ -90,7 +90,7 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  save_dir = os.path.join( results_path, "clustering_with_z" )
+  save_dir = os.path.join( results_path, "kmans_with_z" )
   check_and_mkdir(save_dir)
   size_per_unit = 0.25
   print "HOME_DIR: ", HOME_DIR
@@ -135,8 +135,20 @@ def main( data_location, results_location ):
   sub_values = np.array( data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].values, dtype=str )
   subtypes = pd.Series( sub_values, index = sub_bcs, name="subtypes")
   
+  from sklearn.cluster import MiniBatchKMeans
+  # print "running kmeans"
+  # kmeans_patients = MiniBatchKMeans(n_clusters=10, random_state=0).fit(Z_quantized.values)
+  # kmeans_patients_labels = kmeans_patients.labels_
+  #
+  # kmeans_z = MiniBatchKMeans(n_clusters=10, random_state=0).fit(Z_quantized.values.T)
+  # kmeans_z_labels = kmeans_z.labels_
+  #
+  #
+  # order_labels = np.argsort(kmeans_patients_labels)
+  # order_labels_z = np.argsort(kmeans_z_labels)
+  # sorted_Z = pd.DataFrame( Z_quantized.values[order_labels,:], index=Z_quantized.index[order_labels], columns=Z_quantized.columns)
+  # sorted_Z = pd.DataFrame( sorted_Z.values[:,order_labels_z], index=sorted_Z.index, columns = sorted_Z.columns[order_labels_z] )
   
-  #pdb.set_trace()
   tissues = data_store["/CLINICAL/TISSUE"].loc[barcodes]
   
   tissue_names = tissues.columns
@@ -144,35 +156,8 @@ def main( data_location, results_location ):
 
   n = len(Z)
   n_tissues = len(tissue_names)
-  #import networkx as nx
-  #fullG = nx.Graph()
-  #G=nx.MultiGraph()
-  
-   #sns.color_palette("Blues", len(subtype_names))
-  
-  print "computing distances..."
-  full_d_mat  = pdist( Z_quantized.values )
-  print "square form..."
-  full_s_form = squareform(full_d_mat)
-  print "csr_matrix.."
-  full_csr    = csr_matrix(np.triu(full_s_form))
-  print "spanning tree.."
-  full_Tcsr   = minimum_spanning_tree(full_csr)
-  
-  print "add_edges..."
-  i=0
-  for x in full_Tcsr:
-    indices = x.indices
-    weights = x.data
-    
-    for j,w in zip(indices,weights):
-      if np.random.rand<0.01:
-        fullG.add_edge(barcodes[i][-7:], barcodes[j][-7:], weight=w)
-    i+=1
-  #full_as_mat = Tcsr.toarray()
-  
-  print "add_nodes..."
-  true_y = np.ones(n, dtype=int)
+  K_p = 5
+  K_z = 10
   for t_idx in range(n_tissues):
     tissue_name = tissue_names[t_idx]
     
@@ -188,26 +173,42 @@ def main( data_location, results_location ):
     
     bcs = barcodes[t_ids_cohort]
     
-    G = nx.Graph()
-    for bc in bcs:
-      fullG.add_node( bc[-7:], color=tissue_color_names[t_idx])
-      G.add_node( bc[-7:], color=tissue_color_names[t_idx])
-  layout=nx.spring_layout
-  print "computing layout..."
-  #pos = layout(fullG)
-  #pos=nx.graphviz_layout(fullG)
-  f=pp.figure(figsize=(12,12)); ax=f.add_subplot(111)
-  nx.draw_spectral( fullG, ax=ax)
-  # nx.draw(fullG,pos,
-  #                with_labels=False,
-  #                node_size=1000, hold=False,  ax=ax
-  #                )
-  pp.savefig( save_dir + "/Z_full.png", fmt="png", dpi=300, bbox_inches='tight')               
+    kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_cohort.values)
+    kmeans_patients_labels = kmeans_patients.labels_
+
+    kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_cohort.values.T)
+    kmeans_z_labels = kmeans_z.labels_
+
+  
+    order_labels = np.argsort(kmeans_patients_labels)
+    order_labels_z = np.argsort(kmeans_z_labels)
+    sorted_Z = pd.DataFrame( Z_cohort.values[order_labels,:], index=Z_cohort.index[order_labels], columns=Z_cohort.columns)
+    sorted_Z = pd.DataFrame( sorted_Z.values[:,order_labels_z], index=sorted_Z.index, columns = sorted_Z.columns[order_labels_z] )
+
+    cohort_subtypes = subtypes.loc[bcs]
+    subtype_names = np.unique(cohort_subtypes.values)
+    subtype2colors = OrderedDict( zip(subtype_names,sns.color_palette("Blues", len(subtype_names))) )
+    subtype_colors = np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] )
+
+    
+    f = pp.figure(figsize=(12,12))
+    ax=f.add_subplot(111)
+    h = sns.heatmap( sorted_Z, ax=ax )
+    #pdb.set_trace()
+    pp.setp(h.yaxis.get_majorticklabels(), rotation=0)
+    pp.setp(h.xaxis.get_majorticklabels(), rotation=90)
+    pp.setp(h.yaxis.get_majorticklabels(), fontsize=12)
+    pp.setp(h.xaxis.get_majorticklabels(), fontsize=12)
+    #h.ax_row_dendrogram.set_visible(False)
+    #h.ax_col_dendrogram.set_visible(False)
+    #h.cax.set_visible(False)
+    pp.savefig( save_dir + "/Z_kmeans_%s.png"%(tissue_name), fmt="png", dpi=300, bbox_inches='tight')
+    pp.close('all')
+    #pdb.set_trace()
+    
+    
+            
   #pdb.set_trace()
-    #cohort_subtypes = subtypes.loc[bcs]
-    #subtype_names = np.unique(cohort_subtypes.values)
-    #subtype2colors = OrderedDict( zip(subtype_names,sns.color_palette("Blues", len(subtype_names))) ) 
-    #subtype_colors = np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] ) 
 
     #d_mat = pdist( Z_cohort.values )
     #s_form = squareform(d_mat)
