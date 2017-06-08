@@ -269,8 +269,8 @@ def main( data_location, results_location ):
     pp.setp(h.yaxis.get_majorticklabels(), fontsize=12)
     pp.setp(h.xaxis.get_majorticklabels(), fontsize=12)
     
-    ax.hlines(len(kmeans_patients_labels)-pp.find(np.diff(np.array(kmeans_patients_labels)[order_labels]))-1, *ax.get_xlim(), color="lime", lw=3)
-    ax.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *ax.get_ylim(), color="lime", lw=3)
+    ax.hlines(len(kmeans_patients_labels)-pp.find(np.diff(np.array(kmeans_patients_labels)[order_labels]))-1, *ax.get_xlim(), color="black", lw=5)
+    ax.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *ax.get_ylim(), color="black", lw=5)
     #pp.show()
     #pdb.set_trace()
     #h.ax_row_dendrogram.set_visible(False)
