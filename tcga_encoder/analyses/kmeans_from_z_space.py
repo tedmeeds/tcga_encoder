@@ -235,8 +235,10 @@ def main( data_location, results_location ):
     elif n_tissue < 800:
       K_p = 6
     else:
-      k_p = 7
+      K_p = 7
       
+    k_pallette = sns.hls_palette(K_p)
+    
     if n_tissue < 1:
       continue
     
@@ -281,22 +283,25 @@ def main( data_location, results_location ):
     size1 = max( min( int( n_z*size_per_unit ), 12), 16 )
     size2 = max( min( int( n_tissue*size_per_unit), 12), 16)
     
-    f = pp.figure(figsize=(size1,size2))
-    ax=f.add_subplot(111)
-    h = sns.heatmap( sorted_Z, ax=ax )
+    #f = pp.figure(figsize=(size1,size2))
+    #ax=f.add_subplot(111)
+    #k_pallette
+    k_colors = np.array([k_pallette[kmeans_patients_labels[i]] for i in order_labels] )
     #pdb.set_trace()
-    pp.setp(h.yaxis.get_majorticklabels(), rotation=0)
-    pp.setp(h.xaxis.get_majorticklabels(), rotation=90)
-    pp.setp(h.yaxis.get_majorticklabels(), fontsize=12)
-    pp.setp(h.xaxis.get_majorticklabels(), fontsize=12)
-    
-    ax.hlines(len(kmeans_patients_labels)-pp.find(np.diff(np.array(kmeans_patients_labels)[order_labels]))-1, *ax.get_xlim(), color="black", lw=5)
-    ax.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *ax.get_ylim(), color="black", lw=5)
+    h = sns.clustermap( sorted_Z, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(size1,size2) )
+    #pdb.set_trace()
+    pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+    pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+    h.ax_row_dendrogram.set_visible(False)
+    h.ax_col_dendrogram.set_visible(False)
+    h.cax.set_visible(False)
+    h.ax_heatmap.hlines(len(kmeans_patients_labels)-pp.find(np.diff(np.array(kmeans_patients_labels)[order_labels]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
+    h.ax_heatmap.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *h.ax_heatmap.get_ylim(), color="black", lw=5)
     #pp.show()
     #pdb.set_trace()
-    #h.ax_row_dendrogram.set_visible(False)
-    #h.ax_col_dendrogram.set_visible(False)
-    #h.cax.set_visible(False)
+
     pp.savefig( save_dir + "/Z_kmeans_%s.png"%(tissue_name), fmt="png", dpi=300, bbox_inches='tight')
     pp.close('all')
     
@@ -317,7 +322,7 @@ def main( data_location, results_location ):
     
       if len(k_bcs) > 5:
         kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
-        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True)
+        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp])
     #kmf.fit(times[z2_fifth], event_observed=events[z2_fifth], label="rest"  )
     #ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
     #pp.title( "%s z%d  splits 1/5 v rest p-value = %g"%( tissue_name, z_idx, p_values_fifth[t_idx,z_idx]) )
