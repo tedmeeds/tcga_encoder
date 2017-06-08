@@ -12,7 +12,11 @@ from scipy.spatial.distance import squareform
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
 
-
+from lifelines import CoxPHFitter
+from lifelines.datasets import load_regression_dataset
+from lifelines.utils import k_fold_cross_validation
+from lifelines import KaplanMeierFitter
+from lifelines.statistics import logrank_test
 # cloudy blue  #acc2d9
 # dark pastel green  #56ae57
 # dust  #b2996e
@@ -134,56 +138,63 @@ def main( data_location, results_location ):
   sub_bcs = np.array([ x+"_"+y for x,y in np.array(data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].index.tolist(),dtype=str)] )
   sub_values = np.array( data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].values, dtype=str )
   subtypes = pd.Series( sub_values, index = sub_bcs, name="subtypes")
+  tissues = data_store["/CLINICAL/TISSUE"].loc[barcodes]
   
-  # # -----------------------------
-  # # -----------------------------
-  # ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death","patient.days_to_birth"]]
-  # tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
-  # surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
-  # NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns )
-  # NEW_SURVIVAL = NEW_SURVIVAL.loc[barcodes]
-  # #clinical = data_store["/CLINICAL/data"].loc[barcodes]
-  #
-  # Age = NEW_SURVIVAL[ "patient.days_to_birth" ].values.astype(int)
-  # Times = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+NEW_SURVIVAL[ "patient.days_to_death" ].fillna(0).values.astype(int)
-  # Events = (1-np.isnan( NEW_SURVIVAL[ "patient.days_to_death" ].astype(float)) ).astype(int)
-  #
-  # ok_age_query = Age<-10
-  # ok_age = pp.find(ok_age_query )
-  # tissues = tissues[ ok_age_query ]
-  # #pdb.set_trace()
-  # Age=-Age[ok_age]
-  # Times = Times[ok_age]
-  # Events = Events[ok_age]
-  # barcodes = barcodes[ok_age]
-  # NEW_SURVIVAL = NEW_SURVIVAL.loc[barcodes]
-  #
-  # #ok_followup_query = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values>=0
-  # #ok_followup = pp.find( ok_followup_query )
-  #
-  # bad_followup_query = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)<0
-  # bad_followup = pp.find( bad_followup_query )
-  #
-  # ok_followup_query = 1-bad_followup_query
-  # ok_followup = pp.find( ok_followup_query )
-  #
-  # bad_death_query = NEW_SURVIVAL[ "patient.days_to_death" ].fillna(0).values.astype(int)<0
-  # bad_death = pp.find( bad_death_query )
-  #
-  # #pdb.set_trace()
-  # Age=Age[ok_followup]
-  # Times = Times[ok_followup]
-  # Events = Events[ok_followup]
-  # barcodes = barcodes[ok_followup]
-  # NEW_SURVIVAL = NEW_SURVIVAL.loc[barcodes]
-  #
-  # S = Z.loc[barcodes]
+  tissue_names = tissues.columns
+  tissue_idx = np.argmax( tissues.values, 1 )
+  
+  # -----------------------------
+  # -----------------------------
+  ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death","patient.days_to_birth"]]
+  tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
+  surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
+  NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns )
+  NEW_SURVIVAL = NEW_SURVIVAL.loc[barcodes]
+  #clinical = data_store["/CLINICAL/data"].loc[barcodes]
+
+  Age = NEW_SURVIVAL[ "patient.days_to_birth" ].values.astype(int)
+  Times = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+NEW_SURVIVAL[ "patient.days_to_death" ].fillna(0).values.astype(int)
+  Events = (1-np.isnan( NEW_SURVIVAL[ "patient.days_to_death" ].astype(float)) ).astype(int)
+
+  ok_age_query = Age<-10
+  ok_age = pp.find(ok_age_query )
+  tissues = tissues[ ok_age_query ]
+  #pdb.set_trace()
+  Age=-Age[ok_age]
+  Times = Times[ok_age]
+  Events = Events[ok_age]
+  s_barcodes = barcodes[ok_age]
+  NEW_SURVIVAL = NEW_SURVIVAL.loc[s_barcodes]
+
+  #ok_followup_query = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values>=0
+  #ok_followup = pp.find( ok_followup_query )
+
+  bad_followup_query = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)<0
+  bad_followup = pp.find( bad_followup_query )
+
+  ok_followup_query = 1-bad_followup_query
+  ok_followup = pp.find( ok_followup_query )
+
+  bad_death_query = NEW_SURVIVAL[ "patient.days_to_death" ].fillna(0).values.astype(int)<0
+  bad_death = pp.find( bad_death_query )
+
+  #pdb.set_trace()
+  Age=Age[ok_followup]
+  Times = Times[ok_followup]
+  Events = Events[ok_followup]
+  s_barcodes = s_barcodes[ok_followup]
+  NEW_SURVIVAL = NEW_SURVIVAL.loc[s_barcodes]
+
+  # S = Z.loc[s_barcodes]
   # S["E"] = Events
   # S["T"] = Times
   # S["Age"] = np.log(Age)
-  # # -----------------------------
-  # # -----------------------------
-  #
+  
+  S = pd.DataFrame( np.vstack((Events,Times)).T, index = s_barcodes, columns=["E","T"])
+  #pdb.set_trace()
+  # -----------------------------
+  # -----------------------------
+
   
   from sklearn.cluster import MiniBatchKMeans
   # print "running kmeans"
@@ -199,14 +210,11 @@ def main( data_location, results_location ):
   # sorted_Z = pd.DataFrame( Z_quantized.values[order_labels,:], index=Z_quantized.index[order_labels], columns=Z_quantized.columns)
   # sorted_Z = pd.DataFrame( sorted_Z.values[:,order_labels_z], index=sorted_Z.index, columns = sorted_Z.columns[order_labels_z] )
   
-  tissues = data_store["/CLINICAL/TISSUE"].loc[barcodes]
-  
-  tissue_names = tissues.columns
-  tissue_idx = np.argmax( tissues.values, 1 )
+
 
   n = len(Z)
   n_tissues = len(tissue_names)
-  K_p = 8
+  K_p = 5
   K_z = 10
   for t_idx in range(n_tissues):
     tissue_name = tissue_names[t_idx]
@@ -278,6 +286,31 @@ def main( data_location, results_location ):
     #h.cax.set_visible(False)
     pp.savefig( save_dir + "/Z_kmeans_%s.png"%(tissue_name), fmt="png", dpi=300, bbox_inches='tight')
     pp.close('all')
+    
+    S_cohort = S.loc[bcs]
+    
+    f = pp.figure()
+    ax= f.add_subplot(111)
+    kmf = KaplanMeierFitter()
+    
+    for kp in range(K_p):
+      ids = pp.find( np.array(kmeans_patients_labels)==kp )
+      k_bcs = bcs[ ids ]
+      #pdb.set_trace()
+      S_cohort_k = S_cohort.loc[ k_bcs ]
+      
+      times = S_cohort_k["T"].values
+      events = S_cohort_k["E"].values
+    
+      kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
+      ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True)
+    #kmf.fit(times[z2_fifth], event_observed=events[z2_fifth], label="rest"  )
+    #ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
+    #pp.title( "%s z%d  splits 1/5 v rest p-value = %g"%( tissue_name, z_idx, p_values_fifth[t_idx,z_idx]) )
+    pp.title("%s"%(tissue_name))
+    pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
+    
+    
     #pdb.set_trace()
     
     
