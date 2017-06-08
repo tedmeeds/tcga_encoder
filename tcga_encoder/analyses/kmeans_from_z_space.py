@@ -135,6 +135,56 @@ def main( data_location, results_location ):
   sub_values = np.array( data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].values, dtype=str )
   subtypes = pd.Series( sub_values, index = sub_bcs, name="subtypes")
   
+  # # -----------------------------
+  # # -----------------------------
+  # ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death","patient.days_to_birth"]]
+  # tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
+  # surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
+  # NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns )
+  # NEW_SURVIVAL = NEW_SURVIVAL.loc[barcodes]
+  # #clinical = data_store["/CLINICAL/data"].loc[barcodes]
+  #
+  # Age = NEW_SURVIVAL[ "patient.days_to_birth" ].values.astype(int)
+  # Times = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)+NEW_SURVIVAL[ "patient.days_to_death" ].fillna(0).values.astype(int)
+  # Events = (1-np.isnan( NEW_SURVIVAL[ "patient.days_to_death" ].astype(float)) ).astype(int)
+  #
+  # ok_age_query = Age<-10
+  # ok_age = pp.find(ok_age_query )
+  # tissues = tissues[ ok_age_query ]
+  # #pdb.set_trace()
+  # Age=-Age[ok_age]
+  # Times = Times[ok_age]
+  # Events = Events[ok_age]
+  # barcodes = barcodes[ok_age]
+  # NEW_SURVIVAL = NEW_SURVIVAL.loc[barcodes]
+  #
+  # #ok_followup_query = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values>=0
+  # #ok_followup = pp.find( ok_followup_query )
+  #
+  # bad_followup_query = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)<0
+  # bad_followup = pp.find( bad_followup_query )
+  #
+  # ok_followup_query = 1-bad_followup_query
+  # ok_followup = pp.find( ok_followup_query )
+  #
+  # bad_death_query = NEW_SURVIVAL[ "patient.days_to_death" ].fillna(0).values.astype(int)<0
+  # bad_death = pp.find( bad_death_query )
+  #
+  # #pdb.set_trace()
+  # Age=Age[ok_followup]
+  # Times = Times[ok_followup]
+  # Events = Events[ok_followup]
+  # barcodes = barcodes[ok_followup]
+  # NEW_SURVIVAL = NEW_SURVIVAL.loc[barcodes]
+  #
+  # S = Z.loc[barcodes]
+  # S["E"] = Events
+  # S["T"] = Times
+  # S["Age"] = np.log(Age)
+  # # -----------------------------
+  # # -----------------------------
+  #
+  
   from sklearn.cluster import MiniBatchKMeans
   # print "running kmeans"
   # kmeans_patients = MiniBatchKMeans(n_clusters=10, random_state=0).fit(Z_quantized.values)
@@ -156,7 +206,7 @@ def main( data_location, results_location ):
 
   n = len(Z)
   n_tissues = len(tissue_names)
-  K_p = 5
+  K_p = 8
   K_z = 10
   for t_idx in range(n_tissues):
     tissue_name = tissue_names[t_idx]
@@ -207,8 +257,10 @@ def main( data_location, results_location ):
     subtype2colors = OrderedDict( zip(subtype_names,sns.color_palette("Blues", len(subtype_names))) )
     subtype_colors = np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] )
 
+    size1 = max( min( int( n_z*size_per_unit ), 12), 16 )
+    size2 = max( min( int( n_tissue*size_per_unit), 12), 16)
     
-    f = pp.figure(figsize=(12,12))
+    f = pp.figure(figsize=(size1,size2))
     ax=f.add_subplot(111)
     h = sns.heatmap( sorted_Z, ax=ax )
     #pdb.set_trace()
@@ -216,10 +268,15 @@ def main( data_location, results_location ):
     pp.setp(h.xaxis.get_majorticklabels(), rotation=90)
     pp.setp(h.yaxis.get_majorticklabels(), fontsize=12)
     pp.setp(h.xaxis.get_majorticklabels(), fontsize=12)
+    
+    ax.hlines(len(kmeans_patients_labels)-pp.find(np.diff(np.array(kmeans_patients_labels)[order_labels]))-1, *ax.get_xlim(), color="lime", lw=3)
+    ax.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *ax.get_ylim(), color="lime", lw=3)
+    #pp.show()
+    #pdb.set_trace()
     #h.ax_row_dendrogram.set_visible(False)
     #h.ax_col_dendrogram.set_visible(False)
     #h.cax.set_visible(False)
-    pp.savefig( save_dir + "/Z_kmeans_%s.png"%(tissue_name), fmt="png" ) #, dpi=300, bbox_inches='tight')
+    pp.savefig( save_dir + "/Z_kmeans_%s.png"%(tissue_name), fmt="png", dpi=300, bbox_inches='tight')
     pp.close('all')
     #pdb.set_trace()
     
