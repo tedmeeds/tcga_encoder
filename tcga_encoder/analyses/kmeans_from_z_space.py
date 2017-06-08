@@ -315,7 +315,7 @@ def main( data_location, results_location ):
       times = S_cohort_k["T"].values
       events = S_cohort_k["E"].values
     
-      if len(k_bcs) > 10:
+      if len(k_bcs) > 5:
         kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True)
     #kmf.fit(times[z2_fifth], event_observed=events[z2_fifth], label="rest"  )
