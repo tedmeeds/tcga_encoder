@@ -179,6 +179,23 @@ def main( data_location, results_location ):
     kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_cohort.values.T)
     kmeans_z_labels = kmeans_z.labels_
 
+    bicluster_means = np.zeros( (K_p,K_z), dtype=float )
+    for kp in range(K_p):
+      ip = pp.find( kmeans_patients_labels==kp )
+      z_p = Z_cohort.values[ip,:]
+      for kz in range(K_z):
+        iz = pp.find( kmeans_z_labels==kz )
+        z_pz = z_p[:,iz]
+        bicluster_means[kp,kz]=z_pz.mean()
+    
+    spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
+    spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
+    order_rows = np.argsort(spread_rows)
+    order_cols = np.argsort(spread_cols)
+    
+    kmeans_patients_labels = [order_rows[idx] for idx in kmeans_patients_labels]
+    kmeans_z_labels = [order_cols[idx] for idx in kmeans_z_labels]
+    #pdb.set_trace()
   
     order_labels = np.argsort(kmeans_patients_labels)
     order_labels_z = np.argsort(kmeans_z_labels)
@@ -202,7 +219,7 @@ def main( data_location, results_location ):
     #h.ax_row_dendrogram.set_visible(False)
     #h.ax_col_dendrogram.set_visible(False)
     #h.cax.set_visible(False)
-    pp.savefig( save_dir + "/Z_kmeans_%s.png"%(tissue_name), fmt="png", dpi=300, bbox_inches='tight')
+    pp.savefig( save_dir + "/Z_kmeans_%s.png"%(tissue_name), fmt="png" ) #, dpi=300, bbox_inches='tight')
     pp.close('all')
     #pdb.set_trace()
     
