@@ -94,7 +94,7 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  save_dir = os.path.join( results_path, "kmeans_with_z" )
+  save_dir = os.path.join( results_path, "kmeans_with_z_global" )
   check_and_mkdir(save_dir)
   size_per_unit = 0.25
   print "HOME_DIR: ", HOME_DIR
@@ -214,8 +214,25 @@ def main( data_location, results_location ):
 
   n = len(Z)
   n_tissues = len(tissue_names)
-  K_p = 5
+  K_p = 10
   K_z = 10
+  k_pallette = sns.hls_palette(K_p)
+  
+  global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
+  global_kmeans_patients_labels = global_kmeans_patients.labels_
+
+  global_kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_quantized.values.T)
+  global_kmeans_z_labels = global_kmeans_z.labels_
+
+  bicluster_means = np.zeros( (K_p,K_z), dtype=float )
+  for kp in range(K_p):
+    ip = pp.find( global_kmeans_patients_labels==kp )
+    z_p = Z_quantized.values[ip,:]
+    for kz in range(K_z):
+      iz = pp.find( global_kmeans_z_labels==kz )
+      z_pz = z_p[:,iz]
+      bicluster_means[kp,kz]=z_pz.mean()
+      
   for t_idx in range(n_tissues):
     tissue_name = tissue_names[t_idx]
     
@@ -224,20 +241,7 @@ def main( data_location, results_location ):
     t_ids_cohort = tissue_idx == t_idx
     n_tissue = np.sum(t_ids_cohort)
  
-    if n_tissue < 50:
-      K_p = 2
-    elif n_tissue < 100:
-      K_p = 3
-    elif n_tissue < 200:
-      K_p =4 
-    elif n_tissue < 400:
-      K_p = 5
-    elif n_tissue < 800:
-      K_p = 6
-    else:
-      K_p = 7
-      
-    k_pallette = sns.hls_palette(K_p)
+    
     
     if n_tissue < 1:
       continue
@@ -246,23 +250,15 @@ def main( data_location, results_location ):
     
     bcs = barcodes[t_ids_cohort]
     
-    kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_cohort.values)
-    kmeans_patients_labels = kmeans_patients.labels_
-
-    kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_cohort.values.T)
-    kmeans_z_labels = kmeans_z.labels_
-
-    bicluster_means = np.zeros( (K_p,K_z), dtype=float )
-    for kp in range(K_p):
-      ip = pp.find( kmeans_patients_labels==kp )
-      z_p = Z_cohort.values[ip,:]
-      for kz in range(K_z):
-        iz = pp.find( kmeans_z_labels==kz )
-        z_pz = z_p[:,iz]
-        bicluster_means[kp,kz]=z_pz.mean()
     
-    spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
-    spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
+    
+    #kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_cohort.values)
+    kmeans_patients_labels = global_kmeans_patients_labels[ t_ids_cohort ]
+    kmeans_z_labels = global_kmeans_z_labels
+    
+    cohort_k = np.unique(kmeans_patients_labels)
+    spread_rows = bicluster_means[cohort_k,:].max(1)-bicluster_means[cohort_k,:].min(1)
+    spread_cols = bicluster_means[cohort_k,:].max(0)-bicluster_means[cohort_k,:].min(0)
     order_rows = np.argsort(spread_rows)
     order_cols = np.argsort(spread_cols)
     
@@ -275,10 +271,10 @@ def main( data_location, results_location ):
     sorted_Z = pd.DataFrame( Z_cohort.values[order_labels,:], index=Z_cohort.index[order_labels], columns=Z_cohort.columns)
     sorted_Z = pd.DataFrame( sorted_Z.values[:,order_labels_z], index=sorted_Z.index, columns = sorted_Z.columns[order_labels_z] )
 
-    cohort_subtypes = subtypes.loc[bcs]
-    subtype_names = np.unique(cohort_subtypes.values)
-    subtype2colors = OrderedDict( zip(subtype_names,sns.color_palette("Blues", len(subtype_names))) )
-    subtype_colors = np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] )
+    #cohort_subtypes = subtypes.loc[bcs]
+    #subtype_names = np.unique(cohort_subtypes.values)
+    #subtype2colors = OrderedDict( zip(subtype_names,sns.color_palette("Blues", len(subtype_names))) )
+    #subtype_colors = np.array( [subtype2colors[subtype] for subtype in cohort_subtypes.values] )
 
     size1 = max( min( int( n_z*size_per_unit ), 12), 16 )
     size2 = max( min( int( n_tissue*size_per_unit), 12), 16)
