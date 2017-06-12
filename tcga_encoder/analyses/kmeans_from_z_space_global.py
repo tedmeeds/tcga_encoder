@@ -232,6 +232,11 @@ def main( data_location, results_location ):
       iz = pp.find( global_kmeans_z_labels==kz )
       z_pz = z_p[:,iz]
       bicluster_means[kp,kz]=z_pz.mean()
+  
+  spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
+  spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
+  order_rows = np.argsort(spread_rows)
+  order_cols = np.argsort(spread_cols)
       
   for t_idx in range(n_tissues):
     tissue_name = tissue_names[t_idx]
@@ -257,10 +262,7 @@ def main( data_location, results_location ):
     kmeans_z_labels = global_kmeans_z_labels
     
     cohort_k = np.unique(kmeans_patients_labels)
-    spread_rows = bicluster_means[cohort_k,:].max(1)-bicluster_means[cohort_k,:].min(1)
-    spread_cols = bicluster_means[cohort_k,:].max(0)-bicluster_means[cohort_k,:].min(0)
-    order_rows = np.argsort(spread_rows)
-    order_cols = np.argsort(spread_cols)
+
     
     kmeans_patients_labels = [order_rows[idx] for idx in kmeans_patients_labels]
     kmeans_z_labels = [order_cols[idx] for idx in kmeans_z_labels]
