@@ -542,15 +542,16 @@ class MultiSourceData(object):
     
     print "** METH filter for tumor samples only"
     patient_disease = h5["admin.disease_code"].values
-    patient_bcs     = h5["patient.bcr_patient_barcode"].values
-    pdb.set_trace()
+    patient_bcs     = h5.index.values
+    patient_rows     = h5["patient.bcr_patient_barcode"].values
+    #pdb.set_trace()
     #patient_rows    = h5["Methpatient.bcr_patient_barcode"].values
     
     keep_bcs        = []
     keep_query      = []
     last_bc         = None
-    for disease,bc in zip(patient_disease,patient_bcs):
-      pbc = bc[:12]
+    for disease,pbc,bc in zip(patient_disease,patient_rows,patient_bcs):
+      #pbc = bc[:12]
       sample_type = bc[13:15]
       if (    sample_type == '01' \
            or sample_type == '02' \
