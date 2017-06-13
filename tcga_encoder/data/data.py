@@ -426,24 +426,34 @@ class MultiSourceData(object):
         if last_bc is not None and last_bc == pbc:
           if sample_type == '01':
             print "%s ignore  %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
-            keep_bcs.append(disease+"_"+pbc)
+            #keep_bcs.append(disease+"_"+pbc)
             #print "%s adding %s"%( disease,bc )
-            keep_query.append(True)
+            keep_query.append(False)
           elif last_sample == '01':
             print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
             keep_query[-1] = False
             print "%s adding  %s"%( disease,bc )
-            keep_bcs.append(disease+"_"+pbc)
+            #keep_bcs.append(disease+"_"+pbc)
             keep_query.append(True)
+            last_bc = pbc
+            last_sample = sample_type
+          else:
+            print bc,last_bc, last_sample
+            print "why are we here?"
+            pdb.set_trace()
+            #keep_query.append(True)
+            #last_bc = pbc
+            #last_sample = sample_type
         else:  
           keep_bcs.append(disease+"_"+pbc)
           print "%s adding  %s"%( disease,bc )
           keep_query.append(True)
+          last_bc = pbc
+          last_sample = sample_type
       else:
         print "%s reject  %s"%( disease,bc )
         keep_query.append(False)
-      last_bc = pbc
-      last_sample = sample_type
+
     keep_bcs = np.array(keep_bcs)
     keep_query = np.array(keep_query)    
     
