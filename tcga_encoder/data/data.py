@@ -412,6 +412,8 @@ class MultiSourceData(object):
     for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
       #if pbc=="tcga-vq-a8p8":
       #  print disease,pbc, bc
+      if disease == "laml":
+        print print "%s adding %s"%( disease,bc )
       if bc[13:15] == '01' and bc[-2:] != "_x" and bc[-2:] != "_y":
         assert bc[:12] == pbc, "these should be the same"
         keep_bcs.append(disease+"_"+pbc)
