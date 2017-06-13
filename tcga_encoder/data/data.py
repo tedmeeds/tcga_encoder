@@ -405,25 +405,12 @@ class MultiSourceData(object):
     print "** RNA filter for tumor samples only"
     
     patient_disease = h5["admin.disease_code"].values
-    patient_bcs = h5["patient.bcr_patient_barcode"].values
-    patient_rows = h5["RNApatient.bcr_patient_barcode"].values
-    
-    # i_order = np.argsort( patient_bcs )
-    # reverse_order = np.argsort( i_order )
-    # patient_bcs = patient_bcs[i_order]
-    # patient_rows = patient_rows[i_order]
-    # patient_disease = patient_disease[i_order]
-    keep_bcs = []
-    keep_query = []
-    last_bc = None
+    patient_bcs     = h5["patient.bcr_patient_barcode"].values
+    patient_rows    = h5["RNApatient.bcr_patient_barcode"].values
+    keep_bcs        = []
+    keep_query      = []
+    last_bc         = None
     for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
-      #if pbc=="tcga-vq-a8p8":
-      #  print disease,pbc, bc
-      #if disease == "laml":
-      #  print "%s adding %s"%( disease,bc )
-      if pbc == "tcga-bk-a139":
-        print disease,bc,pbc
-        print last_sample, last_bc
       sample_type = bc[13:15]
       if (    sample_type == '01' \
            or sample_type == '02' \
@@ -435,14 +422,11 @@ class MultiSourceData(object):
         if last_bc is not None and last_bc == pbc:
           if sample_type == '01':
             print "%s ignore  %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
-            #keep_bcs.append(disease+"_"+pbc)
-            #print "%s adding %s"%( disease,bc )
             keep_query.append(False)
           elif last_sample == '01':
             print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
             keep_query[-1] = False
             print "  %s adding  %s"%( disease,bc )
-            #keep_bcs.append(disease+"_"+pbc)
             keep_query.append(True)
             last_bc = pbc
             last_sample = sample_type
@@ -452,18 +436,13 @@ class MultiSourceData(object):
               print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
               keep_query[-1] = False
               print "  %s adding  %s"%( disease,bc )
-              #keep_bcs.append(disease+"_"+pbc)
               keep_query.append(True)
               last_bc = pbc
               last_sample = sample_type
             else:
               print bc,last_bc, last_sample
               print "why are we here?"  
-              #pdb.set_trace()
               keep_query.append(False)
-            #keep_query.append(True)
-            #last_bc = pbc
-            #last_sample = sample_type
         else:  
           
           print "%s adding  %s"%( disease,bc )
@@ -478,8 +457,8 @@ class MultiSourceData(object):
 
     keep_bcs = np.array(keep_bcs)
     keep_query = np.array(keep_query)    
-    len(keep_bcs), len(np.unique(keep_bcs))
-    pdb.set_trace()
+    print len(keep_bcs), len(np.unique(keep_bcs))
+    #pdb.set_trace()
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] 
@@ -549,36 +528,74 @@ class MultiSourceData(object):
     print "*****************************************"
     self.InitSource( METH, broad_location, filename )
     
-    h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
+    h5 = h5store.sort_values( by="patient.bcr_patient_barcode" ) #self.ReadH5( os.path.join(broad_location, filename) )
     
-    if diseases is not None:
-      n=len(h5)
-      print "** METH filtering diseases"
-      index_array = np.array(h5.index.values)
-      query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
-      h5 = h5[query]
-      n_after = len(h5)
-      self.AddInfo( METH, "filtering_step", "disease number%d"%(len(diseases)) )
-      self.AddInfo( METH, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
+    # if diseases is not None:
+    #   n=len(h5)
+    #   print "** METH filtering diseases"
+    #   index_array = np.array(h5.index.values)
+    #   query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
+    #   h5 = h5[query]
+    #   n_after = len(h5)
+    #   self.AddInfo( METH, "filtering_step", "disease number%d"%(len(diseases)) )
+    #   self.AddInfo( METH, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
     
     print "** METH filter for tumor samples only"
     patient_disease = h5["admin.disease_code"].values
-    patient_bcs = h5["patient.bcr_patient_barcode"].values
-    patient_rows = h5["Methpatient.bcr_patient_barcode"].values
-    keep_bcs = []
-    keep_query = []
+    patient_bcs     = h5["patient.bcr_patient_barcode"].values
+    patient_rows    = h5["METHpatient.bcr_patient_barcode"].values
+    
+    keep_bcs        = []
+    keep_query      = []
+    last_bc         = None
     for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
-      if pbc=="tcga-vq-a8p8":
-        print disease,pbc, bc
-      if bc[13:15] == '01':
+      sample_type = bc[13:15]
+      if (    sample_type == '01' \
+           or sample_type == '02' \
+           or sample_type == '03' \
+           or sample_type == '04' \
+           or sample_type == '05'  \
+           or sample_type == '06' ) and bc[-2:] != "_x" and bc[-2:] != "_y":
         assert bc[:12] == pbc, "these should be the same"
-        keep_bcs.append(disease+"_"+pbc)
-        keep_query.append(True)
+        if last_bc is not None and last_bc == pbc:
+          if sample_type == '01':
+            print "%s ignore  %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+            keep_query.append(False)
+          elif last_sample == '01':
+            print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+            keep_query[-1] = False
+            print "  %s adding  %s"%( disease,bc )
+            keep_query.append(True)
+            last_bc = pbc
+            last_sample = sample_type
+          else:
+            
+            if int(sample_type) > int(last_sample):
+              print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+              keep_query[-1] = False
+              print "  %s adding  %s"%( disease,bc )
+              keep_query.append(True)
+              last_bc = pbc
+              last_sample = sample_type
+            else:
+              print bc,last_bc, last_sample
+              print "why are we here?"  
+              keep_query.append(False)
+        else:  
+          
+          print "%s adding  %s"%( disease,bc )
+          keep_bcs.append(disease+"_"+pbc)
+          
+          keep_query.append(True)
+          last_bc = pbc
+          last_sample = sample_type
       else:
+        print "%s reject  %s"%( disease,bc )
         keep_query.append(False)
+
     keep_bcs = np.array(keep_bcs)
     keep_query = np.array(keep_query)    
-    
+    print len(keep_bcs), len(np.unique(keep_bcs))    
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query]#h5["patient.bcr_patient_barcode"].values
