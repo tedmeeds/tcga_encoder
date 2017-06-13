@@ -400,13 +400,19 @@ class MultiSourceData(object):
     h5store_ga, h5store_hi
     
     h5_b = h5store_hi.append(h5store_ga)
-    h5 = h5_b.drop_duplicates( subset=["RNApatient.bcr_patient_barcode"])
+    h5 = h5_b.drop_duplicates( subset=["RNApatient.bcr_patient_barcode"]).sort_values( by="patient.bcr_patient_barcode" )
     
     print "** RNA filter for tumor samples only"
     
     patient_disease = h5["admin.disease_code"].values
     patient_bcs = h5["patient.bcr_patient_barcode"].values
     patient_rows = h5["RNApatient.bcr_patient_barcode"].values
+    
+    # i_order = np.argsort( patient_bcs )
+    # reverse_order = np.argsort( i_order )
+    # patient_bcs = patient_bcs[i_order]
+    # patient_rows = patient_rows[i_order]
+    # patient_disease = patient_disease[i_order]
     keep_bcs = []
     keep_query = []
     last_bc = None
