@@ -415,6 +415,9 @@ class MultiSourceData(object):
       #  print disease,pbc, bc
       #if disease == "laml":
       #  print "%s adding %s"%( disease,bc )
+      if pbc == "tcga-bk-a139":
+        print disease,bc,pbc
+        print last_sample, last_bc
       sample_type = bc[13:15]
       if (    sample_type == '01' \
            or sample_type == '02' \
@@ -456,8 +459,10 @@ class MultiSourceData(object):
             #last_bc = pbc
             #last_sample = sample_type
         else:  
-          keep_bcs.append(disease+"_"+pbc)
+          
           print "%s adding  %s"%( disease,bc )
+          keep_bcs.append(disease+"_"+pbc)
+          
           keep_query.append(True)
           last_bc = pbc
           last_sample = sample_type
