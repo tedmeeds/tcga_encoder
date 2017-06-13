@@ -432,15 +432,25 @@ class MultiSourceData(object):
           elif last_sample == '01':
             print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
             keep_query[-1] = False
-            print "%s adding  %s"%( disease,bc )
+            print "  %s adding  %s"%( disease,bc )
             #keep_bcs.append(disease+"_"+pbc)
             keep_query.append(True)
             last_bc = pbc
             last_sample = sample_type
           else:
-            print bc,last_bc, last_sample
-            print "why are we here?"
-            pdb.set_trace()
+            
+            if int(sample_type) > int(last_sample):
+              print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+              keep_query[-1] = False
+              print "  %s adding  %s"%( disease,bc )
+              #keep_bcs.append(disease+"_"+pbc)
+              keep_query.append(True)
+              last_bc = pbc
+              last_sample = sample_type
+            else:
+              print bc,last_bc, last_sample
+              print "why are we here?"  
+              pdb.set_trace()
             #keep_query.append(True)
             #last_bc = pbc
             #last_sample = sample_type
