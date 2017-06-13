@@ -10,6 +10,7 @@ from tcga_encoder.definitions.locations import *
 from tcga_encoder.definitions.tcga import *
 import pdb
 
+  
 def MakeBatchShape( shape ):
   if shape is None:
     return None

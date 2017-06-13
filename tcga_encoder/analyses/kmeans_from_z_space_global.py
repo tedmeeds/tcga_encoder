@@ -218,9 +218,14 @@ def main( data_location, results_location ):
   K_z = 15
   k_pallette = sns.hls_palette(K_p)
   
-  global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
+  K_ps = [2,5,10,15,20]
+  fit = []
+  for K_p in K_ps:
+    global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
+    fit.append( global_kmeans_patients.inertia_)
+    print fit
   global_kmeans_patients_labels = global_kmeans_patients.labels_
-
+  pdb.set_trace()
   global_kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_quantized.values.T)
   global_kmeans_z_labels = global_kmeans_z.labels_
 

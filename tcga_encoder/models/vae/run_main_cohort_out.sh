@@ -1,6 +1,6 @@
 #!/bin/bash
 yaml_template_file="$1"
-declare -i n_xval_folds
+#declare -i n_xval_folds
 #n_xval_folds="$1"
 declare -i run_it
 run_it="$2"
