@@ -409,19 +409,41 @@ class MultiSourceData(object):
     patient_rows = h5["RNApatient.bcr_patient_barcode"].values
     keep_bcs = []
     keep_query = []
+    last_bc = None
     for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
       #if pbc=="tcga-vq-a8p8":
       #  print disease,pbc, bc
       #if disease == "laml":
       #  print "%s adding %s"%( disease,bc )
-      if bc[13:15] == '01' and bc[-2:] != "_x" and bc[-2:] != "_y":
+      sample_type = bc[13:15]
+      if (    sample_type == '01' \
+           or sample_type == '02' \
+           or sample_type == '03' \
+           or sample_type == '04' \
+           or sample_type == '05'  \
+           or sample_type == '06' ) and bc[-2:] != "_x" and bc[-2:] != "_y":
         assert bc[:12] == pbc, "these should be the same"
-        keep_bcs.append(disease+"_"+pbc)
-        print "%s adding %s"%( disease,bc )
-        keep_query.append(True)
+        if last_bc is not None and last_bc == pbc:
+          if sample_type == '01':
+            print "%s ignore  %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+            keep_bcs.append(disease+"_"+pbc)
+            #print "%s adding %s"%( disease,bc )
+            keep_query.append(True)
+          elif last_sample == '01':
+            print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+            keep_query[-1] = False
+            print "%s adding  %s"%( disease,bc )
+            keep_bcs.append(disease+"_"+pbc)
+            keep_query.append(True)
+        else:  
+          keep_bcs.append(disease+"_"+pbc)
+          print "%s adding  %s"%( disease,bc )
+          keep_query.append(True)
       else:
-        print "%s rejecting %s"%( disease,bc )
+        print "%s reject  %s"%( disease,bc )
         keep_query.append(False)
+      last_bc = pbc
+      last_sample = sample_type
     keep_bcs = np.array(keep_bcs)
     keep_query = np.array(keep_query)    
     
