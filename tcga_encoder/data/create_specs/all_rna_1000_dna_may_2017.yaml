@@ -18,11 +18,11 @@ sources:
   CLINICAL:
     data_store: "CLINICAL/gdac.broadinstitute.org_PAN33.Merge_Clinical.Level_1.2016012800.0.0.h5"
 
-#broad_location: "data/broad_firehose/stddata__2016_01_28_processed_may_2017/20160128/"
-
-broad_processed_location: "data/broad_processed_may_2017/20160128/"
 broad_location: "data/broad_firehose/stddata__2016_01_28_processed_may_2017/20160128/"
-broad_analyses_location: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/"
+
+# broad_processed_location: "data/broad_processed_may_2017/20160128/"
+# broad_location: "data/broad_firehose/stddata__2016_01_28_processed_may_2017/20160128/"
+# broad_analyses_location: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/"
    
 data_store: 
   location: "data/broad_processed_june_2017/20160128/pan_all_rna_and_1000_dna"
