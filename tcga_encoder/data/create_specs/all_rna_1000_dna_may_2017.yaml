@@ -21,5 +21,5 @@ sources:
 broad_location: "data/broad_firehose/stddata__2016_01_28_processed_may_2017/20160128/"
    
 data_store: 
-  location: "data/broad_processed_may_2017/20160128/pan_all_rna_and_1000_dna"
+  location: "data/broad_processed_june_2017/20160128/pan_all_rna_and_1000_dna"
   name_of_store: "data"
