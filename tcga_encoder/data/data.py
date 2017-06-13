@@ -417,6 +417,7 @@ class MultiSourceData(object):
         keep_bcs.append(disease+"_"+pbc)
         keep_query.append(True)
       else:
+        print "%s rejecting %s"%( disease,bc )
         keep_query.append(False)
     keep_bcs = np.array(keep_bcs)
     keep_query = np.array(keep_query)    

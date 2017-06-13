@@ -337,16 +337,7 @@ def Connect( layer_class, input_layers, layer_specs={}, shared_layers = None, na
     shape = layer_specs[SHAPE]
     input_layer = input_layers[0]
     beta_layer  = input_layers[1]
-    
-    #weights_location = tf.Variable( weight_init( shape, constant=0.1 ), name = name+"_location" )
-    #weights_scale    = tf.Variable( weight_init( shape, constant=0.1 ), name = name+"_location" )
-    
-    #assert len(input_layers) == 1, "must provide 1 inputs"
-    #transfer = None
-    #if layer_specs.has_key(TRANSFER):
-    #  transfer = layer_specs[TRANSFER]
       
-
     layer = layer_class( shape, input_layer, beta_layer, name )
 
         
