@@ -115,9 +115,9 @@ def main( data_location, results_location ):
   Z = pd.DataFrame( Z, index = np.hstack( (Z_train.index.values, Z_val.index.values)), columns = z_names )
   
   barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
-  #quantiles = (len(Z)*np.array( [0,0.33, 0.66, 1.0] )).astype(int)
+  quantiles = (len(Z)*np.array( [0,0.33, 0.66, 1.0] )).astype(int)
   #quantiles = (len(Z)*np.array( [0,0.2, 0.4,0.6,0.8,1.0] )).astype(int)
-  quantiles = (len(Z)*np.array( [0,0.1, 0.2,0.3,0.4,0.6,0.7,0.8,0.9,1.0] )).astype(int)
+  #quantiles = (len(Z)*np.array( [0,0.1, 0.2,0.3,0.4,0.6,0.7,0.8,0.9,1.0] )).astype(int)
   n_quantiles = len(quantiles)-1
   start_q_id = -(n_quantiles-1)/2
   Z=Z.loc[barcodes]
@@ -214,18 +214,19 @@ def main( data_location, results_location ):
 
   n = len(Z)
   n_tissues = len(tissue_names)
-  K_p = 5
+  K_p = 8
   K_z = 15
   k_pallette = sns.hls_palette(K_p)
   
-  K_ps = [2,5,10,15,20]
-  fit = []
-  for K_p in K_ps:
-    global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
-    fit.append( global_kmeans_patients.inertia_)
-    print fit
+  # K_ps = [2,5,10,15,20]
+  # fit = []
+  # for K_p in K_ps:
+  #   global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
+  #   fit.append( global_kmeans_patients.inertia_)
+  #   print fit
+  global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
   global_kmeans_patients_labels = global_kmeans_patients.labels_
-  pdb.set_trace()
+  #pdb.set_trace()
   global_kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_quantized.values.T)
   global_kmeans_z_labels = global_kmeans_z.labels_
 
