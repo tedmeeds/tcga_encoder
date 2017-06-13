@@ -450,7 +450,8 @@ class MultiSourceData(object):
             else:
               print bc,last_bc, last_sample
               print "why are we here?"  
-              pdb.set_trace()
+              #pdb.set_trace()
+              keep_query.append(False)
             #keep_query.append(True)
             #last_bc = pbc
             #last_sample = sample_type
@@ -466,7 +467,8 @@ class MultiSourceData(object):
 
     keep_bcs = np.array(keep_bcs)
     keep_query = np.array(keep_query)    
-    
+    len(keep_bcs), len(np.unique(keep_bcs))
+    pdb.set_trace()
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] 
