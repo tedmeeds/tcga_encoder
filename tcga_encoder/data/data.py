@@ -543,7 +543,8 @@ class MultiSourceData(object):
     print "** METH filter for tumor samples only"
     patient_disease = h5["admin.disease_code"].values
     patient_bcs     = h5["patient.bcr_patient_barcode"].values
-    patient_rows    = h5["METHpatient.bcr_patient_barcode"].values
+    pdb.set_trace()
+    patient_rows    = h5["Methpatient.bcr_patient_barcode"].values
     
     keep_bcs        = []
     keep_query      = []
