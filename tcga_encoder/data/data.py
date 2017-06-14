@@ -686,36 +686,94 @@ class MultiSourceData(object):
     self.InitSource( miRNA, broad_location, filename )
     
     h5_b = h5store_hi.append(h5store_ga)
-    h5 = h5_b.drop_duplicates( subset=["miRNApatient.bcr_patient_barcode"])
+    h5 = h5_b.drop_duplicates( subset=["miRNApatient.bcr_patient_barcode"]).sort_values( by="patient.bcr_patient_barcode" )
     #h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
-    if diseases is not None:
-      n=len(h5)
-      print "** miRNA filtering diseases"
-      index_array = np.array(h5.index.values)
-      query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
-      h5 = h5[query]
-      n_after = len(h5)
-      self.AddInfo( miRNA, "filtering_step", "disease number%d"%(len(diseases)) )
-      self.AddInfo( miRNA, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
+    # if diseases is not None:
+    #   n=len(h5)
+    #   print "** miRNA filtering diseases"
+    #   index_array = np.array(h5.index.values)
+    #   query=np.array([ (h5["admin.disease_code"]==d).values.reshape((len(h5),1)) for d in diseases ]).reshape((len(h5),len(diseases))).prod(1).astype(bool)
+    #   h5 = h5[query]
+    #   n_after = len(h5)
+    #   self.AddInfo( miRNA, "filtering_step", "disease number%d"%(len(diseases)) )
+    #   self.AddInfo( miRNA, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
     
     #gene_columns = np.sort( np.unique( h5["Hugo_Symbol"].values ) )
     print "** miRNA filter for tumor samples only"
-    
+
     patient_disease = h5["admin.disease_code"].values
-    patient_bcs = h5["patient.bcr_patient_barcode"].values
-    patient_rows = h5["miRNApatient.bcr_patient_barcode"].values
-    keep_bcs = []
-    keep_query = []
+    patient_bcs     = h5["patient.bcr_patient_barcode"].values
+    patient_rows    = h5["miRNApatient.bcr_patient_barcode"].values
+    keep_bcs        = []
+    keep_query      = []
+    last_bc         = None
     for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
-      assert bc[:12] == pbc, "these should be the same"
-      keep_bcs.append(disease+"_"+pbc)
-      keep_query.append(True)
-      
+      sample_type = bc[13:15]
+      if (    sample_type == '01' \
+           or sample_type == '02' \
+           or sample_type == '03' \
+           or sample_type == '04' \
+           or sample_type == '05'  \
+           or sample_type == '06' ) and bc[-2:] != "_x" and bc[-2:] != "_y":
+        assert bc[:12] == pbc, "these should be the same"
+        if last_bc is not None and last_bc == pbc:
+          if sample_type == '01':
+            print "%s ignore  %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+            keep_query.append(False)
+          elif last_sample == '01':
+            print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+            keep_query[-1] = False
+            print "  %s adding  %s"%( disease,bc )
+            keep_query.append(True)
+            last_bc = pbc
+            last_sample = sample_type
+          else:
+            
+            if int(sample_type) > int(last_sample):
+              print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+              keep_query[-1] = False
+              print "  %s adding  %s"%( disease,bc )
+              keep_query.append(True)
+              last_bc = pbc
+              last_sample = sample_type
+            else:
+              print bc,last_bc, last_sample
+              print "why are we here?"  
+              keep_query.append(False)
+        else:  
+          
+          print "%s adding  %s"%( disease,bc )
+          keep_bcs.append(disease+"_"+pbc)
+          
+          keep_query.append(True)
+          last_bc = pbc
+          last_sample = sample_type
+      else:
+        print "%s reject  %s"%( disease,bc )
+        keep_query.append(False)
+
     keep_bcs = np.array(keep_bcs)
     keep_query = np.array(keep_query)    
-    
+    print len(keep_bcs), len(np.unique(keep_bcs))
+    #pdb.set_trace()
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
+        
+    # patient_disease = h5["admin.disease_code"].values
+    # patient_bcs = h5["patient.bcr_patient_barcode"].values
+    # patient_rows = h5["miRNApatient.bcr_patient_barcode"].values
+    #
+    # keep_bcs = []
+    # keep_query = []
+    # for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
+    #   assert bc[:12] == pbc, "these should be the same"
+    #   keep_bcs.append(disease+"_"+pbc)
+    #   keep_query.append(True)
+    #
+    # keep_bcs = np.array(keep_bcs)
+    # keep_query = np.array(keep_query)
+    
+    # assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] #h5["patient.bcr_patient_barcode"].values
     
