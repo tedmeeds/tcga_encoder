@@ -69,6 +69,12 @@ if __name__ == "__main__":
       nbr = source_spec["nbr"]
       method = source_spec["method"]
       dataset.AddmiRNA( broad_location, source_name, mirna_h5_ga, mirna_h5_hi, nbr, method )
+    elif source_name == "miRNA_MATURE":
+      mirna_h5 = ReadH5( os.path.join( broad_location, source_spec["data_store"]) )
+      nbr = source_spec["nbr"]
+      method = source_spec["method"]
+      dataset.AddMaturemiRNA( broad_location, source_name, mirna_h5, nbr, method )
+      
     elif source_name == METH:
       meth_h5 = ReadH5( os.path.join( broad_location, source_spec["data_store"]) )
       nbr = source_spec["nbr"]
