@@ -705,6 +705,8 @@ class MultiSourceData(object):
     patient_disease = h5["admin.disease_code"].values
     patient_bcs     = h5["patient.bcr_patient_barcode"].values
     patient_rows    = h5["miRNApatient.bcr_patient_barcode"].values
+    
+    pdb.set_trace()
     keep_bcs        = []
     keep_query      = []
     last_bc         = None
