@@ -2,7 +2,7 @@ sources:
   DNA:
     data_store: "DNA/gdac.broadinstitute.org_PAN32.Mutation_Packager_Calls.Level_3.2016012800.0.0.h5"
     data_store_raw: "RAW_DNA/gdac.broadinstitute.org_PAN17.Mutation_Packager_Raw_Calls.Level_3.2016012800.0.0.h5"
-    filter_file: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/MUT_SIG/PAN30_sig_genes.csv"
+    filter_file: "data/broad_firehose/analyses__2016_01_28_processed_june_2017/20160128/MUT_SIG/PAN30_sig_genes.csv"
     filter_column: "pan-fisher-chi"
     filter_nbr: 1000
     #min_nbr_in_pan: 100
