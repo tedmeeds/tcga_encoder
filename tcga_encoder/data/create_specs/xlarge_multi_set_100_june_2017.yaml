@@ -1,0 +1,47 @@
+sources:
+  DNA:
+    data_store: "DNA/gdac.broadinstitute.org_PAN32.Mutation_Packager_Calls.Level_3.2016012800.0.0.h5"
+    data_store_raw: "RAW_DNA/gdac.broadinstitute.org_PAN17.Mutation_Packager_Raw_Calls.Level_3.2016012800.0.0.h5"
+    filter_file: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/MUT_SIG/PAN30_sig_genes.csv"
+    filter_column: "pan-fisher-chi"
+    #
+    # data_store: "DNA/gdac.broadinstitute.org_PAN32.Mutation_Packager_Calls.Level_3.2016012800.0.0.h5"
+    # data_store_raw: "RAW_DNA/gdac.broadinstitute.org_PAN17.Mutation_Packager_Raw_Calls.Level_3.2016012800.0.0.h5"
+    # filter_file: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/MUT_SIG/PAN30_sig_genes.csv"
+    # filter_column: "pan-min_r"
+    filter_nbr: 1000
+    #min_nbr_in_pan: 1000
+    mutation_channels:
+      - ["Missense_Mutation","Nonsense_Mutation","Nonstop_Mutation","Frame_Shift_Del","Frame_Shift_Ins","In_Frame_Del","In_Frame_Ins"]
+
+  RNA:
+    filter_file: "RNA_SIG/PAN32_sig_genes.csv"
+    filter_column: "pan-fisher-chi"
+    filter_nbr: 5000
+    data_store: "pan_all_rna_and_1000_dna/data.h5"
+    method: "fisher"
+  #
+  METH:
+    filter_file: "METH_SIG/PAN32_sig_genes.csv"
+    filter_column: "pan-fisher-chi"
+    filter_nbr: 5000
+    data_store: "pan_all_meth_and_1000_dna/data.h5"
+    method: "fisher"
+  #
+  miRNA:
+    filter_file: "miRNA_SIG/PAN33_sig_genes.csv"
+    filter_column: "pan-fisher-chi"
+    filter_nbr: 5000
+    data_store: "pan_all_mirna_and_1000_dna/data.h5"
+    method: "fisher"
+  #
+  CLINICAL:
+    data_store: "CLINICAL/gdac.broadinstitute.org_PAN33.Merge_Clinical.Level_1.2016012800.0.0.h5"
+
+broad_processed_location: "data/broad_processed_june_2017/20160128/"
+broad_location: "data/broad_firehose/stddata__2016_01_28_processed_may_2017/20160128/"
+broad_analyses_location: "data/broad_firehose/analyses__2016_01_28_processed_may_2017/20160128/"
+   
+data_store: 
+  location: "data/broad_processed_june_2017/20160128/pan_xlarge_multi_set_dna1000"
+  name_of_store: "data"
