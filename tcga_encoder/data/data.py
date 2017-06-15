@@ -981,7 +981,7 @@ class MultiSourceData(object):
     hsa_columns = hsa_columns[I]
     nan_count = nan_count[I]
     
-    I_enough = pp.find(nan_count>2000)
+    I_enough = pp.find(nan_count<2000)
     
     R=R[:,I_enough]
     hsa_columns = hsa_columns[I_enough]
