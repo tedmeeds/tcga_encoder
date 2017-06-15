@@ -994,7 +994,7 @@ class MultiSourceData(object):
     pp.figure(); pp.plot( nan_count ); 
     pp.matshow( np.log(R[I_patient[:500],-200:].T) );
 
-    pp.matshow( np.log(R[I_patient[:1000],np.argsort(hsa_columns)].T) )
+    pp.matshow( np.log(R[I_patient[:1000],:][:,np.argsort(hsa_columns)].T) )
     
     pp.show()
     pdb.set_trace()
