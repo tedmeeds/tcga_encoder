@@ -981,7 +981,7 @@ class MultiSourceData(object):
     hsa_columns = hsa_columns[I]
     nan_count = nan_count[I]
     
-    I_enough = pp.find(nan_count<2000)
+    I_enough = pp.find(nan_count<5000)
     
     R=R[:,I_enough]
     hsa_columns = hsa_columns[I_enough]
@@ -992,7 +992,11 @@ class MultiSourceData(object):
     I_patient = np.argsort(nan_count_patients)
     pp.matshow( np.log(R[I_patient[:1000],:].T) )
     pp.figure(); pp.plot( nan_count ); 
-    pp.matshow( np.log(R[I_patient[:500],-200:].T) );pp.show()
+    pp.matshow( np.log(R[I_patient[:500],-200:].T) );
+
+    pp.matshow( np.log(R[I_patient[:1000],np.argsort(hsa_columns)].T) )
+    
+    pp.show()
     pdb.set_trace()
     I = pp.find( np.isnan(R.sum(0) )==False )
     R = R[:,I]
