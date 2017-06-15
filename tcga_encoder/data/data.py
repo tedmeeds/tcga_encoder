@@ -702,80 +702,80 @@ class MultiSourceData(object):
     #gene_columns = np.sort( np.unique( h5["Hugo_Symbol"].values ) )
     print "** miRNA filter for tumor samples only"
 
-    # patient_disease = h5["admin.disease_code"].values
-    # patient_bcs     = h5["patient.bcr_patient_barcode"].values
-    # patient_rows    = h5["miRNApatient.bcr_patient_barcode"].values
-    #
-    # #pdb.set_trace()
-    # keep_bcs        = []
-    # keep_query      = []
-    # last_bc         = None
-    # for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
-    #   sample_type = bc[13:15]
-    #   if (    sample_type == '01' \
-    #        or sample_type == '02' \
-    #        or sample_type == '03' \
-    #        or sample_type == '04' \
-    #        or sample_type == '05'  \
-    #        or sample_type == '06' ) and bc[-2:] != "_x" and bc[-2:] != "_y":
-    #     assert bc[:12] == pbc, "these should be the same"
-    #     if last_bc is not None and last_bc == pbc:
-    #       if sample_type == '01':
-    #         print "%s ignore  %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
-    #         keep_query.append(False)
-    #       elif last_sample == '01':
-    #         print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
-    #         keep_query[-1] = False
-    #         print "  %s adding  %s"%( disease,bc )
-    #         keep_query.append(True)
-    #         last_bc = pbc
-    #         last_sample = sample_type
-    #       else:
-    #
-    #         if int(sample_type) > int(last_sample):
-    #           print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
-    #           keep_query[-1] = False
-    #           print "  %s adding  %s"%( disease,bc )
-    #           keep_query.append(True)
-    #           last_bc = pbc
-    #           last_sample = sample_type
-    #         else:
-    #           print bc,last_bc, last_sample
-    #           print "why are we here?"
-    #           keep_query.append(False)
-    #     else:
-    #
-    #       print "%s adding  %s"%( disease,bc )
-    #       keep_bcs.append(disease+"_"+pbc)
-    #
-    #       keep_query.append(True)
-    #       last_bc = pbc
-    #       last_sample = sample_type
-    #   else:
-    #     print "%s reject  %s"%( disease,bc )
-    #     keep_query.append(False)
-    #
-    # keep_bcs = np.array(keep_bcs)
-    # keep_query = np.array(keep_query)
-    # print len(keep_bcs), len(np.unique(keep_bcs))
-    # #pdb.set_trace()
-    # assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
-        
     patient_disease = h5["admin.disease_code"].values
-    patient_bcs = h5["patient.bcr_patient_barcode"].values
-    patient_rows = h5["miRNApatient.bcr_patient_barcode"].values
+    patient_bcs     = h5["patient.bcr_patient_barcode"].values
+    patient_rows    = h5["miRNApatient.bcr_patient_barcode"].values
 
-    keep_bcs = []
-    keep_query = []
+    #pdb.set_trace()
+    keep_bcs        = []
+    keep_query      = []
+    last_bc         = None
     for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
-      assert bc[:12] == pbc, "these should be the same"
-      keep_bcs.append(disease+"_"+pbc)
-      keep_query.append(True)
+      sample_type = bc[13:15]
+      if (    sample_type == '01' \
+           or sample_type == '02' \
+           or sample_type == '03' \
+           or sample_type == '04' \
+           or sample_type == '05'  \
+           or sample_type == '06' ) and bc[-2:] != "_x" and bc[-2:] != "_y":
+        assert bc[:12] == pbc, "these should be the same"
+        if last_bc is not None and last_bc == pbc:
+          if sample_type == '01':
+            print "%s ignore  %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+            keep_query.append(False)
+          elif last_sample == '01':
+            print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+            keep_query[-1] = False
+            print "  %s adding  %s"%( disease,bc )
+            keep_query.append(True)
+            last_bc = pbc
+            last_sample = sample_type
+          else:
+
+            if int(sample_type) > int(last_sample):
+              print "%s replace %s, already have %s for %s"%( disease, bc, last_sample, last_bc )
+              keep_query[-1] = False
+              print "  %s adding  %s"%( disease,bc )
+              keep_query.append(True)
+              last_bc = pbc
+              last_sample = sample_type
+            else:
+              print bc,last_bc, last_sample
+              print "why are we here?"
+              keep_query.append(False)
+        else:
+
+          print "%s adding  %s"%( disease,bc )
+          keep_bcs.append(disease+"_"+pbc)
+
+          keep_query.append(True)
+          last_bc = pbc
+          last_sample = sample_type
+      else:
+        print "%s reject  %s"%( disease,bc )
+        keep_query.append(False)
 
     keep_bcs = np.array(keep_bcs)
     keep_query = np.array(keep_query)
-
+    print len(keep_bcs), len(np.unique(keep_bcs))
+    #pdb.set_trace()
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
+        
+    # patient_disease = h5["admin.disease_code"].values
+    # patient_bcs = h5["patient.bcr_patient_barcode"].values
+    # patient_rows = h5["miRNApatient.bcr_patient_barcode"].values
+    #
+    # keep_bcs = []
+    # keep_query = []
+    # for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
+    #   assert bc[:12] == pbc, "these should be the same"
+    #   keep_bcs.append(disease+"_"+pbc)
+    #   keep_query.append(True)
+    #
+    # keep_bcs = np.array(keep_bcs)
+    # keep_query = np.array(keep_query)
+    #
+    # assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] #h5["patient.bcr_patient_barcode"].values
     
@@ -814,10 +814,39 @@ class MultiSourceData(object):
     
     R =   h5.values[:, hsa_ids ].astype(float)
     
-    #pdb.set_trace()
-    I = pp.find( np.isnan(R.sum(0) )==False )
+    
+    
+    nan_count = np.isnan(R).sum(0)
+    I_nan = pp.find( nan_count < R.shape[0] )
+    R = R[:,I_nan]
+    hsa_columns = hsa_columns[I_nan]
+    nan_count = nan_count[I_nan]
+    I = np.argsort(nan_count)
     R = R[:,I]
     hsa_columns = hsa_columns[I]
+    nan_count = nan_count[I]
+    
+    I_enough = pp.find(nan_count<5000)
+    
+    R=R[:,I_enough]
+    hsa_columns = hsa_columns[I_enough]
+    nan_count = nan_count[I_enough]
+    
+    
+    nan_count_patients = np.isnan(R).sum(1)
+    I_patient = np.argsort(nan_count_patients)
+    pp.matshow( np.log(R[I_patient[:1000],:].T) )
+    pp.figure(); pp.plot( nan_count );
+    pp.matshow( np.log(R[I_patient[:500],-200:].T) );
+
+    pp.matshow( np.log(R[I_patient[:1000],:][:,np.argsort(hsa_columns)].T) )
+
+    pp.show()
+    pdb.set_trace()
+    #pdb.set_trace()
+    # I = pp.find( np.isnan(R.sum(0) )==False )
+    # R = R[:,I]
+    # hsa_columns = hsa_columns[I]
     FAIR_R = fair_rank_order_normalization(R)
     
     if method == "max_var_fair":
@@ -838,7 +867,7 @@ class MultiSourceData(object):
       pass
     else:
       assert False, "unknown selection method for RNA = %s"%(method)
-    self.store[ miRNA + "/" + "READS" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = hsa_columns )
+    self.store[ miRNA + "/" + "RSEM" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = hsa_columns )
     self.store[ miRNA + "/" + "FAIR" + "/" ] = pd.DataFrame( FAIR_R, index = patient_rows, columns = hsa_columns )    
     #pdb.set_trace()
     
