@@ -970,7 +970,7 @@ class MultiSourceData(object):
     
     R =   h5.values[:, hsa_ids ].astype(float)
     
-    #pdb.set_trace()
+    pdb.set_trace()
     I = pp.find( np.isnan(R.sum(0) )==False )
     R = R[:,I]
     hsa_columns = hsa_columns[I]
