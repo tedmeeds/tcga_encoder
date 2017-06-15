@@ -833,20 +833,21 @@ class MultiSourceData(object):
     nan_count = nan_count[I_enough]
     
     
-    nan_count_patients = np.isnan(R).sum(1)
-    I_patient = np.argsort(nan_count_patients)
-    pp.matshow( np.log(R[I_patient[:1000],:].T) )
-    pp.figure(); pp.plot( nan_count );
-    pp.matshow( np.log(R[I_patient[:500],-200:].T) );
-
-    pp.matshow( np.log(R[I_patient[:1000],:][:,np.argsort(hsa_columns)].T) )
-
-    pp.show()
+    # nan_count_patients = np.isnan(R).sum(1)
+    # I_patient = np.argsort(nan_count_patients)
+    # pp.matshow( np.log(R[I_patient[:1000],:].T) )
+    # pp.figure(); pp.plot( nan_count );
+    # pp.matshow( np.log(R[I_patient[:500],-200:].T) );
+    #
+    # pp.matshow( np.log(R[I_patient[:1000],:][:,np.argsort(hsa_columns)].T) )
+    #
+    # pp.show()
     #pdb.set_trace()
     #pdb.set_trace()
     # I = pp.find( np.isnan(R.sum(0) )==False )
     # R = R[:,I]
     # hsa_columns = hsa_columns[I]
+    R[ np.isnan(R) ] = 0.0
     FAIR_R = fair_rank_order_normalization(R)
     
     if method == "max_var_fair":
