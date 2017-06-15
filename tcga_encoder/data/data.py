@@ -970,6 +970,14 @@ class MultiSourceData(object):
     
     R =   h5.values[:, hsa_ids ].astype(float)
     
+    
+    nan_count = np.isnan(R).sum(0)
+    I_nan = pp.find( nan_count < R.shape[0] )
+    R = R[:,I_nan]
+    hsa_columns = hsa_columns[I_nan]
+    nan_count = nan_count[I_nan]
+    pp.matshow( R.T )
+    pp.figure(); pp.plot( np.sort(nan_count) ); pp.show()
     pdb.set_trace()
     I = pp.find( np.isnan(R.sum(0) )==False )
     R = R[:,I]
