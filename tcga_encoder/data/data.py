@@ -1007,9 +1007,9 @@ class MultiSourceData(object):
     # set missing values to 0
     R[ np.isnan(R) ] = 0.0
     FAIR_R = fair_rank_order_normalization(R)
-    pp.matshow( FAIR_R[:500,:].T)
-    pp.show()
-    pdb.set_trace()
+    #pp.matshow( FAIR_R[:500,:].T)
+    #pp.show()
+    #pdb.set_trace()
     if method == "max_var_fair":
       v = np.var( FAIR_R, 0 )
       hsa_ids = np.argsort( v )[-nbr_hsas:]
