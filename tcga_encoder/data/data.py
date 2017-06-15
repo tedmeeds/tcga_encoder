@@ -976,8 +976,13 @@ class MultiSourceData(object):
     R = R[:,I_nan]
     hsa_columns = hsa_columns[I_nan]
     nan_count = nan_count[I_nan]
+    I = np.argsort(nan_count)
+    R = R[:,I]
+    hsa_columns = hsa_columns[I]
+    nan_count = nan_count[I]
+    
     pp.matshow( R.T )
-    pp.figure(); pp.plot( np.sort(nan_count) ); pp.show()
+    pp.figure(); pp.plot( nan_count ); pp.show()
     pdb.set_trace()
     I = pp.find( np.isnan(R.sum(0) )==False )
     R = R[:,I]
