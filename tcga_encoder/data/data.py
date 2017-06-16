@@ -410,6 +410,7 @@ class MultiSourceData(object):
     patient_rows    = h5["RNApatient.bcr_patient_barcode"].values
     keep_bcs        = []
     keep_query      = []
+    pdb.set_trace()
     last_bc         = None
     for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
       sample_type = bc[13:15]
@@ -708,6 +709,7 @@ class MultiSourceData(object):
     patient_bcs     = h5["patient.bcr_patient_barcode"].values
     patient_rows    = h5["miRNApatient.bcr_patient_barcode"].values
 
+    pdb.set_trace()
     #pdb.set_trace()
     keep_bcs        = []
     keep_query      = []
