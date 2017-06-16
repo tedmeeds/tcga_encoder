@@ -160,6 +160,7 @@ class MultiSourceData(object):
       one_hot_tissue[ idx ][self.clinical_disease2idx[disease]] = 1    
     #pdb.set_trace()
     self.store[ CLINICAL + "/" + TISSUE ] = pd.DataFrame( one_hot_tissue, index = self.clinical_patients, columns = self.clinical_diseases )    
+    pdb.set_trace()
     self.store[ CLINICAL + "/" + DATA ] = h5
     self.store[ CLINICAL + "/" + OBSERVED ] = pd.DataFrame( np.ones((len(self.clinical_patients),1),dtype=int), index = self.clinical_patients, columns = [CLINICAL] )
     self.AddObservedPatients( TISSUE, self.clinical_patients )
@@ -714,8 +715,6 @@ class MultiSourceData(object):
     patient_bcs     = h5["patient.bcr_patient_barcode"].values
     patient_rows    = h5["miRNApatient.bcr_patient_barcode"].values
 
-    pdb.set_trace()
-    #pdb.set_trace()
     keep_bcs        = []
     keep_query      = []
     last_bc         = None
@@ -770,29 +769,10 @@ class MultiSourceData(object):
     #pdb.set_trace()
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
         
-    # patient_disease = h5["admin.disease_code"].values
-    # patient_bcs = h5["patient.bcr_patient_barcode"].values
-    # patient_rows = h5["miRNApatient.bcr_patient_barcode"].values
-    #
-    # keep_bcs = []
-    # keep_query = []
-    # for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
-    #   assert bc[:12] == pbc, "these should be the same"
-    #   keep_bcs.append(disease+"_"+pbc)
-    #   keep_query.append(True)
-    #
-    # keep_bcs = np.array(keep_bcs)
-    # keep_query = np.array(keep_query)
-    #
-    # assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
-    patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] #h5["patient.bcr_patient_barcode"].values
+    patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query]
     
-    #pdb.set_trace()
     self.AddObservedPatients( miRNA, patient_rows )
-    
-      
-    #self.rna_h5 = h5
     
     print "** miRNA splitting HSA"
     self.mirna_original_hsas = h5.columns
@@ -802,7 +782,6 @@ class MultiSourceData(object):
       if k == "admin.disease_code" or k == "patient.bcr_patient_barcode" or k == "miRNApatient.bcr_patient_barcode":
         continue
       self.mirna_original2index[k] = v
-      #hugo,entrez = k.split("|")
       self.mirna_hsa2index[k] = v
     
     hsas2keep = None
