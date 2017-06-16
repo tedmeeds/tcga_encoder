@@ -784,7 +784,7 @@ class MultiSourceData(object):
     
     remove_once = []
     found_removed=[]
-    for tup in counted:
+    for tup in counted.most_common():
       if tup[1]==2:
         print "found duplicate ",tup
         remove_once.append(tup[0])
