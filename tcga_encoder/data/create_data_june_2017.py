@@ -80,8 +80,8 @@ if __name__ == "__main__":
       dataset.InitSource( RNA, broad_location, source_name )
       dataset.store[ RNA + "/" + "RSEM" + "/" ] = rna_h5[RNA + "/" + "RSEM" + "/"][ genes2keep ]
       dataset.store[ RNA + "/" + "FAIR" + "/" ] = rna_h5[RNA + "/" + "FAIR" + "/"][ genes2keep ]
-      print source_name
-      pdb.set_trace()
+      #print source_name
+      #pdb.set_trace()
       dataset.AddObservedPatients( RNA, rna_h5[RNA + "/" + "FAIR" + "/"].index.values )
       
     elif source_name == miRNA:
@@ -104,8 +104,8 @@ if __name__ == "__main__":
       dataset.InitSource( miRNA, broad_location, source_name )
       dataset.store[ miRNA + "/" + "RSEM" + "/" ] = mirna_h5[miRNA + "/" + "RSEM" + "/"][ genes2keep ]
       dataset.store[ miRNA + "/" + "FAIR" + "/" ] = mirna_h5[miRNA + "/" + "FAIR" + "/"][ genes2keep ]
-      print source_name
-      pdb.set_trace()
+      #print source_name
+      #pdb.set_trace()
       dataset.AddObservedPatients( miRNA, mirna_h5[miRNA + "/" + "FAIR" + "/"].index.values )
       
     elif source_name == METH:
@@ -122,8 +122,8 @@ if __name__ == "__main__":
       dataset.InitSource( METH, broad_location, source_name )
       dataset.store[ METH + "/" + "METH" + "/" ] = meth_h5[METH + "/" + "METH" + "/"][ genes2keep ]
       dataset.store[ METH + "/" + "FAIR" + "/" ] = meth_h5[METH + "/" + "FAIR" + "/"][ genes2keep ]
-      print source_name
-      pdb.set_trace()
+      #print source_name
+      #pdb.set_trace()
       dataset.AddObservedPatients( METH, meth_h5[METH + "/" + "METH" + "/"].index.values )
       #dataset.AddMeth( broad_location, source_name, meth_h5, nbr, method )
     elif source_name == CLINICAL:
