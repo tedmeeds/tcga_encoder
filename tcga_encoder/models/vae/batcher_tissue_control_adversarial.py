@@ -718,7 +718,12 @@ class TCGABatcherAdversarial( TCGABatcher ):
         train_cnt = val_cnt
         n_train = n_val
         train_auc_rfc = val_auc_rfc
-      aucs.append([train_auc,val_auc, 1+1000*float(train_cnt)/n_train,1+1000*float(val_cnt)/n_val, train_auc_rfc, val_auc_rfc])
+      #pdb.set_trace()
+      if n_val>0:
+        aucs.append([train_auc,val_auc, 1+1000*float(train_cnt)/n_train,1+1000*float(val_cnt)/n_val, train_auc_rfc, val_auc_rfc])
+      else:
+        aucs.append([train_auc,val_auc, 1+1000*float(train_cnt),1+1000*float(val_cnt), train_auc_rfc, val_auc_rfc])
+      
     aucs = np.array(aucs)
     
     ok_val.append(False)
@@ -764,6 +769,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       highlight_genes = self.data_dict[ "highlight_genes"]
       X = self.dna_aucs[highlight_genes]
       X.T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Yellow', s=self.dna_aucs[highlight_genes].T["Frequency2"].values, alpha=0.75, edgecolors='k', linewidths=1)
+      #pdb.set_trace()
       for x,y,dna_gene in zip( X.T.values[:,0], X.T.values[:,1], highlight_genes ):
         ax.text( x,y,dna_gene, fontsize=8 )
         val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets[dna_gene].values, val_predictions[dna_gene].values )
@@ -856,30 +862,34 @@ class TCGABatcherAdversarial( TCGABatcher ):
     ax_data2.plot(data.values.mean(0))
     ax_data.grid('off')
     
-    ax_pos.imshow(pos_pred, aspect='auto',interpolation='nearest',cmap='hot')
-    ax_pos.grid('off')
-    ax_pos2.plot(pos_pred.values.T, 'k.-', lw=0.5, alpha=0.5 )
-    ax_pos2.plot(pos_pred.values.mean(0))
-    
-    #ax_neg.imshow(neg_pred, aspect='auto',interpolation='nearest')
-    ax_pos_pred.imshow(pos_predictions, aspect='auto',interpolation='nearest',cmap='hot')
-    ax_pos_pred.grid('off')
-    ax_pos_pred2.plot(pos_predictions.mean(0))
-    #ax_neg_pred.imshow(neg_predictions, aspect='auto',interpolation='nearest')
-    
-    ax_pos_no_bias.imshow(pos_pred_no_bias, aspect='auto',interpolation='nearest',cmap='hot')
-    ax_pos_no_bias.grid('off')
-    ax_pos_no_bias2.plot(pos_pred_no_bias.values.T, 'k.-', lw=0.5, alpha=0.5 )
-    ax_pos_no_bias2.plot(pos_pred_no_bias.values.mean(0))
-    
-    #ax_neg_no_bias.imshow(neg_pred_no_bias, aspect='auto',interpolation='nearest')
-    ax_pos_pred_no_bias.imshow(pos_predictions_no_bias, aspect='auto',interpolation='nearest',cmap='hot')
-    ax_pos_pred_no_bias2.plot(pos_predictions_no_bias.mean(0))
-    #ax_neg_pred_no_bias.imshow(neg_predictions_no_bias, aspect='auto',interpolation='nearest')
-    ax_pos_pred_no_bias.grid('off')
+    if len(pos_pred) > 0:
+      ax_pos.imshow(pos_pred, aspect='auto',interpolation='nearest',cmap='hot')
+      ax_pos.grid('off')
+      #pdb.set_trace()
     
     
-    #f.savefig( self.viz_tissue_predictions + "_%d.png"%(info_dict["epoch"]))
+      ax_pos2.plot(pos_pred.values.T, 'k.-', lw=0.5, alpha=0.5 )
+      ax_pos2.plot(pos_pred.values.mean(0))
+    
+      #ax_neg.imshow(neg_pred, aspect='auto',interpolation='nearest')
+      ax_pos_pred.imshow(pos_predictions, aspect='auto',interpolation='nearest',cmap='hot')
+      ax_pos_pred.grid('off')
+      ax_pos_pred2.plot(pos_predictions.mean(0))
+      #ax_neg_pred.imshow(neg_predictions, aspect='auto',interpolation='nearest')
+    
+      ax_pos_no_bias.imshow(pos_pred_no_bias, aspect='auto',interpolation='nearest',cmap='hot')
+      ax_pos_no_bias.grid('off')
+      ax_pos_no_bias2.plot(pos_pred_no_bias.values.T, 'k.-', lw=0.5, alpha=0.5 )
+      ax_pos_no_bias2.plot(pos_pred_no_bias.values.mean(0))
+    
+      #ax_neg_no_bias.imshow(neg_pred_no_bias, aspect='auto',interpolation='nearest')
+      ax_pos_pred_no_bias.imshow(pos_predictions_no_bias, aspect='auto',interpolation='nearest',cmap='hot')
+      ax_pos_pred_no_bias2.plot(pos_predictions_no_bias.mean(0))
+      #ax_neg_pred_no_bias.imshow(neg_predictions_no_bias, aspect='auto',interpolation='nearest')
+      ax_pos_pred_no_bias.grid('off')
+    
+    
+      #f.savefig( self.viz_tissue_predictions + "_%d.png"%(info_dict["epoch"]))
     f.savefig( self.viz_tissue_predictions + ".png")
     pp.close()
     #pdb.set_trace()
