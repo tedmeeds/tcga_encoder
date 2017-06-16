@@ -158,7 +158,7 @@ class MultiSourceData(object):
     one_hot_tissue = np.zeros( (len(self.clinical_patients),len(self.clinical_diseases)), dtype=int )
     for idx,barcode,disease in zip(xrange(len(self.clinical_patients)),self.clinical_patients,DISEASES):
       one_hot_tissue[ idx ][self.clinical_disease2idx[disease]] = 1    
-    pdb.set_trace()
+    #pdb.set_trace()
     self.store[ CLINICAL + "/" + TISSUE ] = pd.DataFrame( one_hot_tissue, index = self.clinical_patients, columns = self.clinical_diseases )    
     self.store[ CLINICAL + "/" + DATA ] = h5
     self.store[ CLINICAL + "/" + OBSERVED ] = pd.DataFrame( np.ones((len(self.clinical_patients),1),dtype=int), index = self.clinical_patients, columns = [CLINICAL] )
@@ -410,7 +410,7 @@ class MultiSourceData(object):
     patient_rows    = h5["RNApatient.bcr_patient_barcode"].values
     keep_bcs        = []
     keep_query      = []
-    pdb.set_trace()
+    #pdb.set_trace()
     last_bc         = None
     for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
       sample_type = bc[13:15]
@@ -543,10 +543,16 @@ class MultiSourceData(object):
     #   self.AddInfo( METH, "filtering_step", "disease filter: from %d to %d"%(n,n_after) )
     
     print "** METH filter for tumor samples only"
+    # patient_disease = h5["admin.disease_code"].values
+    # patient_bcs     = h5.index.values
+    # patient_rows     = h5["patient.bcr_patient_barcode"].values
+    
+
     patient_disease = h5["admin.disease_code"].values
-    patient_bcs     = h5.index.values
-    patient_rows     = h5["patient.bcr_patient_barcode"].values
-    pdb.set_trace()
+    patient_bcs     = h5["patient.bcr_patient_barcode"].values
+    patient_rows    = h5["Methpatient.bcr_patient_barcode"].values
+    
+    #pdb.set_trace()
     #patient_rows    = h5["Methpatient.bcr_patient_barcode"].values
     
     keep_bcs        = []
@@ -604,10 +610,9 @@ class MultiSourceData(object):
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query]
-    #h5["patient.bcr_patient_barcode"].values
+    
     
     self.AddObservedPatients( METH, patient_rows )
-    pdb.set_trace()
     print "** METH splitting genes"
     self.meth_original_genes = h5.columns
     self.meth_original2index = OrderedDict()
@@ -616,7 +621,6 @@ class MultiSourceData(object):
       if k == "admin.disease_code" or k == "patient.bcr_patient_barcode" or k == "Methpatient.bcr_patient_barcode":
         continue
       self.meth_original2index[k] = v
-      #hugo,entrez = k.split("|")
       self.meth_hugo2index[k] = v
     
     genes2keep=None
@@ -672,7 +676,7 @@ class MultiSourceData(object):
     
     
     
-    pdb.set_trace()
+    #pdb.set_trace()
     self.store[ METH + "/" + "METH" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = gene_columns )
     self.store[ METH + "/" + "FAIR" + "/" ] = pd.DataFrame( FAIR_R, index = patient_rows, columns = gene_columns )
     
