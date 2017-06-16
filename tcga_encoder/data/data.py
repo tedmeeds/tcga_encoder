@@ -816,18 +816,18 @@ class MultiSourceData(object):
     
     
     
-    nan_count = np.isnan(R).sum(0)
-    I_nan = pp.find( nan_count < R.shape[0] )
-    R = R[:,I_nan]
+    nan_count   = np.isnan(R).sum(0)
+    I_nan       = pp.find( nan_count < R.shape[0] )
+    R           = R[:,I_nan]
     hsa_columns = hsa_columns[I_nan]
-    nan_count = nan_count[I_nan]
+    nan_count   = nan_count[I_nan]
+    
     I = np.argsort(nan_count)
     R = R[:,I]
     hsa_columns = hsa_columns[I]
     nan_count = nan_count[I]
     
     I_enough = pp.find(nan_count<7000)
-    
     R=R[:,I_enough]
     hsa_columns = hsa_columns[I_enough]
     nan_count = nan_count[I_enough]
