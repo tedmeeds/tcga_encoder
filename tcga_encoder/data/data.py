@@ -780,6 +780,27 @@ class MultiSourceData(object):
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query]
     
+    counted = Counter( patient_rows )
+    
+    remove_once = []
+    found_removed=[]
+    for tup in counted:
+      if tup[1]==2:
+        print "found duplicate ",tup
+        remove_once.append(tup[0])
+        found_removed.append(False)
+      elif tup[1] > 2:
+        assert False, "found triplicate"
+      else:
+        pass
+    
+    keep_query = np.ones( len(patient_rows), dtype=bool )
+    #new_patient_rows = []
+    for idx,patient in zip(range(len(patient_rows)), patient_rows):
+      for dup, found in zip( remove_once, found_removed):
+        if patient == dup and found is False:
+          keep_query[idx] = False
+            
     pdb.set_trace()
     
     self.AddObservedPatients( miRNA, patient_rows )
