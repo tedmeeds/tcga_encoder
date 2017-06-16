@@ -468,8 +468,42 @@ class MultiSourceData(object):
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] 
     
-    pdb.set_trace()
+    #pdb.set_trace()
     
+    # ------------------
+    # remove duplicate
+    # ---------------------------
+    counted = Counter( patient_rows )
+    
+    remove_once = []
+    found_removed=[]
+    for tup in counted.most_common():
+      if tup[1]==2:
+        print "found duplicate ",tup
+        remove_once.append(tup[0])
+        found_removed.append(False)
+      elif tup[1] > 2:
+        pdb.set_trace()
+        assert False, "found triplicate"
+      else:
+        pass
+    
+    found_removed = np.array(found_removed)
+    keep_query = np.ones( len(patient_rows), dtype=bool )
+    #new_patient_rows = []
+    for f_idx,dup in zip( range(len(found_removed)), remove_once):
+      found = False
+      for idx,patient in zip(range(len(patient_rows)), patient_rows):
+        if patient == dup and found is False:
+          # and found is False:
+          keep_query[idx] = False
+          found = True
+    
+    patient_rows = patient_rows[keep_query]
+    h5 = h5[keep_query]
+    # ---------------------------
+    # end remove duplicate
+    # ---------------------------
     
     self.AddObservedPatients( RNA, patient_rows )
     
@@ -780,6 +814,9 @@ class MultiSourceData(object):
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query]
     
+    # ------------------
+    # remove duplicate
+    # ---------------------------
     counted = Counter( patient_rows )
     
     remove_once = []
@@ -805,7 +842,13 @@ class MultiSourceData(object):
           # and found is False:
           keep_query[idx] = False
           found = True
-    pdb.set_trace()
+    
+    patient_rows = patient_rows[keep_query]
+    h5 = h5[keep_query]
+    # ---------------------------
+    # end remove duplicate
+    # ---------------------------
+    #pdb.set_trace()
     
     
     self.AddObservedPatients( miRNA, patient_rows )
