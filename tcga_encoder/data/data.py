@@ -803,8 +803,9 @@ class MultiSourceData(object):
         if patient == dup and found is False:
           keep_query[idx] = False
           found_removed[f_idx] = True
-            
+          pdb.set_trace()
     pdb.set_trace()
+    
     
     self.AddObservedPatients( miRNA, patient_rows )
     
