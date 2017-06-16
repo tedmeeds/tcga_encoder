@@ -798,13 +798,13 @@ class MultiSourceData(object):
     found_removed = np.array(found_removed)
     keep_query = np.ones( len(patient_rows), dtype=bool )
     #new_patient_rows = []
-    for idx,patient in zip(range(len(patient_rows)), patient_rows):
-      for f_idx,dup, found in zip( range(len(found_removed)), remove_once, found_removed):
-        if patient == dup:
+    for f_idx,dup in zip( range(len(found_removed)), remove_once):
+      found = False
+      for idx,patient in zip(range(len(patient_rows)), patient_rows):
+        if patient == dup and found is False:
           # and found is False:
           keep_query[idx] = False
-          found_removed[f_idx] = True
-          pdb.set_trace()
+          found = True
     pdb.set_trace()
     
     
