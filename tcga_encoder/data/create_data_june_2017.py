@@ -100,7 +100,7 @@ if __name__ == "__main__":
       #dataset.SelectiveAddmiRNA( broad_location, source_name, mirna_h5_ga, mirna_h5_hi, genes2keep )
       
       dataset.InitSource( miRNA, broad_location, source_name )
-      dataset.store[ miRNA + "/" + "READS" + "/" ] = mirna_h5[miRNA + "/" + "READS" + "/"][ genes2keep ]
+      dataset.store[ miRNA + "/" + "RSEM" + "/" ] = mirna_h5[miRNA + "/" + "RSEM" + "/"][ genes2keep ]
       dataset.store[ miRNA + "/" + "FAIR" + "/" ] = mirna_h5[miRNA + "/" + "FAIR" + "/"][ genes2keep ]
       dataset.AddObservedPatients( miRNA, mirna_h5[miRNA + "/" + "FAIR" + "/"].index.values )
       
