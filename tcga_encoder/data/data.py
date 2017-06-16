@@ -405,7 +405,7 @@ class MultiSourceData(object):
     h5_b = h5store_hi.append(h5store_ga)
     h5 = h5_b.drop_duplicates( subset=["RNApatient.bcr_patient_barcode"]).sort_values( by="patient.bcr_patient_barcode" )
     
-    pdb.set_trace()
+    
     print "** RNA filter for tumor samples only"
     
     patient_disease = h5["admin.disease_code"].values
@@ -467,6 +467,10 @@ class MultiSourceData(object):
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query] 
+    
+    pdb.set_trace()
+    
+    
     self.AddObservedPatients( RNA, patient_rows )
     
     print "** RNA splitting genes"
@@ -699,7 +703,7 @@ class MultiSourceData(object):
     h5_b = h5store_hi.append(h5store_ga)
     h5 = h5_b.drop_duplicates( subset=["miRNApatient.bcr_patient_barcode"]).sort_values( by="patient.bcr_patient_barcode" )
     
-    pdb.set_trace()
+    #pdb.set_trace()
     #h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
     # if diseases is not None:
@@ -775,6 +779,8 @@ class MultiSourceData(object):
         
     h5 = h5[keep_query]
     patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query]
+    
+    pdb.set_trace()
     
     self.AddObservedPatients( miRNA, patient_rows )
     
