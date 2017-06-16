@@ -558,7 +558,8 @@ class MultiSourceData(object):
     keep_bcs        = []
     keep_query      = []
     last_bc         = None
-    for disease,pbc,bc in zip(patient_disease,patient_rows,patient_bcs):
+    for disease,bc,pbc in zip(patient_disease,patient_rows,patient_bcs):
+    #for disease,pbc,bc in zip(patient_disease,patient_rows,patient_bcs):
       #pbc = bc[:12]
       sample_type = bc[13:15]
       if (    sample_type == '01' \
