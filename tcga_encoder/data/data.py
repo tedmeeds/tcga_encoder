@@ -790,6 +790,7 @@ class MultiSourceData(object):
         remove_once.append(tup[0])
         found_removed.append(False)
       elif tup[1] > 2:
+        pdb.set_trace()
         assert False, "found triplicate"
       else:
         pass
