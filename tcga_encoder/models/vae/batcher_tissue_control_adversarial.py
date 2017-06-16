@@ -39,9 +39,10 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.viz_hidden_weights = os.path.join( self.savedir, "hidden_weights" )
     
   def FillDerivedPlaceholder( self, batch, layer_name, mode ):
-    
+    #pdb.set_trace()
     if layer_name == "Z_rec_input" and self.fill_z_input is True:
       #print "Getting Z for batch for ids ", batch["barcodes"][:5]
+      
       self.fill_store.open()
       if mode == "BATCH" or mode == "TRAIN":
         # #pdb.set_trace()
@@ -84,12 +85,15 @@ class TCGABatcherAdversarial( TCGABatcher ):
     elif layer_name == "Z_rec_input":
       pdb.set_trace()
     elif layer_name == "DNA_target_mask_special":
-      #pdb.set_trace()
+      
       batch_barcodes = batch[ "barcodes" ]
       batch_observed = self.data_store[self.OBSERVED_key].loc[ batch_barcodes ].values
       cohort_observed = find_cohort( batch_barcodes, self.validation_tissues )
+      if len(cohort_observed) != len(batch_observed):
+        pdb.set_trace()
       batch_observed *= cohort_observed
-      #pdb.set_trace()
+      #
+      
       batch[ layer_name ] = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool)
       self.dna_uses_cohorts = True
       #nbr_observed = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool).sum()

@@ -405,6 +405,7 @@ class MultiSourceData(object):
     h5_b = h5store_hi.append(h5store_ga)
     h5 = h5_b.drop_duplicates( subset=["RNApatient.bcr_patient_barcode"]).sort_values( by="patient.bcr_patient_barcode" )
     
+    pdb.set_trace()
     print "** RNA filter for tumor samples only"
     
     patient_disease = h5["admin.disease_code"].values
@@ -697,6 +698,8 @@ class MultiSourceData(object):
     
     h5_b = h5store_hi.append(h5store_ga)
     h5 = h5_b.drop_duplicates( subset=["miRNApatient.bcr_patient_barcode"]).sort_values( by="patient.bcr_patient_barcode" )
+    
+    pdb.set_trace()
     #h5 = h5store #self.ReadH5( os.path.join(broad_location, filename) )
     
     # if diseases is not None:
