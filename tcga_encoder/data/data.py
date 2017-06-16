@@ -1037,6 +1037,7 @@ class MultiSourceData(object):
     # set missing values to 0
     R[ np.isnan(R) ] = 0.0
     FAIR_R = fair_rank_order_normalization(R)
+    
     #pp.matshow( FAIR_R[:500,:].T)
     #pp.show()
     #pdb.set_trace()
@@ -1060,7 +1061,7 @@ class MultiSourceData(object):
       assert False, "unknown selection method for RNA = %s"%(method)
     self.store[ miRNA + "/" + "RSEM" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = hsa_columns )
     self.store[ miRNA + "/" + "FAIR" + "/" ] = pd.DataFrame( FAIR_R, index = patient_rows, columns = hsa_columns )    
-    #pdb.set_trace()
+    pdb.set_trace()
     
     
         
