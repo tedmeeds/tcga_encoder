@@ -606,7 +606,7 @@ class MultiSourceData(object):
     #h5["patient.bcr_patient_barcode"].values
     
     self.AddObservedPatients( METH, patient_rows )
-    
+    pdb.set_trace()
     print "** METH splitting genes"
     self.meth_original_genes = h5.columns
     self.meth_original2index = OrderedDict()
@@ -671,7 +671,7 @@ class MultiSourceData(object):
     
     
     
-    
+    pdb.set_trace()
     self.store[ METH + "/" + "METH" + "/" ] = pd.DataFrame( R, index = patient_rows, columns = gene_columns )
     self.store[ METH + "/" + "FAIR" + "/" ] = pd.DataFrame( FAIR_R, index = patient_rows, columns = gene_columns )
     
