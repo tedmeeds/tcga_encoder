@@ -158,6 +158,7 @@ class MultiSourceData(object):
     one_hot_tissue = np.zeros( (len(self.clinical_patients),len(self.clinical_diseases)), dtype=int )
     for idx,barcode,disease in zip(xrange(len(self.clinical_patients)),self.clinical_patients,DISEASES):
       one_hot_tissue[ idx ][self.clinical_disease2idx[disease]] = 1    
+    pdb.set_trace()
     self.store[ CLINICAL + "/" + TISSUE ] = pd.DataFrame( one_hot_tissue, index = self.clinical_patients, columns = self.clinical_diseases )    
     self.store[ CLINICAL + "/" + DATA ] = h5
     self.store[ CLINICAL + "/" + OBSERVED ] = pd.DataFrame( np.ones((len(self.clinical_patients),1),dtype=int), index = self.clinical_patients, columns = [CLINICAL] )
@@ -601,7 +602,8 @@ class MultiSourceData(object):
     print len(keep_bcs), len(np.unique(keep_bcs))    
     assert len(keep_bcs) == len(np.unique(keep_bcs)), "should be unique list"
     h5 = h5[keep_query]
-    patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query]#h5["patient.bcr_patient_barcode"].values
+    patient_rows = patient_disease[keep_query]+"_"+patient_bcs[keep_query]
+    #h5["patient.bcr_patient_barcode"].values
     
     self.AddObservedPatients( METH, patient_rows )
     
