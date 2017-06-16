@@ -795,6 +795,7 @@ class MultiSourceData(object):
       else:
         pass
     
+    found_removed = np.array(found_removed)
     keep_query = np.ones( len(patient_rows), dtype=bool )
     #new_patient_rows = []
     for idx,patient in zip(range(len(patient_rows)), patient_rows):
