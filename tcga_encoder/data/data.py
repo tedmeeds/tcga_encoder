@@ -800,7 +800,8 @@ class MultiSourceData(object):
     #new_patient_rows = []
     for idx,patient in zip(range(len(patient_rows)), patient_rows):
       for f_idx,dup, found in zip( range(len(found_removed)), remove_once, found_removed):
-        if patient == dup and found is False:
+        if patient == dup:
+          # and found is False:
           keep_query[idx] = False
           found_removed[f_idx] = True
           pdb.set_trace()
