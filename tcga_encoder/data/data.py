@@ -160,7 +160,7 @@ class MultiSourceData(object):
       one_hot_tissue[ idx ][self.clinical_disease2idx[disease]] = 1    
     #pdb.set_trace()
     self.store[ CLINICAL + "/" + TISSUE ] = pd.DataFrame( one_hot_tissue, index = self.clinical_patients, columns = self.clinical_diseases )    
-    pdb.set_trace()
+    #pdb.set_trace()
     self.store[ CLINICAL + "/" + OBSERVED ] = pd.DataFrame( np.ones((len(self.clinical_patients),1),dtype=int), index = self.clinical_patients, columns = [CLINICAL] )
     self.store[ CLINICAL + "/" + DATA ] = h5
     
