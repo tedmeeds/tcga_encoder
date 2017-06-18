@@ -153,7 +153,7 @@ def main( data_location, results_location ):
   tissues = data_store["/CLINICAL/TISSUE"].loc[barcodes]
   
   rna   = np.log(1+data_store["/RNA/RSEM"].loc[ barcodes ])
-  mirna = np.log(1+data_store["/miRNA/READS"].loc[ barcodes ])
+  mirna = np.log(1+data_store["/miRNA/RSEM"].loc[ barcodes ])
   meth  = np.log(0.1+data_store["/METH/METH"].loc[ barcodes ])
   dna   = data_store["/DNA/channel/0"].loc[ barcodes ]
   
