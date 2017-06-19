@@ -372,10 +372,10 @@ def main( data_location, results_location ):
     rna_readable.name="rna"
     meth_readable.name="meth"
     
-    rna_readable_p.name="rna_p"
-    meth_readable_p.name="meth_p"
-    rna_readable_n.name="rna_n"
-    meth_readable_n.name="meth_n"
+    # rna_readable_p.name="rna_p"
+    # meth_readable_p.name="meth_p"
+    # rna_readable_n.name="rna_n"
+    # meth_readable_n.name="meth_n"
                          
     joined = pd.concat( [rna_readable[:20],\
                          meth_readable[:20]], axis=1 )
