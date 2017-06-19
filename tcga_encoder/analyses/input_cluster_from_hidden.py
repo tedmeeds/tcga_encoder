@@ -326,8 +326,8 @@ def main( data_location, results_location ):
     pp.close('all')
 
   for z_idx in range(n_h):
-    z_values = Z_values[:,z_idx]
-    order_z = np.argsort(z_values)
+    #z_values = Z_values[:,z_idx]
+    #order_z = np.argsort(z_values)
 
     rna_w = W_hidden["RNA"][ "h_%d"%(z_idx)]
     mirna_w = W_hidden["miRNA"][ "h_%d"%(z_idx)]
