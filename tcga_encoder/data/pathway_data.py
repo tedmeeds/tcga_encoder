@@ -164,16 +164,16 @@ class Pathways( object ):
             c_weights.append(p_weight )
             has_cancer = True
             
-        if has_cancer is False:
-          for pathway, p_weight in zip( pathways, path_weights ):
-            if self.pathway2hugo.has_key( pathway ):
-              c_pathways.append( pathway )
-              c_weights.append(p_weight )
-              has_cancer = True
+        # if has_cancer is False:
+        #   for pathway, p_weight in zip( pathways, path_weights ):
+        #     if self.pathway2hugo.has_key( pathway ):
+        #       c_pathways.append( pathway )
+        #       c_weights.append(p_weight )
+        #       has_cancer = True
             
-        if has_cancer is False:
-            c_pathways.append( "zilch" )
-            c_weights.append(w )
+        # if has_cancer is False:
+        #     c_pathways.append( "zilch" )
+        #     c_weights.append(w )
           
         c.update( dict( zip(c_pathways, c_weights ) ) )
     

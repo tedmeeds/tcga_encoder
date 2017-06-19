@@ -293,22 +293,24 @@ def main( data_location, results_location ):
     neg_meth = pp.find( meth_w_ordered.values<0) ; pos_meth = pp.find( meth_w_ordered.values>0) 
 
     
-    rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index, np.abs( rna_w_ordered.values)  )
-    meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index, np.abs( meth_w_ordered.values ) )
+    #rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index, np.abs( rna_w_ordered.values)  )
+    #meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index, np.abs( meth_w_ordered.values ) )
+    rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index[:50], np.abs( rna_w_ordered.values[:50])  )
+    meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index[:50], np.abs( meth_w_ordered.values[:50] ) )
 
-    rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna], np.abs( rna_w_ordered.values[pos_rna]) ) 
-    meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth], np.abs( meth_w_ordered.values[pos_meth]))
-
-    rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna], np.abs( rna_w_ordered.values[neg_rna] ) )
-    meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth], np.abs( meth_w_ordered.values[neg_meth]) )
+    # rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna], np.abs( rna_w_ordered.values[pos_rna]) )
+    # meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth], np.abs( meth_w_ordered.values[pos_meth]))
+    #
+    # rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna], np.abs( rna_w_ordered.values[neg_rna] ) )
+    # meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth], np.abs( meth_w_ordered.values[neg_meth]) )
 
     rna_readable.name="rna"
     meth_readable.name="meth"
     
-    rna_readable_p.name="rna_p"
-    meth_readable_p.name="meth_p"
-    rna_readable_n.name="rna_n"
-    meth_readable_n.name="meth_n"
+    # rna_readable_p.name="rna_p"
+    # meth_readable_p.name="meth_p"
+    # rna_readable_n.name="rna_n"
+    # meth_readable_n.name="meth_n"
                          
     joined = pd.concat( [rna_readable[:20],\
                          meth_readable[:20]], axis=1 )
@@ -358,14 +360,14 @@ def main( data_location, results_location ):
     neg_meth = pp.find( meth_w_ordered.values<0) ; pos_meth = pp.find( meth_w_ordered.values>0) 
 
     
-    rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index, np.abs( rna_w_ordered.values)  )
-    meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index, np.abs( meth_w_ordered.values ) )
+    rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index[:50], np.abs( rna_w_ordered.values[:50])  )
+    meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index[:50], np.abs( meth_w_ordered.values[:50] ) )
 
-    rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna], np.abs( rna_w_ordered.values[pos_rna]) ) 
-    meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth], np.abs( meth_w_ordered.values[pos_meth]))
+    #rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna], np.abs( rna_w_ordered.values[pos_rna]) ) 
+    #meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth], np.abs( meth_w_ordered.values[pos_meth]))
 
-    rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna], np.abs( rna_w_ordered.values[neg_rna] ) )
-    meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth], np.abs( meth_w_ordered.values[neg_meth]) )
+    #rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna], np.abs( rna_w_ordered.values[neg_rna] ) )
+    #meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth], np.abs( meth_w_ordered.values[neg_meth]) )
 
     rna_readable.name="rna"
     meth_readable.name="meth"
