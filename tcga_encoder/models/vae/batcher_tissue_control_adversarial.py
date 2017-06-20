@@ -1,6 +1,7 @@
 #from tcga_encoder.models.vae.batcher_ABC import *
 from tcga_encoder.models.vae.batcher_tissue_control import *
 from sklearn.ensemble import RandomForestClassifier as rfc
+from tcga_encoder.utils.models import GenerativeBinaryClassifier
 
 def find_cohort( barcodes, cohorts ):
   found = np.zeros( (len(barcodes),1), dtype=bool )
@@ -26,6 +27,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.viz_filename_dna_batch_target       =  os.path.join( self.savedir, "dna_batch_target" )
     self.viz_filename_dna_batch_predict      =  os.path.join( self.savedir, "dna_batch_predict" )
     self.viz_filename_dna_aucs               =  os.path.join( self.savedir, "dna_aucs.png" )
+    self.viz_filename_dna_aucs2               =  os.path.join( self.savedir, "dna_aucs_generative.png" )
     self.viz_filename_weights        =  os.path.join( self.savedir, "weights_" )
     self.viz_filename_lower_bound            =  os.path.join( self.savedir, "lower_bound.png" )
     self.viz_filename_log_pdf_sources        = os.path.join( self.savedir, "log_pdf_sources_z.png" )
@@ -106,6 +108,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
   def InitializeAnythingYouWant(self, sess, network ):
     print "Running : InitializeAnythingYouWant"
     self.dna_aucs_all = []
+    self.dna_aucs_all2 = []
     self.fill_z_input = True
     self.dna_uses_cohorts = False
     input_sources = ["METH","RNA","miRNA"] 
@@ -620,12 +623,175 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.PlotTissuePrediction(sess, info_dict)
     
     if self.network.HasLayer("gen_dna_space"):
+      self.DnaGenerativeModel( sess, info_dict )
       self.PrintAndPlotDnaPredictions(sess, info_dict)
       
     self.epoch_store.close()
     pp.close('all')
   
   
+  def DnaGenerativeModel( self, sess, info_dict ):
+    self.fill_store.open()
+    f=pp.figure()
+    ax=f.add_subplot(111)
+    ax.plot( [0.0,1.0], [0,1], 'k--')
+    
+    #self.TrainFillDna(sess, info_dict)
+    
+    dna_observed_query = self.data_store["/CLINICAL/observed"][DNA] == 1
+    dna_observed_train = dna_observed_query.loc[self.train_barcodes]
+    dna_observed_val   = dna_observed_query.loc[self.validation_barcodes]
+    
+    dna_observed_train_barcodes = dna_observed_train[dna_observed_train.values].index.values
+
+    
+    dna_observed_val_barcodes   = dna_observed_val[dna_observed_val.values].index.values
+    val_cohorts = np.unique( np.array( [s.split("_")[0] for s in dna_observed_val_barcodes] ) )
+    
+    train_cohorts = np.array( [s.split("_")[0] for s in dna_observed_train_barcodes] )
+    #if self.dna_uses_cohorts is True:
+    new_cohorts = []
+    for cohort in val_cohorts:
+      I = pp.find( train_cohorts==cohort )
+      new_cohorts.extend( dna_observed_train_barcodes[I] )
+    dna_observed_train_barcodes = np.array(new_cohorts)
+      
+    #pdb.set_trace()
+    # val_predictions   = self.fill_store["/Fill/VAL/DNA"].loc[dna_observed_val_barcodes]
+    # train_predictions = self.fill_store["/Fill/TRAIN/DNA"].loc[dna_observed_train_barcodes]
+    
+    train_z = self.fill_store["/Z/TRAIN/Z/mu"].loc[dna_observed_train_barcodes]
+    val_z   = self.fill_store["/Z/VAL/Z/mu"].loc[dna_observed_val_barcodes]
+    
+    val_targets   = self.dna_store.loc[dna_observed_val_barcodes]
+    train_targets = self.dna_store.loc[dna_observed_train_barcodes]
+    
+    n_train = len(train_targets)
+    n_val   = len(val_targets)
+    aucs = []
+    groups1 = []
+    groups0 = []
+    val_weighted_auc = 0.0
+    val_weights = 0.0
+    train_weighted_auc = 0.0
+    train_weights = 0.0
+  
+    ok_val = []
+    set_train_2_val = False
+    train_predictions = []
+    val_predictions = []
+    for dna_gene in self.dna_genes:
+      train_auc_rfc = 1.0
+      train_cnt = np.sum(train_targets[dna_gene].values)
+      n_train = len(train_targets[dna_gene].values)
+      
+      val_auc = 1.0
+      val_auc_rfc = 1.0
+      n_val = len(val_targets[dna_gene].values) 
+      val_cnt = np.sum(val_targets[dna_gene].values)
+      
+      if train_cnt>0 and train_cnt < n_train:
+        
+        model = GenerativeBinaryClassifier()
+        model.fit( train_z.values, train_targets[dna_gene].values )
+        train_prediction = model.predict( train_z.values )
+        train_predictions.append(train_prediction)
+        train_auc = roc_auc_score( train_targets[dna_gene].values, train_prediction )
+        train_weighted_auc += train_cnt*train_auc
+        train_weights += train_cnt
+        
+        if val_cnt>0 and val_cnt<n_val:
+          ok_val.append(True)
+          val_prediction = model.predict( val_z.values )
+          val_predictions.append(val_prediction)
+          val_auc = roc_auc_score( val_targets[dna_gene].values, val_prediction )
+          val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets[dna_gene].values, val_prediction )
+          val_weighted_auc += val_cnt*val_auc
+          val_weights += val_cnt
+          val_auc_rfc = 0#roc_auc_score( val_targets[dna_gene].values, val_rfc )
+          if val_cnt>20:
+            ax.plot( val_auc_fpr, val_auc_tpr, "k-", lw=1, alpha=0.5, label = "Val %s"%(dna_gene) )
+          groups1.append(dna_gene)
+        else:
+          groups0.append(dna_gene)
+          ok_val.append(False)
+        if set_train_2_val is True:
+          train_auc = val_auc
+          train_cnt = val_cnt
+          n_train = n_val
+        #pdb.set_trace()
+        if n_val>0:
+          aucs.append([train_auc,val_auc, 1+1000*float(train_cnt)/n_train,1+1000*float(val_cnt)/n_val])
+        else:
+          aucs.append([train_auc,val_auc, 1+1000*float(train_cnt),1+1000*float(val_cnt)])
+      else:
+        set_train_2_val = True
+      
+      
+    aucs = np.array(aucs)
+    train_predictions = np.array(train_predictions).T
+    val_predictions = np.array(val_predictions).T
+    
+    val_predictions = pd.DataFrame( val_predictions, columns = self.dna_genes )
+    train_predictions = pd.DataFrame( train_predictions, columns = self.dna_genes )
+    ok_val.append(False)
+    ok_val = np.array(ok_val)
+    self.dna_aucs2 = pd.DataFrame( aucs.T, index = ["Train","Val","Frequency","Frequency2"], columns = self.dna_genes )
+    
+    #pdb.set_trace()
+    val_auc = roc_auc_score( val_targets.values.flatten(), val_predictions.values.flatten() )
+    val_weighted_auc /= val_weights
+    val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets.values.flatten(), val_predictions.values.flatten() )
+    I_val   = np.argsort( -val_predictions.values.flatten() )
+    
+    if set_train_2_val is True:
+      train_auc = val_auc
+      train_weighted_auc=val_weighted_auc
+      
+      train_weights=val_weights
+      train_auc_fpr=val_auc_fpr
+      train_auc_tpr=val_auc_tpr
+      tr_auc_fpr=val_auc_fpr
+      tr_auc_tpr=val_auc_tpr
+      I_train=I_val
+    else:
+      train_auc = roc_auc_score( train_targets.values.flatten(), train_predictions.values.flatten() )
+      train_weighted_auc /= train_weights
+      tr_auc_fpr, tr_auc_tpr, thresholds = roc_curve( train_targets.values.flatten(), train_predictions.values.flatten() )
+      I_train = np.argsort( -train_predictions.values.flatten() )
+    
+    self.dna_aucs2["ALL"] = pd.Series( [train_auc,val_auc, 1000.0,1000.0], index = ["Train","Val","Frequency","Frequency2"])  
+    print self.dna_aucs2.T
+    
+    mean_aucs = self.dna_aucs2.T[ok_val].T.mean(1)
+    self.dna_aucs_all2.append( [train_auc,val_auc, mean_aucs.loc["Train"], mean_aucs.loc["Val"], train_weighted_auc, val_weighted_auc]  )
+    self.dna_aucs2[groups1].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='White', s=self.dna_aucs2[groups1].T["Frequency2"].values, alpha=0.75, edgecolors='k')
+        
+    ax.plot( val_auc_fpr, val_auc_tpr, "r-", label = "Val ROC" )
+    ax.plot( tr_auc_fpr, tr_auc_tpr, "b-", label = "Train ROC" )
+    
+    if self.data_dict.has_key("highlight_genes"):
+      highlight_genes = self.data_dict[ "highlight_genes"]
+      X = self.dna_aucs2[highlight_genes]
+      X.T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Yellow', s=self.dna_aucs2[highlight_genes].T["Frequency2"].values, alpha=0.75, edgecolors='k', linewidths=1)
+      for x,y,dna_gene in zip( X.T.values[:,0], X.T.values[:,1], highlight_genes ):
+        ax.text( x,y,dna_gene, fontsize=8 )
+        val_auc_fpr, val_auc_tpr, thresholds = roc_curve( val_targets[dna_gene].values, val_predictions[dna_gene].values )
+        ax.plot( val_auc_fpr, val_auc_tpr, "y-", lw=2, alpha=0.95, label = "Val %s"%(dna_gene) )
+    
+    X = np.array( self.dna_aucs_all2)
+    ax.plot( X[:,0], X[:,1], 'r.-', alpha=0.75  )
+    ax.plot( X[:,2], X[:,3], 'g.-', alpha=0.75  )
+    ax.plot( X[:,4], X[:,5], 'm.-', alpha=0.75  )
+    self.dna_aucs2[["ALL"]].T.plot(ax=ax, kind='scatter', x='Train', y='Val', marker="o", color='Red', s=self.dna_aucs2[["ALL"]].T["Frequency2"].values, alpha=0.25, edgecolors='k')
+    ax.plot( X[-1,2], X[-1,3],  'go', ms=30,alpha=0.25,mec='k')
+    ax.plot( X[-1,4], X[-1,5],  'mo', ms=30,alpha=0.25,mec='k')
+    pp.xlim(0.0,1)
+    pp.ylim(0.0,1)
+    f.savefig( self.viz_filename_dna_aucs2, dpi=300,  )
+    
+    self.fill_store.close()
+    
   def  PrintAndPlotDnaPredictions(self,sess, info_dict):
     self.fill_store.open()
     f=pp.figure()
