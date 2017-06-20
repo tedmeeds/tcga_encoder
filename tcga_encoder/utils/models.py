@@ -4,8 +4,8 @@ import pylab as pp
 import pandas as pd
 
 class GenerativeBinaryClassifier(object):
-  def __init__(self):
-    pass
+  def __init__(self, prior_std = 1e-12):
+    self.prior_std = prior_std
     
   def fit( self, X, y ):
     self.y_true = y
@@ -26,8 +26,8 @@ class GenerativeBinaryClassifier(object):
     self.mu_1 = X[self.ids_1,:].mean(0)
     self.mu_0 = X[self.ids_0,:].mean(0)
     
-    self.std_1 = X[self.ids_1,:].std(0) + 1e-12
-    self.std_0 = X[self.ids_0,:].std(0) + 1e-12
+    self.std_1 = X[self.ids_1,:].std(0) + self.prior_std 
+    self.std_0 = X[self.ids_0,:].std(0) + self.prior_std 
     
     self.var_1 = np.square(self.std_1)
     self.var_0 = np.square(self.std_0)

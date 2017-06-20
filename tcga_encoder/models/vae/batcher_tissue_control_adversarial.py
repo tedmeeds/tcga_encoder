@@ -692,7 +692,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       
       if train_cnt>0 and train_cnt < n_train:
         
-        model = GenerativeBinaryClassifier()
+        model = GenerativeBinaryClassifier( prior_std = 1.0 )
         model.fit( train_z.values, train_targets[dna_gene].values )
         train_prediction = model.predict( train_z.values )
         train_predictions.append(train_prediction)
