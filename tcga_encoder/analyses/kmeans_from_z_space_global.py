@@ -311,6 +311,8 @@ def main( data_location, results_location ):
     
     S_cohort = S.loc[bcs]
     
+    times = S_cohort["T"].values
+    events = S_cohort["E"].values
     results = multivariate_logrank_test(times, groups=kmeans_patients_labels, event_observed=events )
     
     f = pp.figure()
