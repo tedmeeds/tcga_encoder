@@ -104,13 +104,13 @@ def main( data_location, results_location ):
 
 
   n_tissues = len(tissue_names)
-  n_random = 200
+  n_random = 100
   random_names = ["r_%d"%(trial_idx) for trial_idx in range(n_random)]
   
   
   alpha=0.001
   
-  split_nbrs = [2,3,4]
+  split_nbrs = [2] #,3,4]
   nbr_to_plot = 5
   
   split_p_values = {}
