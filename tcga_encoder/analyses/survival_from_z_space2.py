@@ -124,6 +124,9 @@ def main( data_location, results_location ):
     t_ids = tissue_idx == t_idx
     tissue_name = tissue_names[t_idx]
     
+    if tissue_name == "gbm":
+      print "skipping gbm"
+      continue
     print "working %s"%(tissue_name)
     bcs = barcodes[t_ids]
     Z_tissue = Z.loc[ bcs ]
