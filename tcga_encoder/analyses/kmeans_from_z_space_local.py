@@ -16,7 +16,7 @@ from lifelines import CoxPHFitter
 from lifelines.datasets import load_regression_dataset
 from lifelines.utils import k_fold_cross_validation
 from lifelines import KaplanMeierFitter
-from lifelines.statistics import logrank_test
+from lifelines.statistics import logrank_test,multivariate_logrank_test
 # cloudy blue  #acc2d9
 # dark pastel green  #56ae57
 # dust  #b2996e
