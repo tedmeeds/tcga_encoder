@@ -251,7 +251,7 @@ def main( data_location, results_location ):
 
     kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_cohort.values.T)
     kmeans_z_labels = kmeans_z.labels_
-
+    
     bicluster_means = np.zeros( (K_p,K_z), dtype=float )
     for kp in range(K_p):
       ip = pp.find( kmeans_patients_labels==kp )
@@ -306,7 +306,7 @@ def main( data_location, results_location ):
     pp.close('all')
     
     S_cohort = S.loc[bcs]
-    
+    results = multivariate_logrank_test(times, groups=kmeans_patients_labels, event_observed=events )
     f = pp.figure()
     ax= f.add_subplot(111)
     kmf = KaplanMeierFitter()
@@ -327,8 +327,8 @@ def main( data_location, results_location ):
     #kmf.fit(times[z2_fifth], event_observed=events[z2_fifth], label="rest"  )
     #ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
     #pp.title( "%s z%d  splits 1/5 v rest p-value = %g"%( tissue_name, z_idx, p_values_fifth[t_idx,z_idx]) )
-    pp.title("%s"%(tissue_name))
-    pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
+    pp.title("%s p-value %0.5f"%(tissue_name,results.p_value))
+    pp.savefig( save_dir + "/%s_survival_%0.5f.png"%(tissue_name,results.p_value), format="png", dpi=300)
     
     
     #pdb.set_trace()

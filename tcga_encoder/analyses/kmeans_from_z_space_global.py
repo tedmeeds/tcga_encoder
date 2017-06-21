@@ -16,7 +16,7 @@ from lifelines import CoxPHFitter
 from lifelines.datasets import load_regression_dataset
 from lifelines.utils import k_fold_cross_validation
 from lifelines import KaplanMeierFitter
-from lifelines.statistics import logrank_test
+from lifelines.statistics import logrank_test, multivariate_logrank_test
 # cloudy blue  #acc2d9
 # dark pastel green  #56ae57
 # dust  #b2996e
@@ -311,6 +311,8 @@ def main( data_location, results_location ):
     
     S_cohort = S.loc[bcs]
     
+    results = multivariate_logrank_test(times, groups=kmeans_patients_labels, event_observed=events )
+    
     f = pp.figure()
     ax= f.add_subplot(111)
     kmf = KaplanMeierFitter()
@@ -331,8 +333,8 @@ def main( data_location, results_location ):
     #kmf.fit(times[z2_fifth], event_observed=events[z2_fifth], label="rest"  )
     #ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
     #pp.title( "%s z%d  splits 1/5 v rest p-value = %g"%( tissue_name, z_idx, p_values_fifth[t_idx,z_idx]) )
-    pp.title("%s"%(tissue_name))
-    pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
+    pp.title("%s p-value = %0.5f"%(tissue_name,results.p_value))
+    pp.savefig( save_dir + "/%s_survival_%0.5f.png"%(tissue_name,results.p_value), format="png", dpi=300)
     
     
     #pdb.set_trace()
