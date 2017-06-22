@@ -168,7 +168,7 @@ def EstimateWeightShape( input_shape, output_shape ):
                                                             
 def MakeWeights( input_sources, output_shape, name = "", has_biases=True, constant=None, shared_layers = None, shared_idx = None, layer_specs=None, positive = False ):
     weights   = []
-    default_constant = 0.1
+    default_constant = 0.001
     input_idx = 0
     
     is_trainable = True
