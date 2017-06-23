@@ -75,7 +75,7 @@ def train( sess, network, algo_dict, data_dict, logging_dict, results_dict ):
     print "USING GRADIENT CLIPPING!!!"
     optimizer = optimizer( learning_rate=learning_rate_placeholder )
     gvs = optimizer.compute_gradients(data_cost)
-    capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in gvs]
+    capped_gvs = [(tf.clip_by_value(grad, -0.1, 0.1), var) for grad, var in gvs]
     train_op = optimizer.apply_gradients(capped_gvs)
     
   else:
