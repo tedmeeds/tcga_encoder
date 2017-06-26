@@ -214,7 +214,7 @@ def main( data_location, results_location ):
 
   n = len(Z)
   n_tissues = len(tissue_names)
-  K_p = 5
+  K_p = 30
   K_z = 20
   k_pallette = sns.hls_palette(K_p)
   
