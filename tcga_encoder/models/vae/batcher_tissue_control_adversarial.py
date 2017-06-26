@@ -727,7 +727,9 @@ class TCGABatcherAdversarial( TCGABatcher ):
       else:
         set_train_2_val = True
       
-      
+    if len(val_predictions)==0:
+      self.fill_store.close()
+      return  
     aucs = np.array(aucs)
     train_predictions = np.array(train_predictions).T
     val_predictions = np.array(val_predictions).T
