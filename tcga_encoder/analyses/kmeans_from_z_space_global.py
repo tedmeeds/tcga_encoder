@@ -115,8 +115,8 @@ def main( data_location, results_location ):
   Z = pd.DataFrame( Z, index = np.hstack( (Z_train.index.values, Z_val.index.values)), columns = z_names )
   
   barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
-  #quantiles = (len(Z)*np.array( [0,0.33, 0.66, 1.0] )).astype(int)
-  quantiles = (len(Z)*np.array( [0,0.2, 0.4,0.6,0.8,1.0] )).astype(int)
+  quantiles = (len(Z)*np.array( [0,0.33, 0.66, 1.0] )).astype(int)
+  #quantiles = (len(Z)*np.array( [0,0.2, 0.4,0.6,0.8,1.0] )).astype(int)
   #quantiles = (len(Z)*np.array( [0,0.1, 0.2,0.3,0.4,0.6,0.7,0.8,0.9,1.0] )).astype(int)
   n_quantiles = len(quantiles)-1
   start_q_id = -(n_quantiles-1)/2
@@ -214,8 +214,8 @@ def main( data_location, results_location ):
 
   n = len(Z)
   n_tissues = len(tissue_names)
-  K_p = 10
-  K_z = 15
+  K_p = 5
+  K_z = 20
   k_pallette = sns.hls_palette(K_p)
   
   # K_ps = [2,5,10,15,20]
