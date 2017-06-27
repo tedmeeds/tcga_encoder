@@ -185,7 +185,7 @@ def main( data_location, results_location ):
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   model_filename = os.path.join( results_path, "full_vae_model.h5" )
   
-  save_dir = os.path.join( results_path, "hidden_clustering" )
+  save_dir = os.path.join( results_path, "hallmark_clustering" )
   check_and_mkdir(save_dir)
   z_dir = os.path.join( save_dir, "z_pics" )
   check_and_mkdir(z_dir)
