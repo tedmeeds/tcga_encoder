@@ -324,8 +324,12 @@ def main( data_location, results_location ):
     
     times = S_cohort["T"].values
     events = S_cohort["E"].values
-    results = multivariate_logrank_test(times, groups=kmeans_patients_labels, event_observed=events )
-    
+    if len(np.unique(kmeans_patients_labels))>0:
+      results = multivariate_logrank_test(times, groups=kmeans_patients_labels, event_observed=events )
+      p_value = results.p_value
+    else:
+      p_value = 1
+      
     f = pp.figure()
     ax= f.add_subplot(111)
     kmf = KaplanMeierFitter()
@@ -339,15 +343,10 @@ def main( data_location, results_location ):
       times = S_cohort_k["T"].values
       events = S_cohort_k["E"].values
     
-      if len(k_bcs) > 5:
-        kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
-        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp],ci_show=False)
-        #pdb.set_trace()
-    #kmf.fit(times[z2_fifth], event_observed=events[z2_fifth], label="rest"  )
-    #ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color='red')
-    #pp.title( "%s z%d  splits 1/5 v rest p-value = %g"%( tissue_name, z_idx, p_values_fifth[t_idx,z_idx]) )
-    pp.title("%s p-value = %0.5f"%(tissue_name,results.p_value))
-    pp.savefig( save_dir + "/%s_survival_%0.5f.png"%(tissue_name,results.p_value), format="png", dpi=300)
+      kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
+      ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp],ci_show=False)
+    pp.title("%s p-value = %0.5f"%(tissue_name,p_value))
+    pp.savefig( save_dir + "/%s_survival_%0.5f.png"%(tissue_name,p_value), format="png", dpi=300)
     
     
     #pdb.set_trace()
