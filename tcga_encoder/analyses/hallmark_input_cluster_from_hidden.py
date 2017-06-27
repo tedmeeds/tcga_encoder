@@ -384,11 +384,11 @@ def main( data_location, results_location ):
     meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index[:150], np.abs( meth_w_ordered.values[:150] ) )
     
     
-    rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:50]], rna_w_ordered.values[pos_rna[:50]] )
-    meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:50]], meth_w_ordered.values[pos_meth[:50]])
+    rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:20]], rna_w_ordered.values[pos_rna[:20]] )
+    meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:20]], meth_w_ordered.values[pos_meth[:20]])
     #
-    rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:50]], rna_w_ordered.values[neg_rna[:50]] )
-    meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:50]], meth_w_ordered.values[neg_meth[:50]] )
+    rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:20]], rna_w_ordered.values[neg_rna[:20]] )
+    meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:20]], meth_w_ordered.values[neg_meth[:20]] )
 
     rna_readable.name="rna"
     meth_readable.name="meth"
@@ -411,7 +411,11 @@ def main( data_location, results_location ):
     
     #joined=joined.loc[maxvalues]
     #hjoined = joined[:25]
-    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False); 
+    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
+    max_ax = np.max( joined.values.flatten() )
+    min_ax = np.min( joined.values.flatten() )
+    max_ax = np.max( max_ax, -min_ax )
+    min_ax = -max_ax
     #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=True,stacked=True, sort_columns=False); 
     pp.suptitle( "H %d"%(z_idx))
     pp.savefig( h_dir + "/h%d_weighted.png"%(z_idx), format="png", dpi=300 )
