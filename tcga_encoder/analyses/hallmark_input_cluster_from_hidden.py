@@ -293,21 +293,15 @@ def main( data_location, results_location ):
     neg_rna = pp.find( rna_w_ordered.values<0) ; pos_rna = pp.find( rna_w_ordered.values>0)
     neg_meth = pp.find( meth_w_ordered.values<0) ; pos_meth = pp.find( meth_w_ordered.values>0) 
 
-    
-    #rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index, np.abs( rna_w_ordered.values)  )
-    #meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index, np.abs( meth_w_ordered.values ) )
-    #rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index[:50], np.abs( rna_w_ordered.values[:50])  )
-    #meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index[:50], np.abs( meth_w_ordered.values[:50] ) )
-
-    rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index[:150], np.abs( rna_w_ordered.values[:150])  )
-    meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index[:150], np.abs( meth_w_ordered.values[:150] ) )
+    rna_readable = pathway_info.CancerEnrichment(rna_w_ordered[:nbr].index, 1+0*np.abs( rna_w_ordered[:nbr].values)  )
+    meth_readable = pathway_info.CancerEnrichment(meth_w_ordered[:nbr].index, 1+0*np.abs( meth_w_ordered[:nbr].values ) )
     
     
-    rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:20]], rna_w_ordered.values[pos_rna[:20]] )
-    meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:20]], meth_w_ordered.values[pos_meth[:20]])
-    #
-    rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:20]], rna_w_ordered.values[neg_rna[:20]] )
-    meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:20]], meth_w_ordered.values[neg_meth[:20]] )
+    # rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:20]], 1+0*rna_w_ordered.values[pos_rna[:20]] )
+    # meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:20]], 1+0*meth_w_ordered.values[pos_meth[:20]])
+    # #
+    # rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:20]], -1+0*rna_w_ordered.values[neg_rna[:20]] )
+    # meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:20]], -1+0*meth_w_ordered.values[neg_meth[:20]] )
 
     rna_readable.name="rna"
     meth_readable.name="meth"
@@ -320,25 +314,26 @@ def main( data_location, results_location ):
     #joined = pd.concat( [rna_readable[:20],\
     #                     meth_readable[:20]], axis=1 )
                          
-    # joined = pd.concat( [rna_readable,\
-    #                      meth_readable], axis=1 )
+    joined = pd.concat( [rna_readable,\
+                         meth_readable], axis=1 )
                          
-    joined = pd.concat( [rna_readable_p,rna_readable_n,\
-                         meth_readable_p,meth_readable_n], axis=1 )
+    # joined = pd.concat( [rna_readable_p,rna_readable_n,\
+    #                      meth_readable_p,meth_readable_n], axis=1 )
     #
     # maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
     #
     # joined=joined.loc[maxvalues]
     # joined = joined[:25]
 
-    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
+    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
     
     max_ax = np.max( joined.values.flatten() )
     min_ax = np.min( joined.values.flatten() )
     max_ax = np.max( max_ax, -min_ax )
     min_ax = -max_ax
     #pdb.set_trace()
-    ax_pie1.set_xlim(min_ax,max_ax);
+    #ax_pie1.set_xlim(min_ax,max_ax);
     #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=True,stacked=True, sort_columns=False); 
     pp.suptitle( "Z %d"%(z_idx))
     pp.savefig( z_dir + "/z%d_weighted.png"%(z_idx), format="png", dpi=300 )
@@ -380,15 +375,15 @@ def main( data_location, results_location ):
 
     
     
-    rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index[:150], np.abs( rna_w_ordered.values[:150])  )
-    meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index[:150], np.abs( meth_w_ordered.values[:150] ) )
+    rna_readable = pathway_info.CancerEnrichment(rna_w_ordered[:nbr].index, 1+0*np.abs( rna_w_ordered[:nbr].values)  )
+    meth_readable = pathway_info.CancerEnrichment(meth_w_ordered[:nbr].index, 1+0*np.abs( meth_w_ordered[:nbr].values ) )
     
     
-    rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:20]], rna_w_ordered.values[pos_rna[:20]] )
-    meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:20]], meth_w_ordered.values[pos_meth[:20]])
-    #
-    rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:20]], rna_w_ordered.values[neg_rna[:20]] )
-    meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:20]], meth_w_ordered.values[neg_meth[:20]] )
+    # rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:20]], 1+0*rna_w_ordered.values[pos_rna[:20]] )
+    # meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:20]], 1+0*meth_w_ordered.values[pos_meth[:20]])
+    # #
+    # rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:20]], -1+0*rna_w_ordered.values[neg_rna[:20]] )
+    # meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:20]], -1+0*meth_w_ordered.values[neg_meth[:20]] )
 
     rna_readable.name="rna"
     meth_readable.name="meth"
@@ -401,17 +396,19 @@ def main( data_location, results_location ):
     #joined = pd.concat( [rna_readable[:20],\
     #                     meth_readable[:20]], axis=1 )
                          
-    # joined = pd.concat( [rna_readable,\
-    #                      meth_readable], axis=1 )
+    joined = pd.concat( [rna_readable,\
+                         meth_readable], axis=1 )
                          
-    joined = pd.concat( [rna_readable_p,rna_readable_n,\
-                         meth_readable_p,meth_readable_n], axis=1 )
-    
-    #maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
-    
-    #joined=joined.loc[maxvalues]
-    #hjoined = joined[:25]
-    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
+    # joined = pd.concat( [rna_readable_p,rna_readable_n,\
+    #                      meth_readable_p,meth_readable_n], axis=1 )
+    #
+    # maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
+    #
+    # joined=joined.loc[maxvalues]
+    # joined = joined[:25]
+
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
+    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
     max_ax = np.max( joined.values.flatten() )
     min_ax = np.min( joined.values.flatten() )
     max_ax = np.max( max_ax, -min_ax )
