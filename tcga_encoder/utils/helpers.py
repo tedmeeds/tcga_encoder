@@ -9,7 +9,7 @@ from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.model_selection import KFold
 from collections import *
 import itertools
-
+import pdb
 def xval_folds( n, K, randomize = False, seed = None ):
   if randomize is True:
     print("XVAL RANDOMLY PERMUTING")
@@ -38,6 +38,29 @@ def chunks(l, n):
   for i in xrange(0, len(l), n):
     yield l[i:i + n]
         
+def load_gmt( filename ):
+  with open(filename, 'r') as f:
+    pathway2genes = OrderedDict()
+    gene2pathways = OrderedDict()
+    for line in f.readlines():
+      splits = line.split("\t")
+      splits[-1] = splits[-1].rstrip("\n")
+      
+      #pdb.set_trace()
+      if splits[0][:9] == "HALLMARK_":
+        pathway = splits[0][9:]
+      link = splits[1]
+      genes = splits[2:]
+      
+      pathway2genes[ pathway ] = genes
+      for g in genes:
+        if gene2pathways.has_key( g ):
+          gene2pathways[g].append( pathway )
+        else:
+          gene2pathways[g] = [pathway]
+      
+    return pathway2genes, gene2pathways
+  
 def load_yaml( filename ):
   with open(filename, 'r') as f:
     data = yaml.load(f)
