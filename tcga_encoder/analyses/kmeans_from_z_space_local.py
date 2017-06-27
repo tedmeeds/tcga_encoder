@@ -131,7 +131,8 @@ def main( data_location, results_location ):
       z_idx_order = argsort_Z[:,z_idx] 
       Z_quantized[ z_idx_order[start_q:end_q], z_idx] = start_q_id
     start_q_id+=1
-    
+  
+  Z_quantized = Z  
   Z_quantized = pd.DataFrame(Z_quantized, index=barcodes, columns=z_names )
   Z_quantized.to_csv( save_dir + "/Z_quantized.csv")
   
