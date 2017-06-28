@@ -1828,7 +1828,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     self.model_store.close()
 
   def VizRecHidden(self, sess, info_dict ):
-    return
+    #return
     
     
     if self.network.HasLayer( "rec_hidden" ):
@@ -1909,67 +1909,83 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     #pp.show()
     
-    cmap = sns.diverging_palette(h_neg=210, h_pos=350, s=90, l=30, as_cmap=True)
+    #pdb.set_trace()
+    #cmap = sns.diverging_palette(h_neg=210, h_pos=350, s=90, l=30, as_cmap=True)
     
-    W_all = pd.concat( W.values(), axis=0 )
-    rownames = W_all.index.values
-    
-    W_corr_hidden = W_all.corr()
-    W_corr_inputs = W_all.T.corr()
-    
-    f = pp.figure(figsize=(32,24))
-    ax=f.add_subplot(111)
-    # mask = np.zeros_like(W_corr, dtype=np.bool)
-    # mask[np.triu_indices_from(mask)] = True
-    
-    htmap = sns.clustermap ( W_corr_hidden, cmap=cmap, square=True )
-    #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
-    #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
-    
-    pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-    pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-    pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
-    pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
-    
-    pp.savefig( self.viz_hidden_weights + "_corr_heatmap_hidden.png", fmt="png", bbox_inches = "tight") 
-
-    f2 = pp.figure(figsize=(32,24))
-    ax2=f.add_subplot(111)
-    # mask = np.zeros_like(W_corr, dtype=np.bool)
-    # mask[np.triu_indices_from(mask)] = True
-    
-    htmap2 = sns.clustermap ( W_corr_inputs, cmap=cmap, square=True )
-    #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
-    #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
-    
-    pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-    pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-    pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
-    pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
-    
-    pp.savefig( self.viz_hidden_weights + "_corr_heatmap_inputs.png", fmt="png", bbox_inches = "tight") 
-
-    # f3 = pp.figure(figsize=(32,24))
-    # ax3=f.add_subplot(111)
-    # # mask = np.zeros_like(W_corr, dtype=np.bool)
-    # # mask[np.triu_indices_from(mask)] = True
+    # W_all = pd.concat( W.values(), axis=0 )
+    # rownames = W_all.index.values
     #
-    # htmap3 = sns.clustermap ( W_all, cmap=cmap, square=False )
+    # W_corr_hidden = W_all.corr()
+    # W_corr_inputs = W_all.T.corr()
+    
+    f = pp.figure(figsize=(12,24))
+    ax_rna=f.add_subplot(321)
+    ax_rna_sort=f.add_subplot(324)
+    ax_meth=f.add_subplot(322)
+    ax_meth_sort=f.add_subplot(325)
+    ax_mirna=f.add_subplot(323)
+    ax_mirna_sort=f.add_subplot(326)
+    
+    ax_rna.plot( W["RNA"].values, 'r-', lw=0.2 )
+    ax_meth.plot( W["METH"].values, 'b-', lw=0.2 )
+    ax_mirna.plot( W["miRNA"].values, 'g-', lw=0.2 )
+    
+    ax_rna_sort.plot( np.sort( W["RNA"].values, 0), 'r-', lw=0.2 )
+    ax_meth_sort.plot( np.sort( W["METH"].values, 0), 'b-', lw=0.2 )
+    ax_mirna_sort.plot(np.sort(  W["miRNA"].values, 0), 'g-', lw=0.2 )
+    
+    #ax_rna.plot( W["RNA"].values, 'k-', lw=0.2 )
+    # mask = np.zeros_like(W_corr, dtype=np.bool)
+    # mask[np.triu_indices_from(mask)] = True
+    
+    # htmap = sns.clustermap ( W_corr_hidden, cmap=cmap, square=True )
     # #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
     # #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
     #
-    # pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-    # pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-    # pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
-    # pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
-    #
-    # pp.savefig( self.viz_hidden_weights + "_weights_heatmap.png", fmt="png", bbox_inches = "tight")
-    #
-    #
-    # 
-    #pdb.set_trace() 
-    # 
+    # pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    # pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    # pp.setp(htmap.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+    # pp.setp(htmap.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
     
+    pp.savefig( self.viz_hidden_weights + "_sorted_hidden.png", fmt="png", bbox_inches = "tight") 
+
+    # f2 = pp.figure(figsize=(32,24))
+    # ax2=f.add_subplot(111)
+    # # mask = np.zeros_like(W_corr, dtype=np.bool)
+    # # mask[np.triu_indices_from(mask)] = True
+    #
+    # htmap2 = sns.clustermap ( W_corr_inputs, cmap=cmap, square=True )
+    # #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
+    # #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
+    
+    # pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    # pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    # pp.setp(htmap2.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+    # pp.setp(htmap2.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+    #
+    # pp.savefig( self.viz_hidden_weights + "_corr_heatmap_inputs.png", fmt="png", bbox_inches = "tight")
+    #
+    # # f3 = pp.figure(figsize=(32,24))
+    # # ax3=f.add_subplot(111)
+    # # # mask = np.zeros_like(W_corr, dtype=np.bool)
+    # # # mask[np.triu_indices_from(mask)] = True
+    # #
+    # # htmap3 = sns.clustermap ( W_all, cmap=cmap, square=False )
+    # # #htmap.set_yticklabels( list(rownames), rotation='horizontal', fontsize=8 )
+    # # #htmap.set_xticklabels( list(rownames), rotation='vertical', fontsize=8 )
+    # #
+    # # pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    # # pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    # # pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=8)
+    # # pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=8)
+    # #
+    # # pp.savefig( self.viz_hidden_weights + "_weights_heatmap.png", fmt="png", bbox_inches = "tight")
+    # #
+    # #
+    # #
+    # #pdb.set_trace()
+    # #
+    #
           
   def VizModel( self, sess, info_dict ): 
     print "** VIZ Model"
