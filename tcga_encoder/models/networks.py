@@ -582,6 +582,7 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
     self.arch = arch_dict
     self.anti_weight = arch_dict["anti_weight"]
     
+    self.train_penalty_factor = tf.placeholder( tf.float32, [], name = "train_penalty_factor" )
     #self.beta       = tf.placeholder( tf.float32, [], name="beta" )
     #self.free_bits = tf.placeholder( tf.float32, [], name="free_bits" )
     
@@ -630,7 +631,7 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
     self.log_p_t_given_z_neg = tf.reduce_sum( self.loglikes_neg_target_as_matrix.values(), name = "log_p_t_given_z_neg" )
     
     #self.lower_bound = self.log_p_x_given_z + self.log_p_z - self.log_q_z
-    self.lower_bound = self.log_p_x_given_z + self.log_p_z - self.log_q_z 
+    self.lower_bound = self.log_p_x_given_z + self.train_penalty_factor*(self.log_p_z - self.log_q_z)
      
     self.batch_log_tensors = [self.lower_bound,self.log_p_x_given_z,self.log_p_z,self.log_q_z]
     self.batch_log_tensors.extend( self.log_p_source_given_z )
@@ -643,9 +644,9 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
   def CostToMinimize(self):
     if self.anti_weight > 0:
       print "ANTI WEIGHT = ",self.anti_weight
-      return -self.lower_bound + self.weight_penalty + self.anti_weight*self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
+      return -self.lower_bound + self.train_penalty_factor*(self.weight_penalty + self.anti_weight*self.log_p_t_given_z_neg) - self.log_p_t_given_z_pos
     else:
-      return -self.lower_bound + self.weight_penalty + self.anti_weight*self.log_p_t_given_z_neg - self.log_p_t_given_z_pos
+      return -self.lower_bound + self.train_penalty_factor*self.weight_penalty - self.log_p_t_given_z_pos
       
  
   def FillFeedDict( self, feed_dict, imputation_dict ):
@@ -655,9 +656,9 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
         feed_dict[ self.GetTensor(name) ]  = imputed_values
       elif self.HasDropout( name ):
         feed_dict[ self.GetDropout(name).GetKeepRateTensor() ]  = imputed_values
-    # if imputation_dict.has_key("beta"):
-    #   #print "filling beta"
-    #   feed_dict[self.beta] = imputation_dict["beta"]
+    if imputation_dict.has_key("train_penalty_factor"):
+      #print "filling beta"
+      feed_dict[self.train_penalty_factor] = imputation_dict["train_penalty_factor"]
     # if imputation_dict.has_key("free_bits"):
     #   #print "filling beta"
     #   feed_dict[self.free_bits] = imputation_dict["free_bits"]

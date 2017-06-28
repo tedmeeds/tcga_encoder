@@ -52,7 +52,19 @@ class TCGABatcherABC( object ):
     self.var_dict       = self.arch_dict[VARIABLES]
     self.default_store_mode   = default_store_mode
     self.validation_tissues = data_dict["validation_tissues"]
-    self.batcher_rates = [0.25,0.90,0.1] # A    
+    self.batcher_rates = [0.25,0.90,0.1] # A   
+
+    
+    self.train_penalty_init   = 1.0
+    self.train_penalty_update = 0.0
+    if self.var_dict.has_key("train_penalty_init"):
+      self.train_penalty_init   = self.var_dict["train_penalty_init"]
+      print "Setting train penalty init to ",self.train_penalty_init
+    if self.var_dict.has_key("train_penalty_update"):
+      self.train_penalty_update   = self.var_dict["train_penalty_update"]
+      print "Setting train penalty update to ",self.train_penalty_update
+    self.train_penalty_factor = self.train_penalty_init
+    
     self.Initialize()
     
     # these are tissues that have 0 or only tiny fully observed
@@ -623,6 +635,11 @@ class TCGABatcherABC( object ):
     elif function_name == TEST_FILL:
       self.TestFill2( sess, cb_info )
       self.TestFillZ( sess, cb_info )
+    
+    elif function_name == "train_penalty_update":
+      self.train_penalty_factor += self.train_penalty_update
+      self.train_penalty_factor = np.min(1.0,self.train_penalty_factor)
+      print 'train penalty = ', self.train_penalty_factor
       #self.TrainFillZ( sess, cb_info )
       
     # elif function_name == "beta":
@@ -1699,6 +1716,8 @@ class TCGABatcherABC( object ):
     
     batch[DNA_OBSERVATIONS] = batch_observed[ :, self.observed_source2idx[DNA] ]
     
+    batch[ "train_penalty_factor"] = float( self.train_penalty_factor )
+    
     for layer_name, layer in self.network.layers.iteritems():
       #print layer_name, layer  
       if layer_name == RNA_INPUT:
@@ -1974,7 +1993,7 @@ class TCGABatcherABC( object ):
         #print "** setting dropout keep rate"
         batch[ layer_name ] = self.keep_rates[ layer_name ]
         
-        
+    #pdb.set_trace()    
     return batch            
     
   def NormalizeMethInput( self, X ):
