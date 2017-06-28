@@ -638,7 +638,7 @@ class TCGABatcherABC( object ):
     
     elif function_name == "train_penalty_update":
       self.train_penalty_factor += self.train_penalty_update
-      self.train_penalty_factor = np.min(1.0,self.train_penalty_factor)
+      self.train_penalty_factor = np.minimum(1.0,self.train_penalty_factor)
       print 'train penalty = ', self.train_penalty_factor
       #self.TrainFillZ( sess, cb_info )
       
