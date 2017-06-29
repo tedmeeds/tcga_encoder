@@ -17,7 +17,8 @@ from lifelines.datasets import load_regression_dataset
 from lifelines.utils import k_fold_cross_validation
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test, multivariate_logrank_test
-from tcga_encoder.analyses.biclustering.interface import Biclustering
+#from tcga_encoder.analyses.biclustering.interface import Biclustering
+from sklearn.cluster.bicluster import SpectralBiclustering
 # cloudy blue  #acc2d9
 # dark pastel green  #56ae57
 # dust  #b2996e
@@ -216,7 +217,7 @@ def main( data_location, results_location ):
   n = len(Z)
   n_tissues = len(tissue_names)
   K_p = 8
-  K_z = 15
+  K_z = 10
   k_pallette = sns.hls_palette(K_p)
   
   # K_ps = [2,5,10,15,20]
@@ -225,14 +226,17 @@ def main( data_location, results_location ):
   #   global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
   #   fit.append( global_kmeans_patients.inertia_)
   #   print fit
-  bic_model = Biclustering().fit(Z_quantized.values)
+  #bic_model = Biclustering().fit(Z_quantized.values)
+  bic_model = SpectralBiclustering(n_clusters=(K_p,K_z), random_state=0)
+  bic_model.fit(Z_quantized.values)
+  
   #patients_cluster_centers_indices = af_patients.cluster_centers_indices_
   global_kmeans_patients_labels = bic_model.row_labels_
-  global_kmeans_z_labels        = bic_model.col_labels_
+  global_kmeans_z_labels        = bic_model.column_labels_
 
   #pdb.set_trace()
-  K_p = len(np.unique(kmeans_patients_labels))
-  K_z = len(np.unique(kmeans_z_labels))
+  K_p = len(np.unique(global_kmeans_patients_labels))
+  K_z = len(np.unique(global_kmeans_z_labels))
   
   
   # global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
@@ -241,19 +245,19 @@ def main( data_location, results_location ):
   # global_kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_quantized.values.T)
   # global_kmeans_z_labels = global_kmeans_z.labels_
 
-  bicluster_means = np.zeros( (K_p,K_z), dtype=float )
-  for kp in range(K_p):
-    ip = pp.find( global_kmeans_patients_labels==kp )
-    z_p = Z_quantized.values[ip,:]
-    for kz in range(K_z):
-      iz = pp.find( global_kmeans_z_labels==kz )
-      z_pz = z_p[:,iz]
-      bicluster_means[kp,kz]=z_pz.mean()
-  
-  spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
-  spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
-  order_rows = np.argsort(spread_rows)
-  order_cols = np.argsort(spread_cols)
+  # bicluster_means = np.zeros( (K_p,K_z), dtype=float )
+  # for kp in range(K_p):
+  #   ip = pp.find( global_kmeans_patients_labels==kp )
+  #   z_p = Z_quantized.values[ip,:]
+  #   for kz in range(K_z):
+  #     iz = pp.find( global_kmeans_z_labels==kz )
+  #     z_pz = z_p[:,iz]
+  #     bicluster_means[kp,kz]=z_pz.mean()
+  #
+  # spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
+  # spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
+  order_rows = np.argsort(np.unique(global_kmeans_patients_labels))
+  order_cols = np.argsort(np.unique(global_kmeans_z_labels))
       
   for t_idx in range(n_tissues):
     tissue_name = tissue_names[t_idx]

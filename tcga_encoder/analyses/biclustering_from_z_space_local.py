@@ -19,7 +19,8 @@ from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test,multivariate_logrank_test
 
 from sklearn.cluster import AffinityPropagation
-from tcga_encoder.analyses.biclustering.interface import Biclustering
+#from tcga_encoder.analyses.biclustering.interface import Biclustering
+from sklearn.cluster.bicluster import SpectralBiclustering
 # cloudy blue  #acc2d9
 # dark pastel green  #56ae57
 # dust  #b2996e
@@ -202,6 +203,8 @@ def main( data_location, results_location ):
   # af = AffinityPropagation(preference=-50).fit(X)
   # cluster_centers_indices = af.cluster_centers_indices_
   # labels = af.labels_
+  K_p = 5
+  K_z = 10
   
   n = len(Z)
   n_tissues = len(tissue_names)
@@ -215,18 +218,18 @@ def main( data_location, results_location ):
     t_ids_cohort = tissue_idx == t_idx
     n_tissue = np.sum(t_ids_cohort)
  
-    # if n_tissue < 50:
-    #   K_p = 2
-    # elif n_tissue < 100:
-    #   K_p = 3
-    # elif n_tissue < 200:
-    #   K_p =4
-    # elif n_tissue < 400:
-    #   K_p = 5
-    # elif n_tissue < 800:
-    #   K_p = 6
-    # else:
-    #   K_p = 7
+    if n_tissue < 50:
+      K_p = 3
+    elif n_tissue < 100:
+      K_p = 4
+    elif n_tissue < 200:
+      K_p =5
+    elif n_tissue < 400:
+      K_p = 6
+    elif n_tissue < 800:
+      K_p = 7
+    else:
+      K_p = 8
       
     
     
@@ -236,11 +239,13 @@ def main( data_location, results_location ):
     Z_cohort = Z_quantized[ t_ids_cohort ]
     
     bcs = barcodes[t_ids_cohort]
+    bic_model = SpectralBiclustering(n_clusters=(K_p,K_z), random_state=0)
+    bic_model.fit(Z_cohort.values)
     
-    bic_model = Biclustering().fit(Z_cohort.values)
+    #bic_model = Biclustering().fit(Z_cohort.values)
     #patients_cluster_centers_indices = af_patients.cluster_centers_indices_
     kmeans_patients_labels = bic_model.row_labels_
-    kmeans_z_labels        = bic_model.col_labels_
+    kmeans_z_labels        = bic_model.column_labels_
 
     #pdb.set_trace()
     K_p = len(np.unique(kmeans_patients_labels))
@@ -253,22 +258,22 @@ def main( data_location, results_location ):
     
     k_pallette = sns.hls_palette(K_p)
     
-    bicluster_means = np.zeros( (K_p,K_z), dtype=float )
-    for kp in range(K_p):
-      ip = pp.find( kmeans_patients_labels==kp )
-      z_p = Z_cohort.values[ip,:]
-      for kz in range(K_z):
-        iz = pp.find( kmeans_z_labels==kz )
-        z_pz = z_p[:,iz]
-        bicluster_means[kp,kz]=z_pz.mean()
+    # bicluster_means = np.zeros( (K_p,K_z), dtype=float )
+    # for kp in range(K_p):
+    #   ip = pp.find( kmeans_patients_labels==kp )
+    #   z_p = Z_cohort.values[ip,:]
+    #   for kz in range(K_z):
+    #     iz = pp.find( kmeans_z_labels==kz )
+    #     z_pz = z_p[:,iz]
+    #     bicluster_means[kp,kz]=z_pz.mean()
+    #
+    # spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
+    # spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
+    # order_rows = np.argsort(spread_rows)
+    # order_cols = np.argsort(spread_cols)
     
-    spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
-    spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
-    order_rows = np.argsort(spread_rows)
-    order_cols = np.argsort(spread_cols)
-    
-    kmeans_patients_labels = [order_rows[idx] for idx in kmeans_patients_labels]
-    kmeans_z_labels = [order_cols[idx] for idx in kmeans_z_labels]
+    #kmeans_patients_labels = [order_rows[idx] for idx in kmeans_patients_labels]
+    #kmeans_z_labels = [order_cols[idx] for idx in kmeans_z_labels]
     #pdb.set_trace()
   
     order_labels = np.argsort(kmeans_patients_labels)

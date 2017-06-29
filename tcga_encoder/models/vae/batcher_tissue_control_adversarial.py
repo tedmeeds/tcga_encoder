@@ -581,12 +581,12 @@ class TCGABatcherAdversarial( TCGABatcher ):
           
           if len(loglik) == 0:
             continue
-          pp.plot( epochs, loglik, 'v-', \
-                 color=self.source2mediumcolor[prior_source],\
-                 mec=self.source2darkcolor[prior_source], mew=1, \
-                 mfc=self.source2lightcolor[prior_source], lw=2, \
-                 ms = 8, \
-                 label="Val prior (%0.6f)"%(loglik[-1]) )
+          # pp.plot( epochs, loglik, 'v-', \
+          #        color=self.source2mediumcolor[prior_source],\
+          #        mec=self.source2darkcolor[prior_source], mew=1, \
+          #        mfc=self.source2lightcolor[prior_source], lw=2, \
+          #        ms = 8, \
+          #        label="Val prior (%0.6f)"%(loglik[-1]) )
         
       
       if idx==0:

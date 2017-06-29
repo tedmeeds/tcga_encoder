@@ -208,6 +208,39 @@ def main( data_location, results_location ):
   W_hidden = get_hidden_weights( model_store, input_sources, data_store )
   W_hidden2z = get_hidden2z_weights( model_store )
   
+  size_per_unit = 0.25
+  size1 = max( int( W_hidden["RNA"].values.shape[0]*size_per_unit ), 12 )
+  #size2 = max( int( n_inputs*size_per_unit ), 12 )
+  cmap = sns.palplot(sns.light_palette((260, 75, 60), input="husl"))
+  htmap3 = sns.clustermap ( W_hidden["RNA"].T.corr(), cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_rna_clustermap.png", fmt="png", bbox_inches = "tight")
+
+  htmap3 = sns.clustermap ( W_hidden["miRNA"].T.corr(), cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_mirna_clustermap.png", fmt="png", bbox_inches = "tight")
+
+  htmap3 = sns.clustermap ( W_hidden["METH"].T.corr(), cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_meth_clustermap.png", fmt="png", bbox_inches = "tight")
+
+  
+  #pdb.set_trace()
   weighted_z = join_weights( W_hidden2z, W_hidden )
   
   #pdb.set_trace()
@@ -255,6 +288,8 @@ def main( data_location, results_location ):
     X -= X.mean(0)
     X /= X.std(0)
     meth_normed[t_query] = X
+  
+  pdb.set_trace()
     
   nbr = 20
   Z_keep_rna=[]
