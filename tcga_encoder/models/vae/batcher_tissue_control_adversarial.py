@@ -1860,7 +1860,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     idx=1
     
     W = {}
-    for w_idx, input_source in zip( range(n_sources-1), input_sources[:-1] ):
+    for w_idx, input_source in zip( range(n_sources), input_sources ):
       w = self.model_store[ "rec_hidden" + "/W/w%d"%(w_idx)].values
       #pdb.set_trace()
       
@@ -1909,7 +1909,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     #pp.show()
     
-    pdb.set_trace()
+    #pdb.set_trace()
     #cmap = sns.diverging_palette(h_neg=210, h_pos=350, s=90, l=30, as_cmap=True)
     
     # W_all = pd.concat( W.values(), axis=0 )
