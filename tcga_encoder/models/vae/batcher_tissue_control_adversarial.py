@@ -1909,7 +1909,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     #pp.show()
     
-    #pdb.set_trace()
+    pdb.set_trace()
     #cmap = sns.diverging_palette(h_neg=210, h_pos=350, s=90, l=30, as_cmap=True)
     
     # W_all = pd.concat( W.values(), axis=0 )
