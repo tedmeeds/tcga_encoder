@@ -5,20 +5,21 @@ from tcga_encoder.analyses.biclustering.bic_data import *
 from tcga_encoder.analyses.biclustering.bic_math import *
 
 class Biclustering(object):
-  def __init__(self, iters = 20, type = "gauss", maximize = True ):
+  def __init__(self, iters = 10, type = "gauss", maximize = True, is_sparse = False, missing=-1 ):
     self.simulationspecs          = SimulationSpecs()
     self.type = type
         
+    self.missing_value = missing
     self.simulationspecs.nMCMC    = iters
     self.simulationspecs.nBurnIn  = 0
-    self.simulationspecs.nSplitMergeMove = 5
+    self.simulationspecs.nSplitMergeMove = 2
     self.simulationspecs.nAdjustedMove   = 0
-    self.simulationspecs.nSamplesForNew  = 5
+    self.simulationspecs.nSamplesForNew  = 1
     self.simulationspecs.bMaximize       = maximize
 
     self.clusteringPrior                  = ClusteringPrior()
-    self.clusteringPrior.bUseRowBias      = 1   # use row cluster parameters
-    self.clusteringPrior.bUseColumnBias   = 1   # use column cluster parameters
+    self.clusteringPrior.bUseRowBias      = 0   # use row cluster parameters
+    self.clusteringPrior.bUseColumnBias   = 0   # use column cluster parameters
     self.clusteringPrior.bUseBicluster    = 1   # use block-constant bicluster parameters
     self.clusteringPrior.row_hyper        = ClusterHyperPrior( conc_a = 1.5, conc_b = 1.0 )
     self.clusteringPrior.col_hyper        = ClusterHyperPrior( conc_a = 1.5, conc_b = 1.0 )
@@ -30,7 +31,7 @@ class Biclustering(object):
     self.modelPrior                   = BiclusteringPrior()
     #modelPrior.biclusterType     = 'ConjugateGaussianBicluster'
     self.modelPrior.biclusterType     = 'NonConjugateGaussianBicluster'
-    self.bSparse = False
+    self.bSparse = is_sparse
     self.modelPrior.offset_hyper      = GaussianHyperparams( dof_a = 10.0, dof_b = 1.0, expprec_a = 10.0, expprec_b = 1.0 )
     self.modelPrior.bic_hyper         = GaussianHyperparams( dof_a = 1.0, dof_b = 1.0, expprec_a = 1.0, expprec_b = 1.0 )
     self.modelPrior.row_hyper         = GaussianHyperparams( dof_a = 1.0, dof_b = 1.0, expprec_a = 1.0, expprec_b = 1.0 )
@@ -42,8 +43,11 @@ class Biclustering(object):
     self.modelPrior.colcluster_params = GaussianParams( mu_base = 0.0, degreesOfFreedom = 2.0, expPrec = 1.0, dataPrecConst = 1.0, muPrecConst = 1.0, bSparse = self.bSparse )
     
     
-  def fit( self, X ):
-    self.dataset = BiclusteringFullData( X )
+  def fit( self, X  ):
+    if self.bSparse is True:
+      self.dataset = BiclusteringFullData( X,  missing=self.missing_value )
+    else:
+      self.dataset = BiclusteringFullData( X )
     self.M = BuildModel( self.modelPrior, self.clusteringPrior, self.dataset  ) 
     self.M.Init()
     self.M.simspecs = self.simulationspecs
@@ -58,6 +62,7 @@ class Biclustering(object):
 
         self.row_labels_ = self.M.U
         self.col_labels_ = self.M.V
+        self.column_labels_ = self.col_labels_
         #self.M.Show(self.simulationspecs.outdir, t)
         
         # U = M.U

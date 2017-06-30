@@ -3,6 +3,7 @@ from tcga_encoder.data.data import *
 from tcga_encoder.definitions.tcga import *
 #from tcga_encoder.definitions.nn import *
 from tcga_encoder.definitions.locations import *
+from scipy import sparse
 #from tcga_encoder.algorithms import *
 import seaborn as sns
 from sklearn.manifold import TSNE, locally_linear_embedding
@@ -19,8 +20,8 @@ from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test,multivariate_logrank_test
 
 from sklearn.cluster import AffinityPropagation
-#from tcga_encoder.analyses.biclustering.interface import Biclustering
-from sklearn.cluster.bicluster import SpectralBiclustering
+from tcga_encoder.analyses.biclustering.interface import Biclustering
+#from sklearn.cluster.bicluster import SpectralBiclustering
 # cloudy blue  #acc2d9
 # dark pastel green  #56ae57
 # dust  #b2996e
@@ -98,7 +99,7 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  save_dir = os.path.join( results_path, "biclustering_with_z_local" )
+  save_dir = os.path.join( results_path, "biclustering_with_z_local_sparse_bic_only" )
   check_and_mkdir(save_dir)
   size_per_unit = 0.25
   print "HOME_DIR: ", HOME_DIR
@@ -121,8 +122,9 @@ def main( data_location, results_location ):
   barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
   #quantiles = (len(Z)*np.array( [0,0.33, 0.66, 1.0] )).astype(int)
   #quantiles = (len(Z)*np.array( [0,0.2, 0.4,0.6,0.8,1.0] )).astype(int)
-  quantiles = (len(Z)*np.array( [0,0.2,0.8,1.0] )).astype(int)
+  #quantiles = (len(Z)*np.array( [0,0.2,0.8,1.0] )).astype(int)
   #quantiles = (len(Z)*np.array( [0,0.1, 0.2,0.3,0.4,0.6,0.7,0.8,0.9,1.0] )).astype(int)
+  quantiles = (len(Z)*np.array( [0,0.1,0.9,1.0] )).astype(int)
   n_quantiles = len(quantiles)-1
   start_q_id = -(n_quantiles-1)/2
   Z=Z.loc[barcodes]
@@ -240,10 +242,13 @@ def main( data_location, results_location ):
     Z_cohort = Z_quantized[ t_ids_cohort ]
     
     bcs = barcodes[t_ids_cohort]
-    bic_model = SpectralBiclustering(n_clusters=(K_p,K_z), random_state=0)
-    bic_model.fit(Z_cohort.values)
+    #bic_model = SpectralBiclustering(n_clusters=(K_p,K_z), random_state=0)
+    #bic_model.fit(Z_cohort.values)
     
-    #bic_model = Biclustering().fit(Z_cohort.values)
+    Z_sparse  = Z_cohort.values #sparse.dok_matrix(Z_cohort.values )
+    
+    bic_model = Biclustering(is_sparse=True, missing=0.0).fit(Z_sparse)
+    #pdb.set_trace()
     #patients_cluster_centers_indices = af_patients.cluster_centers_indices_
     kmeans_patients_labels = bic_model.row_labels_
     kmeans_z_labels        = bic_model.column_labels_
@@ -258,25 +263,7 @@ def main( data_location, results_location ):
     # K_z = len(z_cluster_centers_indices)
     
     k_pallette = sns.hls_palette(K_p)
-    
-    # bicluster_means = np.zeros( (K_p,K_z), dtype=float )
-    # for kp in range(K_p):
-    #   ip = pp.find( kmeans_patients_labels==kp )
-    #   z_p = Z_cohort.values[ip,:]
-    #   for kz in range(K_z):
-    #     iz = pp.find( kmeans_z_labels==kz )
-    #     z_pz = z_p[:,iz]
-    #     bicluster_means[kp,kz]=z_pz.mean()
-    #
-    # spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
-    # spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
-    # order_rows = np.argsort(spread_rows)
-    # order_cols = np.argsort(spread_cols)
-    
-    #kmeans_patients_labels = [order_rows[idx] for idx in kmeans_patients_labels]
-    #kmeans_z_labels = [order_cols[idx] for idx in kmeans_z_labels]
-    #pdb.set_trace()
-  
+
     order_labels = np.argsort(kmeans_patients_labels)
     order_labels_z = np.argsort(kmeans_z_labels)
     sorted_Z = pd.DataFrame( Z_cohort.values[order_labels,:], index=Z_cohort.index[order_labels], columns=Z_cohort.columns)

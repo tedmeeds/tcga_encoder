@@ -118,8 +118,8 @@ def main( data_location, results_location ):
   
   barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
   quantiles = (len(Z)*np.array( [0,0.33, 0.66, 1.0] )).astype(int)
-  #quantiles = (len(Z)*np.array( [0,0.2, 0.4,0.6,0.8,1.0] )).astype(int)
-  quantiles = (len(Z)*np.array( [0,0.1, 0.2,0.3,0.4,0.6,0.7,0.8,0.9,1.0] )).astype(int)
+  quantiles = (len(Z)*np.array( [0,0.2,0.8,1.0] )).astype(int)
+  #quantiles = (len(Z)*np.array( [0,0.1, 0.2,0.3,0.4,0.6,0.7,0.8,0.9,1.0] )).astype(int)
   n_quantiles = len(quantiles)-1
   start_q_id = -(n_quantiles-1)/2
   Z=Z.loc[barcodes]
