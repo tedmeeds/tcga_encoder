@@ -192,12 +192,12 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
     if True:
       noise=0.0001
-      W = network.GetLayer( "rec_hidden" ).EvalWeights() 
-      W2=[]
+      W = network.GetLayer( "rec_hidden" ).GetWeights() 
+      #W2=[]
       for w in W:
-        w = w + (noise*np.random.randn( w.shape[0],w.shape[1] )).astype(np.float32)
-        W2.append(w)
-      network.GetLayer( "rec_hidden" ).SetWeights( sess, W2 )
+        w = w + tf.random_normal( w.shape, noise ) #*np.random.randn( w.shape[0],w.shape[1] )).astype(np.float32)
+        #W2.append(w)
+      #network.GetLayer( "rec_hidden" ).SetWeights( sess, W2 )
 
       # W = network.GetLayer( "rec_z_space" ).EvalWeights()
       # W2=[]
