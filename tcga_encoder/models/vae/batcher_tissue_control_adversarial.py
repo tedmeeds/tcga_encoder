@@ -189,6 +189,37 @@ class TCGABatcherAdversarial( TCGABatcher ):
     return train_ops
     
   def PostStepDoWhatYouWant( self, sess, epoch, network, cb_info, train_ops_evals ):
+    
+    if True:
+      noise=0.000001
+      W = network.GetLayer( "rec_hidden" ).EvalWeights() 
+      W2=[]
+      for w in W:
+        w = w + (noise*np.random.randn( w.shape[0],w.shape[1] )).astype(np.float32)
+        W2.append(w)
+      network.GetLayer( "rec_hidden" ).SetWeights( sess, W2 )
+
+      W = network.GetLayer( "rec_z_space" ).EvalWeights() 
+      W2=[]
+      for w in W:
+        w = w + (noise*np.random.randn( w.shape[0],w.shape[1] )).astype(np.float32)
+        W2.append(w)
+      network.GetLayer( "rec_z_space" ).SetWeights( sess, W2 )
+
+      W = network.GetLayer( "gen_hidden" ).EvalWeights() 
+      W2=[]
+      for w in W:
+        w = w + (noise*np.random.randn( w.shape[0],w.shape[1] )).astype(np.float32)
+        W2.append(w)
+      network.GetLayer( "gen_hidden" ).SetWeights( sess, W2 )
+            
+      # "rec_z_space"
+      # "gen_hidden"
+      # "gen_mirna_space",0
+      # "gen_rna_space",0
+      # "gen_meth_space",0
+      # network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
+      #
     network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
     network.GetLayer( "target_prediction_neg" ).SetBiases( sess, network.GetLayer( "target_prediction_pos" ).EvalBiases() )
     

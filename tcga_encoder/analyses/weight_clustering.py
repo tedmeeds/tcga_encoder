@@ -15,6 +15,118 @@ from scipy.spatial.distance import squareform
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
 import networkx as nx
+import json
+from networkx.readwrite import json_graph
+size_per_unit=0.25
+
+def process_source( save_dir, source, w, percent_weights, prefix="" ):
+  #corr = w.T.corr()
+  sorted_flattened = np.sort( np.abs(w.values.flatten()) )
+  n = len(sorted_flattened)
+  threshold = sorted_flattened[ - int( float(n)*percent_weights) ]
+  
+  #w = w[ np.abs(w) >= threshold ].fillna(0)
+  
+  #w = np.sign(w)
+  #pdb.set_trace()
+  corr = w.T.corr()
+  corr.sort_index(inplace=True)
+  corr = corr[ corr.index.values ]
+  corr_v = corr.values
+  names = corr.columns
+  n_source = len(names)
+  size1 = max( min( 40, int( w.values.shape[0]*size_per_unit ) ), 12 )
+
+  size2 = max( min( 40, int( w.values.shape[0]*size_per_unit )), 12 )
+
+  
+  cmap = sns.palplot(sns.light_palette((260, 75, 60), input="husl"))
+  htmap3 = sns.clustermap ( corr, cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_%s_clustermap%s.png"%(source,prefix), fmt="png", bbox_inches = "tight")
+  
+  labels = [s.get_text() for s in htmap3.ax_heatmap.yaxis.get_majorticklabels()]
+  
+  corr = corr[labels]
+  corr = corr.loc[labels]
+  corr_v = corr.values
+  names = corr.columns
+  # csr = csr_matrix(np.triu(1.0-np.abs(meth_corr.values)))
+  # Tcsr = minimum_spanning_tree(csr)
+  # as_mat = Tcsr.toarray()
+  #pdb.set_trace()
+  pp.figure(figsize=(45,45))
+  
+  tau = 0.5
+  G=nx.Graph()
+  i=0
+  nodes = []
+  links = []
+  node_ids = OrderedDict()
+  flare = OrderedDict()
+  for i in xrange( n_source ):
+    x = corr_v[i]
+    name_i = names[i]
+    flare[name_i] = []
+    for j in xrange(n_source):
+      if j > i:
+        if np.abs( x[j] ) > tau:
+          name_j = names[j]
+          G.add_edge(name_i, name_j, weight = np.abs(x[j]) )
+          if node_ids.has_key(name_i) is False:
+            nodes.append( {"id":name_i})
+            node_ids[name_i] = 1
+            #flare[name_i] = []
+          if node_ids.has_key(name_j) is False:
+            nodes.append( {"id":name_j})
+            node_ids[name_i] = 1
+          links.append( {"source":name_i,"target":name_j, "value":np.abs(x[j])} )
+          flare[name_i].append( name_j )
+
+  from networkx.drawing.nx_agraph import graphviz_layout
+  layout=graphviz_layout
+  #layout=nx.spectral_layout
+  pos=layout(G)
+  nx.draw(G,pos,
+              with_labels=True,
+              node_size=20, hold=False, node_color='b', alpha=0.25, font_size=12
+              )
+  d = json_graph.node_link_data(G)
+  json.dump({"nodes":nodes,"links":links}, open(save_dir+'/%s_force%s.json'%(source,prefix),'w'))
+  
+  # names = flare.keys()
+  # targets = flare.values()
+  # for target_list in targets:
+    
+  
+  flares=[]
+  targets = []
+  for name_i,list_j in flare.iteritems():
+    o=OrderedDict()
+    o["name"] = name_i
+    o["size"] =  100*len(list_j)
+    o["imports"] = list_j
+    flares.append( o )
+    
+    #targets.extend( )
+  
+   
+  json.dump(flares, open(save_dir+'/%s_flare%s.json'%(source,prefix),'w')) 
+  #from networkx.readwrite import json_graph
+  G.clear()
+  #pp.title("%s"%(tissue_name))
+  pp.savefig(save_dir + "/%s_mwst%s.png"%(source,prefix), fmt='png',dpi=300) 
+  
+  print " only doing one source now"
+  
+  
+
+
 def join_weights( W_hidden2z, W_hidden ):
   W = {}
   n_z = W_hidden2z.shape[1]
@@ -265,7 +377,7 @@ def main( data_location, results_location ):
   #pdb.set_trace()
   weighted_z = join_weights( W_hidden2z, W_hidden )
   #
-  # #pdb.set_trace()
+  #pdb.set_trace()
   # Z = np.vstack( (Z_train.values, Z_val.values) )
   # n_z = Z.shape[1]
   # #pdb.set_trace()
@@ -292,41 +404,19 @@ def main( data_location, results_location ):
   
   n_h = W_hidden2z.shape[0]
   
+  print "+++++++++++++++++++++++++++"
+  print " find weights that are significant together, not"
   W_hidden["RNA_miRNA"] = pd.concat( [W_hidden["RNA"],W_hidden["miRNA"] ],0 )
+  
+  percent_weights = 0.05
+  for source, w in weighted_z.iteritems():
+    
+    process_source( save_dir, source, w, percent_weights, prefix="_Z" )
+    
   for source, w in W_hidden.iteritems():
-  
-    corr = w.T.corr()
-    corr_v = corr.values
-    names = corr.columns
-    n_source = len(names)
-    # csr = csr_matrix(np.triu(1.0-np.abs(meth_corr.values)))
-    # Tcsr = minimum_spanning_tree(csr)
-    # as_mat = Tcsr.toarray()
-    # pdb.set_trace()
-    pp.figure(figsize=(45,45))
-  
-    tau = 0.8
-    G=nx.Graph()
-    i=0
-    for i in xrange( n_source ):
-      x = corr_v[i]
-      name_i = names[i]
-      for j in xrange(n_source):
-        if j > i:
-          if np.abs( x[j] ) > tau:
-            G.add_edge(name_i, names[j], weight = np.abs(x[j]) )
-
-    from networkx.drawing.nx_agraph import graphviz_layout
-    layout=graphviz_layout
-    #layout=nx.spectral_layout
-    pos=layout(G)
-    nx.draw(G,pos,
-                with_labels=True,
-                node_size=20, hold=False, node_color='b', alpha=0.25, font_size=12
-                )
-    G.clear()
-    #pp.title("%s"%(tissue_name))
-    pp.savefig(save_dir + "/%s_mwst.png"%(source), fmt='png',dpi=300) 
+    
+    process_source( save_dir, source, w, percent_weights )
+    #break
   pp.close('all')
   
   # rna_normed = rna; mirna_normed = mirna; meth_normed = meth; dna_normed=2*dna-1
