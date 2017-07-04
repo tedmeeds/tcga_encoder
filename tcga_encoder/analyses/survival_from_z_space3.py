@@ -236,12 +236,23 @@ def main( data_location, results_location ):
 
   #pp.close('all')
   #pdb.set_trace()
-  
-  return concordance_z_random.drop("gbm"), concordance_z_values.drop("gbm")
+  concordance_z_random.drop("gbm",inplace=True)
+  concordance_z_values.drop("gbm",inplace=True)
+  concordance_z_p_values = pd.DataFrame( np.ones( concordance_z_values.values.shape), \
+                                        index = concordance_z_values.index, \
+                                        columns = concordance_z_values.columns )
+                                        
+  for tissue in concordance_z_random.index.values:
+    v = concordance_z_values.loc[tissue].values
+    r = concordance_z_random.loc[tissue].values
+    
+    concordance_z_p_values.loc[tissue] = (1.0 + (v[:,np.newaxis]>r).sum(1))/(1.0+len(r))
+    
+  return concordance_z_random, concordance_z_values, concordance_z_p_values
   
 if __name__ == "__main__":
   
   data_location = sys.argv[1]
   results_location = sys.argv[2]
   
-  concordance_z_random, concordance_z_values = main( data_location, results_location )
+  concordance_z_random, concordance_z_values, concordance_z_p_values = main( data_location, results_location )
