@@ -105,7 +105,7 @@ def main( data_location, results_location ):
 
 
   n_tissues = len(tissue_names)
-  n_random = 500
+  n_random = 1000
   random_names = ["r_%d"%(trial_idx) for trial_idx in range(n_random)]
   
   
