@@ -117,11 +117,13 @@ def main( data_location, results_location ):
   
   concordance_z_values = pd.DataFrame( np.nan*np.ones((n_tissues,n_z) ), index = tissue_names, columns=z_names )
   concordance_z_random = pd.DataFrame( np.nan*np.ones((n_tissues,n_random) ), index = tissue_names, columns=random_names )
-  
+  concordance_z_values_xval = pd.DataFrame( np.nan*np.ones((n_tissues,n_z) ), index = tissue_names, columns=z_names )
   concordance_I_values = pd.DataFrame( np.nan*np.ones((n_tissues,n_z) ), index = tissue_names, columns=z_names )
   concordance_I_random = pd.DataFrame( np.nan*np.ones((n_tissues,n_random) ), index = tissue_names, columns=random_names )
   
-    
+  # cf = CoxPHFitter()
+  # scores = k_fold_cross_validation(cf, Z, 'T', event_col='E', k=5)
+  # pdb.set_trace()
   for t_idx in range(n_tissues):
 
     t_ids = tissue_idx == t_idx
@@ -138,19 +140,32 @@ def main( data_location, results_location ):
     times  = Z_tissue["T"]
     Z_values = Z_tissue[z_names].values
     
+    
     n_tissue = len(bcs)
     print "  using z_values"
     for z_idx in range(n_z):
       z = Z_values[:,z_idx]
+      z_data = Z_tissue[ ["z_%d"%(z_idx), "E","T"] ]
       I = np.argsort(z)
+      
+      
+      cf = CoxPHFitter()
+      scores = k_fold_cross_validation(cf, z_data, 'T', event_col='E', k=5)
+    
+      #pdb.set_trace()
+      
+      
       #print I,lifelines.utils.concordance_index(times.values[I], np.argsort(z), event_observed=events.values[I]) 
       #split_p_values[ split_nbr ]["z_%d"%(z_idx)].loc[tissue_name] = results.p_value
       
       #pdb.set_trace()
       #lifelines.utils.concordance_index 
       z_concordance = lifelines.utils.concordance_index(times[I], z, event_observed=events[I]) 
+      
+      #print z_concordance, np.mean(scores)
       z_concordance = max( z_concordance, 1.0-z_concordance )
       concordance_z_values["z_%d"%(z_idx)].loc[tissue_name] = z_concordance
+      concordance_z_values_xval["z_%d"%(z_idx)].loc[tissue_name] = np.mean(scores)
       #concordance_I_values["z_%d"%(z_idx)].loc[tissue_name] = lifelines.utils.concordance_index(times[I], 0.1*I, event_observed=events[I]) 
     #pdb.set_trace()
     print "  using random"
@@ -242,17 +257,23 @@ def main( data_location, results_location ):
                                         index = concordance_z_values.index, \
                                         columns = concordance_z_values.columns )
                                         
+  concordance_z_p_values_xval = pd.DataFrame( np.ones( concordance_z_values.values.shape), \
+                                        index = concordance_z_values.index, \
+                                        columns = concordance_z_values.columns )
+                                        
   for tissue in concordance_z_random.index.values:
     v = concordance_z_values.loc[tissue].values
     r = concordance_z_random.loc[tissue].values
+    vx = concordance_z_values_xval.loc[tissue].values
     
     concordance_z_p_values.loc[tissue] = (1.0 + (v[:,np.newaxis]>r).sum(1))/(1.0+len(r))
+    concordance_z_p_values_xval.loc[tissue] = (1.0 + (vx[:,np.newaxis]>r).sum(1))/(1.0+len(r))
     
-  return concordance_z_random, concordance_z_values, concordance_z_p_values
+  return concordance_z_random, concordance_z_values, concordance_z_p_values, concordance_z_p_values_xval
   
 if __name__ == "__main__":
   
   data_location = sys.argv[1]
   results_location = sys.argv[2]
   
-  concordance_z_random, concordance_z_values, concordance_z_p_values = main( data_location, results_location )
+  concordance_z_random, concordance_z_values, concordance_z_p_values, concordance_z_p_values_xval = main( data_location, results_location )
