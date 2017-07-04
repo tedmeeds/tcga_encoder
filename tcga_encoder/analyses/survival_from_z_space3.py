@@ -150,8 +150,11 @@ def main( data_location, results_location ):
       
       
       cf = CoxPHFitter()
-      scores = k_fold_cross_validation(cf, z_data, 'T', event_col='E', k=5)
-    
+      try:
+        scores = k_fold_cross_validation(cf, z_data, 'T', event_col='E', k=5)
+      except:
+        print "problem with %s"%tissue_name
+        scores = [0.5]
       #pdb.set_trace()
       
       
