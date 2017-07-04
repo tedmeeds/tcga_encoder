@@ -190,7 +190,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     
   def PostStepDoWhatYouWant( self, sess, epoch, network, cb_info, train_ops_evals ):
     
-    if True:
+    if False:
       noise=0.0001
       W = network.GetLayer( "rec_hidden" ).weights
       #W2=[]
