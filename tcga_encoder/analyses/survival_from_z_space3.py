@@ -280,4 +280,4 @@ if __name__ == "__main__":
   data_location = sys.argv[1]
   results_location = sys.argv[2]
   
-  concordance_z_random, concordance_z_values, concordance_z_p_values, concordance_z_p_values_xval = main( data_location, results_location )
+  concordance_z_random, concordance_z_values, concordance_z_p_values = main( data_location, results_location )
