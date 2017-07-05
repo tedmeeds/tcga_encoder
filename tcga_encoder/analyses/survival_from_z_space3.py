@@ -21,9 +21,9 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  survival_dir = os.path.join( results_path, "survival2" )
-  check_and_mkdir(survival_dir)
-  survival_curves_dir = os.path.join( survival_dir, "sig_curves" )
+  save_dir = os.path.join( results_path, "survival_concordance" )
+  check_and_mkdir(save_dir)
+  survival_curves_dir = os.path.join( save_dir, "sig_curves" )
   check_and_mkdir(survival_curves_dir)
   
   print "HOME_DIR: ", HOME_DIR
@@ -105,7 +105,7 @@ def main( data_location, results_location ):
 
 
   n_tissues = len(tissue_names)
-  n_random = 2000
+  n_random = 1000
   random_names = ["r_%d"%(trial_idx) for trial_idx in range(n_random)]
   
   
@@ -120,10 +120,14 @@ def main( data_location, results_location ):
   concordance_z_values_xval = pd.DataFrame( np.nan*np.ones((n_tissues,n_z) ), index = tissue_names, columns=z_names )
   concordance_I_values = pd.DataFrame( np.nan*np.ones((n_tissues,n_z) ), index = tissue_names, columns=z_names )
   concordance_I_random = pd.DataFrame( np.nan*np.ones((n_tissues,n_random) ), index = tissue_names, columns=random_names )
-  
+
+  concordance_z_p_values = pd.DataFrame( np.ones( (n_tissues,n_z) ), \
+                                        index = tissue_names, \
+                                        columns = z_names )
   # cf = CoxPHFitter()
   # scores = k_fold_cross_validation(cf, Z, 'T', event_col='E', k=5)
   # pdb.set_trace()
+  split_nbr = 3
   for t_idx in range(n_tissues):
 
     t_ids = tissue_idx == t_idx
@@ -147,30 +151,10 @@ def main( data_location, results_location ):
       z = Z_values[:,z_idx]
       z_data = Z_tissue[ ["z_%d"%(z_idx), "E","T"] ]
       I = np.argsort(z)
-      
-      
-      # cf = CoxPHFitter()
-      # try:
-      #   scores = k_fold_cross_validation(cf, z_data, 'T', event_col='E', k=5)
-      # except:
-      #   print "problem with %s"%tissue_name
-      #   scores = [0.5]
-      #pdb.set_trace()
-      
-      
-      #print I,lifelines.utils.concordance_index(times.values[I], np.argsort(z), event_observed=events.values[I]) 
-      #split_p_values[ split_nbr ]["z_%d"%(z_idx)].loc[tissue_name] = results.p_value
-      
-      #pdb.set_trace()
-      #lifelines.utils.concordance_index 
       z_concordance = lifelines.utils.concordance_index(times[I], z, event_observed=events[I]) 
-      
-      #print z_concordance, np.mean(scores)
       z_concordance = max( z_concordance, 1.0-z_concordance )
       concordance_z_values["z_%d"%(z_idx)].loc[tissue_name] = z_concordance
-      #concordance_z_values_xval["z_%d"%(z_idx)].loc[tissue_name] = np.mean(scores)
-      #concordance_I_values["z_%d"%(z_idx)].loc[tissue_name] = lifelines.utils.concordance_index(times[I], 0.1*I, event_observed=events[I]) 
-    #pdb.set_trace()
+
     print "  using random"
     for r_idx in range(n_random):
       #z = Z_values[:,z_idx]
@@ -179,99 +163,80 @@ def main( data_location, results_location ):
       z_concordance = lifelines.utils.concordance_index(times[I], z, event_observed=events[I])
       z_concordance = max( z_concordance, 1.0-z_concordance )
       concordance_z_random["r_%d"%(r_idx)].loc[tissue_name] = z_concordance
-      #concordance_I_random["r_%d"%(r_idx)].loc[tissue_name] = lifelines.utils.concordance_index(times[I], I, event_observed=events[I]) 
-  #pdb.set_trace()
-      #
-      # for split_nbr in split_nbrs:
-      #   I_splits = np.array_split( I, split_nbr )
-      #
-      #   groups = np.zeros(n_tissue)
-      #   k = 1
-      #   for splits in I_splits[1:]:
-      #     groups[splits] = k; k+=1
-      #
-      #   results = multivariate_logrank_test(times[I], groups=groups, event_observed=events[I] )
-      #   split_p_values_random[ split_nbr ]["r_%d"%(r_idx)].loc[tissue_name] = results.p_value
-    
-  #   print "  plotting best"
-  #   for split_nbr in split_nbrs:
-  #     best_z_for_tissue =  split_p_values[ split_nbr ].loc[ tissue_name ].sort_values()[:nbr_to_plot]
-  #     random_pvalues = split_p_values_random[ split_nbr ].loc[ tissue_name ].values
-  #
-  #
-  #     for z_name, p_value in zip( best_z_for_tissue.index.values, best_z_for_tissue.values ):
-  #       worse_than_random_p_value = np.mean( p_value > random_pvalues )
-  #       z_idx = int( z_name.split("_")[1] )
-  #       z = Z_values[:,z_idx]
-  #       I = np.argsort(z)
-  #       I_splits = np.array_split( I, split_nbr )
-  #
-  #
-  #       f = pp.figure()
-  #       ax= f.add_subplot(111)
-  #       kmf = KaplanMeierFitter()
-  #       k=0
-  #       for splits in I_splits:
-  #         kmf.fit(times[splits], event_observed=events[splits], label="q=%d/%d"%(k+1,split_nbr)  )
-  #         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True,ci_show=False)
-  #         k+=1
-  #       pp.title( "%s %s p-value = %g vs random %0.3f"%( tissue_name, z_name, p_value, worse_than_random_p_value ) )
-  #
-  #       pp.savefig( survival_curves_dir + "/%s_r%0.3f_p%0.12f_%s_q_%d.png"%(tissue_name, worse_than_random_p_value, p_value, z_name, split_nbr), format="png", dpi=300)
-  #
-  #       if worse_than_random_p_value < 0.03:
-  #         pp.savefig( survival_curves_dir + "/%s_r%0.3f_p%0.12f_%s_q_%d.png"%(z_name, worse_than_random_p_value, p_value , tissue_name, split_nbr), format="png", dpi=300)
-  #         pp.savefig( survival_curves_dir + "/r%0.3f_%s_p%0.12f_%s_q_%d.png"%(worse_than_random_p_value, z_name, p_value, tissue_name, split_nbr), format="png", dpi=300)
-  #
-  #       #
-  #
-  #       #pp.show()
-  #       #pdb.set_trace()
-  #       pp.close('all')
-  #
-  # for split_nbr in split_nbrs:
-  #   split_p_values_random[ split_nbr ].to_csv( survival_dir + "/p_values_q%d_random.csv"%(split_nbr) )
-  #   split_p_values[ split_nbr ].to_csv( survival_dir + "/p_values_q%d.csv"%(split_nbr) )
+      
+    v = concordance_z_values.loc[tissue_name].values
+    r = concordance_z_random.loc[tissue_name].values
+    concordance_z_p_values.loc[tissue_name] = (1.0 + (v[:,np.newaxis]>r).sum(1))/(1.0+len(r))
+    conc=concordance_z_p_values.loc[tissue_name]
+    sig = (concordance_z_p_values.loc[tissue_name] < 0.05).astype(int)
+    z_sig_names = sig[ sig==1 ].index.values
+    for z_name in z_sig_names:
+      z_idx = int( z_name.split("_")[1] )
+      z = Z_values[:,z_idx]
+      #z_data = Z_tissue[ ["z_%d"%(z_idx), "E","T"] ]
+      I = np.argsort(z)
+      I_splits = np.array_split( I, split_nbr ) 
+      #groups = np.zeros(n_tissue)
+      # k = 1
+      # for splits in I_splits[1:]:
+      #   groups[splits] = k; k+=1
+        
+      results = logrank_test(times[I_splits[0]], times[I_splits[-1]], events[ I_splits[0] ], events[ I_splits[-1] ] )
+      p_value = results.p_value
+      c = conc[ z_name ]
+      f = pp.figure()
+      ax= f.add_subplot(111)
+      kmf = KaplanMeierFitter()
+      k=0
+      for splits in I_splits:
+        kmf.fit(times[splits], event_observed=events[splits], label="q=%d/%d"%(k+1,split_nbr)  )
+        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True,ci_show=False)
+        k+=1
+      pp.ylim(0,1)
+      pp.title( "%s %s p-value = %0.4f concordance = %0.3f "%( tissue_name, z_name, p_value, c ) )
+      
+      pp.savefig( survival_curves_dir + "/%s_%s_p%0.5f_c%0.3f.png"%(tissue_name, z_name, p_value, c), format="png", dpi=300)
+      pp.savefig( survival_curves_dir + "/%s_%s_p%0.5f_c%0.3f.png"%(z_name, tissue_name, p_value, c), format="png", dpi=300)
+      
+      
+    #pdb.set_trace()
 
-  
-  # pv = p_values_third
-  # splits = "1/3"
-  # split_word="third"
-  # binses = [20,50,100]
-  # for pv,splits,split_word in zip( [p_values_half,p_values_third,p_values_fifth],["1/2","1/3"],["half","third"]):
-  #   for bins in binses:
-  #     pp.figure()
-  #     v = pv.values.flatten()
-  #     ok = pp.find( np.isnan(v) == False )
-  #     v = v[ok]
-  #     pp.hist( v, bins, range=(0,1), normed=True, histtype="step", lw=3 )
-  #     pp.plot( [0,1],[1,1], 'r-', lw=3)
-  #     pp.legend( ["Z","random"])
-  #     pp.xlabel("p-value logrank test")
-  #     pp.ylabel("Pr(p_value)")
-  #     pp.title("Comparison between p-values using latent space (%s splits)"%splits)
-  #     pp.savefig( survival_dir + "/p_values_comparison_%s_%dbins.png"%(split_word,bins), format='png', dpi=300 )
-
-  #pp.close('all')
-  #pdb.set_trace()
   concordance_z_random.drop("gbm",inplace=True)
   concordance_z_values.drop("gbm",inplace=True)
-  concordance_z_p_values = pd.DataFrame( np.ones( concordance_z_values.values.shape), \
-                                        index = concordance_z_values.index, \
-                                        columns = concordance_z_values.columns )
-                                        
-  # concordance_z_p_values_xval = pd.DataFrame( np.ones( concordance_z_values.values.shape), \
+  concordance_z_p_values.drop("gbm",inplace=True)
+  # concordance_z_p_values = pd.DataFrame( np.ones( concordance_z_values.values.shape), \
   #                                       index = concordance_z_values.index, \
   #                                       columns = concordance_z_values.columns )
                                         
-  for tissue in concordance_z_random.index.values:
-    v = concordance_z_values.loc[tissue].values
-    r = concordance_z_random.loc[tissue].values
-    #vx = concordance_z_values_xval.loc[tissue].values
-    
-    concordance_z_p_values.loc[tissue] = (1.0 + (v[:,np.newaxis]>r).sum(1))/(1.0+len(r))
-    #concordance_z_p_values_xval.loc[tissue] = (1.0 + (vx[:,np.newaxis]>r).sum(1))/(1.0+len(r))
-    
+  # for tissue in concordance_z_random.index.values:
+  #   v = concordance_z_values.loc[tissue].values
+  #   r = concordance_z_random.loc[tissue].values
+  #   concordance_z_p_values.loc[tissue] = (1.0 + (v[:,np.newaxis]>r).sum(1))/(1.0+len(r))
+  
+  concordance_z_p_values.to_csv( save_dir + "/concordance_z_p_values.csv" )  
+  concordance_z_random.to_csv( save_dir + "/concordance_z_random.csv" )  
+  concordance_z_values.to_csv( save_dir + "/concordance_z_values.csv" )  
+  #pdb.set_trace()
+  
+  f = pp.figure()
+  ax_z = f.add_subplot(221)
+  ax_log_z = f.add_subplot(223)
+  ax_p = f.add_subplot(222)
+  ax_log_p = f.add_subplot(224)
+  
+  bins_conc=np.linspace(0.5,1,21)
+  bins_p=np.linspace(0.0,1,21)
+  ax_z.hist( concordance_z_values.values.flatten(), bins=bins_conc, normed=True, histtype="step", lw=2, log=False) 
+  ax_z.hist( concordance_z_random.values.flatten(), bins=bins_conc, normed=True, histtype="step", lw=2, log=False)
+  ax_log_z.hist( concordance_z_values.values.flatten(), bins=bins_conc, normed=True, histtype="step", lw=2, log=True) 
+  ax_log_z.hist( concordance_z_random.values.flatten(), bins=bins_conc, normed=True, histtype="step", lw=2, log=True)  
+  
+  ax_p.hist( concordance_z_p_values.values.flatten(), bins=bins_p, normed=True, histtype="step", lw=2, log=False)
+  ax_log_p.hist( concordance_z_p_values.values.flatten(), bins=bins_p, normed=True, histtype="step", lw=2, log=True) 
+  pp.savefig( save_dir + "/p_values.png", format="png", dpi=300)
+  
+  
+  
   return concordance_z_random, concordance_z_values, concordance_z_p_values
   #, concordance_z_p_values_xval
   
@@ -281,3 +246,5 @@ if __name__ == "__main__":
   results_location = sys.argv[2]
   
   concordance_z_random, concordance_z_values, concordance_z_p_values = main( data_location, results_location )
+  
+  
