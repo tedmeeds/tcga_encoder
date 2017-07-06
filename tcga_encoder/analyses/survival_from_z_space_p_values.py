@@ -196,8 +196,8 @@ def main( data_location, results_location ):
     
     #pdb.set_trace()
     ax = f.add_subplot( 1,len(split_nbrs),idx+1 )
-    ax.hist( split_p_values_random[split_nbr].values.flatten(), bins=np.linspace(0,1,21), histtype="step", normed=True, color="red", lw=2 )
-    ax.hist( split_p_values[split_nbr].values.flatten(), bins=np.linspace(0,1,21), histtype="step", normed=True, color="blue", lw=2 )
+    ax.hist( split_p_values_random[split_nbr].values.flatten(), bins=np.linspace(0,1,11), histtype="step", normed=True, color="red", lw=2 )
+    ax.hist( split_p_values[split_nbr].values.flatten(), bins=np.linspace(0,1,11), histtype="step", normed=True, color="blue", lw=2 )
     #pdb.set_trace()
     pp.title( "%d splits"%(split_nbr) )
     pp.legend(["random","z-space"])

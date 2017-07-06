@@ -60,6 +60,9 @@ def main( data_location, results_location ):
     true_y[t_ids_other]  = 0
     
     tissue_name = tissue_names[t_idx]
+    if tissue_name == "gbm":
+      print "skipping gbm"
+      continue
     
     print "working %s"%(tissue_name)
     #
@@ -82,6 +85,9 @@ def main( data_location, results_location ):
   #
   aucs_true  = pd.DataFrame( aucs_true, index = tissue_names, columns=z_names )
   aucs_random = pd.DataFrame( aucs_random, index = tissue_names, columns=trial_names )
+  
+  aucs_true.drop("gbm",inplace=True)
+  aucs_random.drop("gbm",inplace=True)
   
   aucs_true.to_csv( tissue_dir + "/aucs_true.csv" )
   aucs_random.to_csv( tissue_dir + "/aucs_random.csv" )
