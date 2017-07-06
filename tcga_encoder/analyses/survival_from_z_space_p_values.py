@@ -107,13 +107,13 @@ def main( data_location, results_location ):
 
 
   n_tissues = len(tissue_names)
-  n_random = 10
+  n_random = 100
   random_names = ["r_%d"%(trial_idx) for trial_idx in range(n_random)]
   
   
   alpha=0.001
   
-  split_nbrs = [2]
+  split_nbrs = [2,4]
   nbr_to_plot = 5
   
   split_p_values = {}
@@ -198,8 +198,11 @@ def main( data_location, results_location ):
     ax = f.add_subplot( 1,len(split_nbrs),idx+1 )
     ax.hist( split_p_values_random[split_nbr].values.flatten(), bins=np.linspace(0,1,21), histtype="step", normed=True, color="red", lw=2 )
     ax.hist( split_p_values[split_nbr].values.flatten(), bins=np.linspace(0,1,21), histtype="step", normed=True, color="blue", lw=2 )
-    ax.title( "%d splits"%(split_nbr))
-    ax.legend(["random","z-space"])
+    #pdb.set_trace()
+    pp.title( "%d splits"%(split_nbr) )
+    pp.legend(["random","z-space"])
+    pp.savefig( survival_dir + "/p_values.png", format="png", dpi=300)
+    
   data_store.close()
   fill_store.close()
   pp.close('all')
