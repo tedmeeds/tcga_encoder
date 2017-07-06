@@ -1957,9 +1957,9 @@ class TCGABatcherAdversarial( TCGABatcher ):
     ax_mirna=f.add_subplot(233)
     ax_mirna_sort=f.add_subplot(236)
     
-    ax_rna.plot( W["RNA"].values, 'r-', lw=0.2 )
-    ax_meth.plot( W["METH"].values, 'b-', lw=0.2 )
-    ax_mirna.plot( W["miRNA"].values, 'g-', lw=0.2 )
+    ax_rna.plot( W["RNA"].values, 'r.', lw=0.2, alpha=0.25 )
+    ax_meth.plot( W["METH"].values, 'b.', lw=0.2, alpha=0.25 )
+    ax_mirna.plot( W["miRNA"].values, 'g.', lw=0.2, alpha=0.25 )
     
     ax_rna_sort.plot( np.sort( W["RNA"].values, 0), 'r-', lw=0.2 )
     ax_meth_sort.plot( np.sort( W["METH"].values, 0), 'b-', lw=0.2 )
