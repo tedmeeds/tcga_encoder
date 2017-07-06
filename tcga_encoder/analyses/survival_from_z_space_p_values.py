@@ -185,13 +185,16 @@ def main( data_location, results_location ):
     #       pp.savefig( survival_curves_dir + "/r%0.3f_%s_p%0.12f_%s_q_%d.png"%(worse_than_random_p_value, z_name, p_value, tissue_name, split_nbr), format="png", dpi=300)
     #
     #     pp.close('all')
-
+  
   f=pp.figure()
   for idx,split_nbr in zip( range(len(split_nbrs)), split_nbrs ):
+    split_p_values_random[ split_nbr ].drop("gbm",inplace=True)
+    split_p_values[ split_nbr ].drop("gbm",inplace=True)
+    
     split_p_values_random[ split_nbr ].to_csv( survival_dir + "/p_values_q%d_random.csv"%(split_nbr) )
     split_p_values[ split_nbr ].to_csv( survival_dir + "/p_values_q%d.csv"%(split_nbr) )
     
-    
+    #pdb.set_trace()
     ax = f.add_subplot( 1,len(split_nbrs),idx+1 )
     ax.hist( split_p_values_random[split_nbr].values.flatten(), bins=np.linspace(0,1,21), histtype="step", normed=True, color="red", lw=2 )
     ax.hist( split_p_values[split_nbr].values.flatten(), bins=np.linspace(0,1,21), histtype="step", normed=True, color="blue", lw=2 )
@@ -200,7 +203,7 @@ def main( data_location, results_location ):
   data_store.close()
   fill_store.close()
   pp.close('all')
-  pdb.set_trace()
+  
   
 if __name__ == "__main__":
   
