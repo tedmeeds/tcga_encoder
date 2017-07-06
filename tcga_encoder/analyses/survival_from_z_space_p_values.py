@@ -148,8 +148,14 @@ def main( data_location, results_location ):
         I_splits = survival_splits( events, I, split_nbr )
         groups = groups_by_splits( n_tissue, I_splits )
         
-        results = multivariate_logrank_test(times[I], groups=groups, event_observed=events[I] )
+        results = multivariate_logrank_test(times, groups=groups, event_observed=events )
         split_p_values[ split_nbr ]["z_%d"%(z_idx)].loc[tissue_name] = results.p_value
+        #
+        # if split_nbr == 2:
+        #   results2 = logrank_test(times[I_splits[0]], times[I_splits[1]], events[I_splits[0]], events[I_splits[1]] )
+        #   print results.p_value, results2.p_value
+        #   pdb.set_trace()
+          
 
     print "  using random"
     for r_idx in range(n_random):
@@ -158,7 +164,7 @@ def main( data_location, results_location ):
         I_splits = survival_splits( events, I, split_nbr )
         groups = groups_by_splits( n_tissue, I_splits )
 
-        results = multivariate_logrank_test(times[I], groups=groups, event_observed=events[I] )
+        results = multivariate_logrank_test(times, groups=groups, event_observed=events )
         split_p_values_random[ split_nbr ]["r_%d"%(r_idx)].loc[tissue_name] = results.p_value
     
     # print "  plotting best"
