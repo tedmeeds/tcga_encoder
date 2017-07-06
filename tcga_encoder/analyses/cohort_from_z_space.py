@@ -50,6 +50,8 @@ def main( data_location, results_location ):
   
   aucs_true  = np.ones( (n_tissues,n_z), dtype=float)
   aucs_random  = np.ones( (n_tissues,n_trials), dtype=float)
+  aucs_true_best  = np.ones( (n_tissues,n_z), dtype=float)
+  aucs_random_best  = np.ones( (n_tissues,n_trials), dtype=float)
   
   true_y = np.ones(n, dtype=int)
   for t_idx in range(n_tissues):
@@ -74,35 +76,53 @@ def main( data_location, results_location ):
     for z_idx in range(n_z):
       z = Z_values[:,z_idx]
       aucs_true[t_idx,z_idx] = roc_auc_score( true_y, z )
+      aucs_true_best[t_idx,z_idx] = max(aucs_true[t_idx,z_idx],1.0-aucs_true[t_idx,z_idx])
       
     for trial_idx in range(n_trials):
       I = np.random.permutation(n_tissue)
       z = Z_values[:,z_idx][I]
       aucs_random[t_idx,trial_idx] = roc_auc_score( true_y, z )
-      
+      aucs_random_best[t_idx,trial_idx] = max(aucs_random[t_idx,trial_idx],1.0-aucs_random[t_idx,trial_idx])
     #events = Z["E"].loc[]
   
   #
   aucs_true  = pd.DataFrame( aucs_true, index = tissue_names, columns=z_names )
   aucs_random = pd.DataFrame( aucs_random, index = tissue_names, columns=trial_names )
+  #
+  aucs_true_best  = pd.DataFrame( aucs_true_best, index = tissue_names, columns=z_names )
+  aucs_random_best = pd.DataFrame( aucs_random_best, index = tissue_names, columns=trial_names )
   
   aucs_true.drop("gbm",inplace=True)
   aucs_random.drop("gbm",inplace=True)
+  aucs_true_best.drop("gbm",inplace=True)
+  aucs_random_best.drop("gbm",inplace=True)
   
   aucs_true.to_csv( tissue_dir + "/aucs_true.csv" )
   aucs_random.to_csv( tissue_dir + "/aucs_random.csv" )
+  aucs_true_best.to_csv( tissue_dir + "/aucs_true_best.csv" )
+  aucs_random_best.to_csv( tissue_dir + "/aucs_random_best.csv" )
   
   binses = [20,50,100,500]
   for bins in binses:
     pp.figure()
-    pp.hist( aucs_true.values.flatten(), bins, range=(0,1), normed=True, histtype="step", lw=3, label="True" )
-    pp.hist( aucs_random.values.flatten(), bins, color="red",range=(0,1), normed=True, histtype="step", lw=3, label="Random" )
+    pp.hist( aucs_true.values.flatten(), bins=np.linspace(0,1,bins+1), normed=True, histtype="step", lw=2, label="True" )
+    pp.hist( aucs_random.values.flatten(), bins=np.linspace(0,1,bins+1), color="red", normed=True, histtype="step", lw=2, label="Random" )
     #pp.plot( [0,1.0],[0.5,0.5], 'r-', lw=3)
     pp.legend()
     pp.xlabel("Area Under the ROC")
     pp.ylabel("Pr(AUC)")
     pp.title("Comparison between AUC using latent space and random")
     pp.savefig( tissue_dir + "/auc_comparison_%dbins.png"%(bins), format='png', dpi=300 )
+    
+    pp.figure()
+    pp.hist( aucs_true_best.values.flatten(), bins=np.linspace(0.5,1,bins/2+1), normed=True, histtype="step", lw=2, label="True" )
+    pp.hist( aucs_random_best.values.flatten(), bins=np.linspace(0.5,1,bins/2+1), color="red", normed=True, histtype="step", lw=2, label="Random" )
+    #pp.plot( [0,1.0],[0.5,0.5], 'r-', lw=3)
+    pp.legend()
+    pp.xlabel("Area Under the ROC")
+    pp.ylabel("Pr(AUC)")
+    pp.title("Comparison between AUC using latent space and random")
+    pp.savefig( tissue_dir + "/auc_comparison_%dbins_best.png"%(bins), format='png', dpi=300 )
 
   pp.close('all')
   #pdb.set_trace()
