@@ -630,8 +630,8 @@ class AdversarialVariationalAutoEncoder(NeuralNetwork):
     self.log_p_t_given_z_pos = tf.reduce_sum( self.loglikes_pos_target_as_matrix.values(), name = "log_p_t_given_z_pos" )
     self.log_p_t_given_z_neg = tf.reduce_sum( self.loglikes_neg_target_as_matrix.values(), name = "log_p_t_given_z_neg" )
     
-    self.lower_bound = self.log_p_x_given_z + self.log_p_z - self.log_q_z
-    #self.lower_bound = self.log_p_x_given_z + self.train_penalty_factor*(self.log_p_z - self.log_q_z)
+    #self.lower_bound = self.log_p_x_given_z + self.log_p_z - self.log_q_z
+    self.lower_bound = self.log_p_x_given_z + tf.minimum(2*self.train_penalty_factor,1.0)*(self.log_p_z - self.log_q_z)
      
     self.batch_log_tensors = [self.lower_bound,self.log_p_x_given_z,self.log_p_z,self.log_q_z]
     self.batch_log_tensors.extend( self.log_p_source_given_z )
