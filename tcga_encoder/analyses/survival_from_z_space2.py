@@ -3,6 +3,8 @@ from tcga_encoder.data.data import *
 from tcga_encoder.definitions.tcga import *
 #from tcga_encoder.definitions.nn import *
 from tcga_encoder.definitions.locations import *
+from tcga_encoder.analyses.survival_functions import *
+
 #from tcga_encoder.algorithms import *
 import seaborn as sns
 from sklearn.manifold import TSNE, locally_linear_embedding
@@ -12,6 +14,7 @@ from lifelines.datasets import load_regression_dataset
 from lifelines.utils import k_fold_cross_validation
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test, multivariate_logrank_test
+  
   
 def main( data_location, results_location ):
   data_path    = os.path.join( HOME_DIR ,data_location ) #, "data.h5" )
@@ -110,7 +113,7 @@ def main( data_location, results_location ):
   
   alpha=0.001
   
-  split_nbrs = [2] #,3,4]
+  split_nbrs = [2,3,4]
   nbr_to_plot = 5
   
   split_p_values = {}
@@ -140,40 +143,21 @@ def main( data_location, results_location ):
     for z_idx in range(n_z):
       z = Z_values[:,z_idx]
       I = np.argsort(z)
-      cum_events = events[I].cumsum()
       
       for split_nbr in split_nbrs:
-        I_splits = np.array_split( I, split_nbr )
-        I_splits = [] #[[],[]] #np.array_split( I, split_nbr ) 
-        I_splits.append( pp.find( cum_events <= events.sum()/2.0 ) )
-        I_splits.append( pp.find( cum_events > events.sum()/2.0 ) )
+        I_splits = survival_splits( events, I, split_nbr )
+        groups = groups_by_splits( n_tissue, I_splits )
         
-        groups = np.zeros(n_tissue)
-        k = 1
-        for splits in I_splits[1:]:
-          groups[splits] = k; k+=1
-          
         results = multivariate_logrank_test(times[I], groups=groups, event_observed=events[I] )
         split_p_values[ split_nbr ]["z_%d"%(z_idx)].loc[tissue_name] = results.p_value
-        #pdb.set_trace()
 
     print "  using random"
     for r_idx in range(n_random):
-      #z = Z_values[:,z_idx]
       I = np.random.permutation(n_tissue)
-      cum_events = events[I].cumsum()
       for split_nbr in split_nbrs:
-        I_splits = np.array_split( I, split_nbr )
+        I_splits = survival_splits( events, I, split_nbr )
+        groups = groups_by_splits( n_tissue, I_splits )
 
-        I_splits = [] #[[],[]] #np.array_split( I, split_nbr ) 
-        I_splits.append( pp.find( cum_events <= events.sum()/2.0 ) )
-        I_splits.append( pp.find( cum_events > events.sum()/2.0 ) )
-        
-        groups = np.zeros(n_tissue)
-        k = 1
-        for splits in I_splits[1:]:
-          groups[splits] = k; k+=1
-      
         results = multivariate_logrank_test(times[I], groups=groups, event_observed=events[I] )
         split_p_values_random[ split_nbr ]["r_%d"%(r_idx)].loc[tissue_name] = results.p_value
     
@@ -188,54 +172,25 @@ def main( data_location, results_location ):
         z_idx = int( z_name.split("_")[1] )
         z = Z_values[:,z_idx]
         I = np.argsort(z)
-        I_splits = np.array_split( I, split_nbr )
+        I_splits = survival_splits( events, I, split_nbr )
         
         
-        f = pp.figure()
-        ax= f.add_subplot(111)
-        kmf = KaplanMeierFitter()
-        k=0
-        for splits in I_splits:
-          kmf.fit(times[splits], event_observed=events[splits], label="q=%d/%d"%(k+1,split_nbr)  )
-          ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True,ci_show=False)
-          k+=1
+        ax = plot_survival_by_splits( times, events, I_splits, at_risk_counts=False,show_censors=True,ci_show=False)
         pp.title( "%s %s p-value = %g vs random %0.3f"%( tissue_name, z_name, p_value, worse_than_random_p_value ) )
-        pp.ylim(0,1)
+        
         pp.savefig( survival_curves_dir + "/%s_r%0.3f_p%0.12f_%s_q_%d.png"%(tissue_name, worse_than_random_p_value, p_value, z_name, split_nbr), format="png", dpi=300)
         
         if worse_than_random_p_value < 0.03:
           pp.savefig( survival_curves_dir + "/%s_r%0.3f_p%0.12f_%s_q_%d.png"%(z_name, worse_than_random_p_value, p_value , tissue_name, split_nbr), format="png", dpi=300)
           pp.savefig( survival_curves_dir + "/r%0.3f_%s_p%0.12f_%s_q_%d.png"%(worse_than_random_p_value, z_name, p_value, tissue_name, split_nbr), format="png", dpi=300)
         
-        #
-          
-        #pp.show()
-        #pdb.set_trace()
         pp.close('all')
 
   for split_nbr in split_nbrs:
     split_p_values_random[ split_nbr ].to_csv( survival_dir + "/p_values_q%d_random.csv"%(split_nbr) )
     split_p_values[ split_nbr ].to_csv( survival_dir + "/p_values_q%d.csv"%(split_nbr) )
-
-  
-  # pv = p_values_third
-  # splits = "1/3"
-  # split_word="third"
-  # binses = [20,50,100]
-  # for pv,splits,split_word in zip( [p_values_half,p_values_third,p_values_fifth],["1/2","1/3"],["half","third"]):
-  #   for bins in binses:
-  #     pp.figure()
-  #     v = pv.values.flatten()
-  #     ok = pp.find( np.isnan(v) == False )
-  #     v = v[ok]
-  #     pp.hist( v, bins, range=(0,1), normed=True, histtype="step", lw=3 )
-  #     pp.plot( [0,1],[1,1], 'r-', lw=3)
-  #     pp.legend( ["Z","random"])
-  #     pp.xlabel("p-value logrank test")
-  #     pp.ylabel("Pr(p_value)")
-  #     pp.title("Comparison between p-values using latent space (%s splits)"%splits)
-  #     pp.savefig( survival_dir + "/p_values_comparison_%s_%dbins.png"%(split_word,bins), format='png', dpi=300 )
-
+  data_store.close()
+  fill_store.close()
   pp.close('all')
   #pdb.set_trace()
   
