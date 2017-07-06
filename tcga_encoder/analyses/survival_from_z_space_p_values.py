@@ -192,9 +192,9 @@ def main( data_location, results_location ):
     split_p_values[ split_nbr ].to_csv( survival_dir + "/p_values_q%d.csv"%(split_nbr) )
     
     
-    ax = pp.add_subplot( 1,len(split_nbrs),idx+1 )
+    ax = f.add_subplot( 1,len(split_nbrs),idx+1 )
     ax.hist( split_p_values_random[split_nbr].values.flatten(), bins=np.linspace(0,1,21), histtype="step", normed=True, color="red", lw=2 )
-    ax.hist( split_p_values_random[split_nbr].values.flatten(), bins=np.linspace(0,1,21), histtype="step", normed=True, color="blue", lw=2 )
+    ax.hist( split_p_values[split_nbr].values.flatten(), bins=np.linspace(0,1,21), histtype="step", normed=True, color="blue", lw=2 )
     ax.title( "%d splits"%(split_nbr))
     ax.legend(["random","z-space"])
   data_store.close()
