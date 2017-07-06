@@ -20,7 +20,7 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  survival_dir = os.path.join( results_path, "survival2" )
+  survival_dir = os.path.join( results_path, "survival_split_events" )
   check_and_mkdir(survival_dir)
   survival_curves_dir = os.path.join( survival_dir, "sig_curves" )
   check_and_mkdir(survival_curves_dir)
@@ -140,9 +140,13 @@ def main( data_location, results_location ):
     for z_idx in range(n_z):
       z = Z_values[:,z_idx]
       I = np.argsort(z)
+      cum_events = events[I].cumsum()
       
       for split_nbr in split_nbrs:
         I_splits = np.array_split( I, split_nbr )
+        I_splits = [] #[[],[]] #np.array_split( I, split_nbr ) 
+        I_splits.append( pp.find( cum_events <= events.sum()/2.0 ) )
+        I_splits.append( pp.find( cum_events > events.sum()/2.0 ) )
         
         groups = np.zeros(n_tissue)
         k = 1
@@ -157,10 +161,14 @@ def main( data_location, results_location ):
     for r_idx in range(n_random):
       #z = Z_values[:,z_idx]
       I = np.random.permutation(n_tissue)
-  
+      cum_events = events[I].cumsum()
       for split_nbr in split_nbrs:
         I_splits = np.array_split( I, split_nbr )
-    
+
+        I_splits = [] #[[],[]] #np.array_split( I, split_nbr ) 
+        I_splits.append( pp.find( cum_events <= events.sum()/2.0 ) )
+        I_splits.append( pp.find( cum_events > events.sum()/2.0 ) )
+        
         groups = np.zeros(n_tissue)
         k = 1
         for splits in I_splits[1:]:
@@ -192,7 +200,7 @@ def main( data_location, results_location ):
           ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True,ci_show=False)
           k+=1
         pp.title( "%s %s p-value = %g vs random %0.3f"%( tissue_name, z_name, p_value, worse_than_random_p_value ) )
-        
+        pp.ylim(0,1)
         pp.savefig( survival_curves_dir + "/%s_r%0.3f_p%0.12f_%s_q_%d.png"%(tissue_name, worse_than_random_p_value, p_value, z_name, split_nbr), format="png", dpi=300)
         
         if worse_than_random_p_value < 0.03:

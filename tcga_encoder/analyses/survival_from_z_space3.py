@@ -105,11 +105,11 @@ def main( data_location, results_location ):
 
 
   n_tissues = len(tissue_names)
-  n_random = 1000
+  n_random = 100
   random_names = ["r_%d"%(trial_idx) for trial_idx in range(n_random)]
   
   
-  alpha=0.001
+  alpha=0.02
   
   nbr_to_plot = 5
   concordance_values = {}
@@ -127,7 +127,7 @@ def main( data_location, results_location ):
   # cf = CoxPHFitter()
   # scores = k_fold_cross_validation(cf, Z, 'T', event_col='E', k=5)
   # pdb.set_trace()
-  split_nbr = 3
+  split_nbr = 2
   for t_idx in range(n_tissues):
 
     t_ids = tissue_idx == t_idx
@@ -168,14 +168,19 @@ def main( data_location, results_location ):
     r = concordance_z_random.loc[tissue_name].values
     concordance_z_p_values.loc[tissue_name] = (1.0 + (v[:,np.newaxis]>r).sum(1))/(1.0+len(r))
     conc=concordance_z_p_values.loc[tissue_name]
-    sig = (concordance_z_p_values.loc[tissue_name] < 0.05).astype(int)
+    sig = (concordance_z_p_values.loc[tissue_name] < alpha ).astype(int)
     z_sig_names = sig[ sig==1 ].index.values
     for z_name in z_sig_names:
       z_idx = int( z_name.split("_")[1] )
       z = Z_values[:,z_idx]
       #z_data = Z_tissue[ ["z_%d"%(z_idx), "E","T"] ]
       I = np.argsort(z)
-      I_splits = np.array_split( I, split_nbr ) 
+      cum_events = events[I].cumsum()
+      I_splits = [] #[[],[]] #np.array_split( I, split_nbr ) 
+      I_splits.append( pp.find( cum_events <= events.sum()/2.0 ) )
+      I_splits.append( pp.find( cum_events > events.sum()/2.0 ) )
+      
+      
       #groups = np.zeros(n_tissue)
       # k = 1
       # for splits in I_splits[1:]:
@@ -183,6 +188,9 @@ def main( data_location, results_location ):
         
       results = logrank_test(times[I_splits[0]], times[I_splits[-1]], events[ I_splits[0] ], events[ I_splits[-1] ] )
       p_value = results.p_value
+      #results2 = logrank_test(times[I_splits[0]]/365.0, times[I_splits[-1]]/365.0, events[ I_splits[0] ], events[ I_splits[-1] ] )
+      
+      #pdb.set_trace()
       c = conc[ z_name ]
       f = pp.figure()
       ax= f.add_subplot(111)
