@@ -307,7 +307,7 @@ def main( data_location, results_location ):
     X /= X.std(0)
     meth_normed[t_query] = X
   
-  pdb.set_trace()
+  #pdb.set_trace()
     
   nbr = 20
   Z_keep_rna=[]
