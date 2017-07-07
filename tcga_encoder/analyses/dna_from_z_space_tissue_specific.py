@@ -266,7 +266,7 @@ def main( data_location, results_location, alpha=0.02 ):
     
     z_cohort   = Z.loc[bcs_cohort]
     dna_cohort = dna.loc[bcs_cohort]
-    dna_genes = dna_cohort.sum(0).sort_values(ascending=False)[:50].index.values
+    dna_genes = dna_cohort.sum(0).sort_values(ascending=False)[:20].index.values
     #pdb.set_trace()
     for dna_gene in dna_genes:
       
@@ -291,6 +291,7 @@ def main( data_location, results_location, alpha=0.02 ):
           pdb.set_trace()
           
         aucs[z_idx]        = roc_auc_score( true_y, z_values )
+        aucs[z_idx] = max(aucs[z_idx],1.0-aucs[z_idx])
         se_aucs[z_idx]     = auc_standard_error( aucs[z_idx], n_1, n_0 )
         se_random[t_idx]   = auc_standard_error( 0.5, n_1, n_0 )
         p_values[z_idx] = auc_p_value( aucs[z_idx], 0.5, se_aucs[z_idx], se_random[t_idx] )
@@ -325,15 +326,22 @@ def main( data_location, results_location, alpha=0.02 ):
   f=pp.figure()
   ax1 = f.add_subplot(121)
   ax2 = f.add_subplot(122)
-  ax1.hist( p_df.values.flatten(), bins = np.linspace(0,0.5,21), lw=2, histtype="step", normed=True )
-  ax2.hist( auc_df.values.flatten(), bins = np.linspace(0,1,21), lw=2, histtype="step", normed=True )
+  ax1.hist( p_df.values.flatten(), bins = np.linspace(0,0.5,21), lw=2, histtype="step", normed=True, range=(0,0.5) )
+  ax2.hist( auc_df.values.flatten(), bins = np.linspace(0.5,1,21), lw=2, histtype="step", normed=True, range=(0.5,1) )
   pp.savefig( dna_dir + "/p_values_and_auc.png", fmt = "png", dpi=300)
   f=pp.figure()
   ax1 = f.add_subplot(121)
   ax2 = f.add_subplot(122)
-  ax1.hist( p_df.values.flatten(), bins = np.linspace(0,0.5,61), lw=2, histtype="step", normed=True )
-  ax2.hist( auc_df.values.flatten(), bins = np.linspace(0,1,61), lw=2, histtype="step", normed=True )
+  ax1.hist( p_df.values.flatten(), bins = np.linspace(0,0.5,61), lw=2, histtype="step", normed=True, range=(0,0.5) )
+  ax2.hist( auc_df.values.flatten(), bins = np.linspace(0.5,1,61), lw=2, histtype="step", normed=True, range=(0.5,1) )
   pp.savefig( dna_dir + "/p_values_and_auc2.png", fmt = "png", dpi=300)
+  
+  f=pp.figure()
+  for z in auc_df.columns:
+    pp.semilogy( auc_df[z].values.flatten(), p_df[z].values.flatten(), '.' )
+  pp.xlabel('AUC');pp.ylabel('p-value')
+  pp.savefig( dna_dir + "/p_values_and_auc_scatter.png", fmt = "png", dpi=300)
+  pp.close('all')
   return auc_df, p_df
   #pdb.set_trace()
   # sorted_pan = pd.concat(sorted_pan,axis=1)
