@@ -328,6 +328,12 @@ def main( data_location, results_location, alpha=0.02 ):
   ax1.hist( p_df.values.flatten(), bins = np.linspace(0,0.5,21), lw=2, histtype="step", normed=True )
   ax2.hist( auc_df.values.flatten(), bins = np.linspace(0,1,21), lw=2, histtype="step", normed=True )
   pp.savefig( dna_dir + "/p_values_and_auc.png", fmt = "png", dpi=300)
+  f=pp.figure()
+  ax1 = f.add_subplot(121)
+  ax2 = f.add_subplot(122)
+  ax1.hist( p_df.values.flatten(), bins = np.linspace(0,0.5,61), lw=2, histtype="step", normed=True )
+  ax2.hist( auc_df.values.flatten(), bins = np.linspace(0,1,61), lw=2, histtype="step", normed=True )
+  pp.savefig( dna_dir + "/p_values_and_auc2.png", fmt = "png", dpi=300)
   return auc_df, p_df
   #pdb.set_trace()
   # sorted_pan = pd.concat(sorted_pan,axis=1)
