@@ -90,14 +90,15 @@ class TCGABatcherAdversarial( TCGABatcher ):
       
       batch_barcodes = batch[ "barcodes" ]
       batch_observed = self.data_store[self.OBSERVED_key].loc[ batch_barcodes ].values
-      cohort_observed = find_cohort( batch_barcodes, self.validation_tissues )
-      if len(cohort_observed) != len(batch_observed):
-        pdb.set_trace()
-      batch_observed *= cohort_observed
+      #cohort_observed = find_cohort( batch_barcodes, self.validation_tissues )
+      #if len(cohort_observed) != len(batch_observed):
+      #  pdb.set_trace()
+      #batch_observed *= cohort_observed
       #
       
       batch[ layer_name ] = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool)
       self.dna_uses_cohorts = True
+      #pdb.set_trace()
       #nbr_observed = batch_observed[:,self.observed_source2idx[ DNA ]].astype(bool).sum()
     elif layer_name == "dropped_source_observations":
       ids = [self.observed_source2idx[ source ] for source in self.arch_dict["input_sources"]]
@@ -195,31 +196,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
       W = network.GetLayer( "rec_hidden" ).weights
       #W2=[]
       for w in W:
-        w = w + tf.random_normal( w.get_shape(), stddev=noise ) #*np.random.randn( w.shape[0],w.shape[1] )).astype(np.float32)
-        #W2.append(w)
-      #network.GetLayer( "rec_hidden" ).SetWeights( sess, W2 )
-
-      # W = network.GetLayer( "rec_z_space" ).EvalWeights()
-      # W2=[]
-      # for w in W:
-      #   w = w + (noise*np.random.randn( w.shape[0],w.shape[1] )).astype(np.float32)
-      #   W2.append(w)
-      # network.GetLayer( "rec_z_space" ).SetWeights( sess, W2 )
-      #
-      # W = network.GetLayer( "gen_hidden" ).EvalWeights()
-      # W2=[]
-      # for w in W:
-      #   w = w + (noise*np.random.randn( w.shape[0],w.shape[1] )).astype(np.float32)
-      #   W2.append(w)
-      # network.GetLayer( "gen_hidden" ).SetWeights( sess, W2 )
-            
-      # "rec_z_space"
-      # "gen_hidden"
-      # "gen_mirna_space",0
-      # "gen_rna_space",0
-      # "gen_meth_space",0
-      # network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
-      #
+        w = w + tf.random_normal( w.get_shape(), stddev=noise ) #*np.random.randn( w.shape[0],w.shape[1] 
     network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
     network.GetLayer( "target_prediction_neg" ).SetBiases( sess, network.GetLayer( "target_prediction_pos" ).EvalBiases() )
     
@@ -261,6 +238,18 @@ class TCGABatcherAdversarial( TCGABatcher ):
   def InitFillStore(self):
     self.fill_store.open()
     z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
+
+    self.h_columns = []
+    self.n_h = 0
+    if self.var_dict.has_key("n_rec_hidden_units"):
+      self.h_columns = ["h%d"%hidx for hidx in range(self.var_dict["n_rec_hidden_units"])]
+      self.n_h = self.var_dict["n_rec_hidden_units"]
+      
+    self.fill_store["hidden"]  = pd.DataFrame( np.zeros( (len(self.all_barcodes),self.n_h)) , index = self.all_barcodes, columns = self.h_columns )
+    self.fill_store["scaled/RNA"]  = pd.DataFrame( np.zeros( (len(self.all_barcodes),self.rna_dim)) , index = self.all_barcodes, columns = self.rna_store.columns )
+    self.fill_store["scaled/miRNA"]  = pd.DataFrame( np.zeros( (len(self.all_barcodes),self.mirna_dim)) , index = self.all_barcodes, columns = self.mirna_store.columns )
+    self.fill_store["scaled/METH"]  = pd.DataFrame( np.zeros( (len(self.all_barcodes),self.meth_dim)) , index = self.all_barcodes, columns = self.meth_store.columns )
+
     self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.train_barcodes),self.n_z)) , index = self.train_barcodes, columns = z_columns )
     self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.ones( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
     self.fill_store["Z/VAL/Z/mu"]  = pd.DataFrame( np.zeros( (len(self.validation_barcodes),self.n_z)) , index = self.validation_barcodes, columns = z_columns )

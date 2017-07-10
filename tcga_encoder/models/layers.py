@@ -2132,10 +2132,10 @@ class EntropySoftmaxModelLayer(SoftmaxModelLayer):
 class EntropySoftmaxModelLayer2(SoftmaxModelLayer):
   def LogLikelihood( self, X, as_matrix = False, boolean_mask = None ):
     if boolean_mask is None:
-      self.loglik_matrix = tf.square( self.p_of_c_no_bias - 1.0/33 )
+      self.loglik_matrix = tf.square( self.p_of_c_no_bias - 1.0/31 )
       #self.loglik_matrix = self.p_of_c * self.log_p_of_c
     else:
-      self.loglik_matrix = tf.square( self.p_of_c_no_bias - 1.0/33 )
+      self.loglik_matrix = tf.square( self.p_of_c_no_bias - 1.0/31 )
       #self.loglik_matrix = self.p_of_c * self.log_p_of_c
     self.loglik = tf.reduce_sum( self.loglik_matrix, name = self.name+"_loglik" )
 

@@ -391,6 +391,17 @@ class TCGABatcherABC( object ):
   def InitFillStore(self):
     self.fill_store.open()
     z_columns = ["z%d"%zidx for zidx in range(self.n_z)]
+    self.h_columns = []
+    self.n_h = 0
+    if self.var_dict.has_key("n_rec_hidden_units"):
+      self.h_columns = ["h%d"%hidx for hidx in range(self.var_dict["n_rec_hidden_units"])]
+      self.n_h = self.var_dict["n_rec_hidden_units"]
+      
+    self.fill_store["hidden"]  = pd.DataFrame( np.zeros( len(self.all_barcodes),self.n_h) , index = self.all_barcodes, columns = self.h_columns )
+    self.fill_store["scaled/RNA"]  = pd.DataFrame( np.zeros( len(self.all_barcodes),self.rna_dim) , index = self.all_barcodes, columns = self.rna_genes )
+    self.fill_store["scaled/miRNA"]  = pd.DataFrame( np.zeros( len(self.all_barcodes),self.mirna_dim) , index = self.all_barcodes, columns = self.mirna_genes )
+    self.fill_store["scaled/METH"]  = pd.DataFrame( np.zeros( len(self.all_barcodes),self.meth_dim) , index = self.all_barcodes, columns = self.meth_genes )
+        
     self.fill_store["Z/TRAIN/Z/mu"]  = pd.DataFrame( np.random.randn( len(self.train_barcodes),self.n_z) , index = self.train_barcodes, columns = z_columns )
     self.fill_store["Z/TRAIN/Z/var"] = pd.DataFrame( np.ones( (len(self.train_barcodes),self.n_z) ), index = self.train_barcodes, columns = z_columns )
     self.fill_store["Z/VAL/Z/mu"]  = pd.DataFrame( np.random.randn( len(self.validation_barcodes),self.n_z) , index = self.validation_barcodes, columns = z_columns )
@@ -635,58 +646,32 @@ class TCGABatcherABC( object ):
     elif function_name == TEST_FILL:
       self.TestFill2( sess, cb_info )
       self.TestFillZ( sess, cb_info )
+      self.TrainFillZ( sess, cb_info )
     
     elif function_name == "train_penalty_update":
       self.train_penalty_factor += self.train_penalty_update
       self.train_penalty_factor = np.minimum(1.0,self.train_penalty_factor)
       print 'train penalty = ', self.train_penalty_factor
-      #self.TrainFillZ( sess, cb_info )
-      
-    # elif function_name == "beta":
-    #   if self.algo_dict["beta_growth"] < 0:
-    #     self.beta = max( self.algo_dict["beta_min"], -self.beta*self.algo_dict["beta_growth"] )
-    #   else:
-    #     self.beta = min( self.algo_dict["beta_max"], self.beta*self.algo_dict["beta_growth"] )
-    #   print "BETA ", self.beta
-    #
-    # elif function_name == "free_bits":
-    #   if self.algo_dict["free_bits_growth"] < 0:
-    #     self.free_bits = max( self.algo_dict["free_bits_min"], -self.free_bits*self.algo_dict["free_bits_growth"] )
-    #   else:
-    #     self.free_bits = min( self.algo_dict["free_bits_max"], self.free_bits*self.algo_dict["free_bits_growth"] )
-    #   print "FREE_BITS ", self.free_bits
 
   def SaveSurvival( self, disease_list, predict_survival_train, g1, g2 ):
     if disease_list.__class__ == list:
       disease = disease_list[0]
       disease_query_train    = predict_survival_train["disease"].values == disease_list[0]
-      #disease_query_test    = predict_survival_test["disease"].values == disease_list[0]
       
       for disease in disease_list[1:]:
         disease += "_%s"%(disease)
         disease_query_train    += predict_survival_train["disease"].values == disease
-        #disease_query_test     += predict_survival_test["disease"].values == disease
     else:
       disease = disease_list
       disease_query_train    = predict_survival_train["disease"].values == disease_list
-      #disease_query_test    = predict_survival_test["disease"].values == disease_list
 
-    #disease_query_train    = predict_survival_train["disease"].values == disease
-    #disease_survival_train = predict_survival_train[ disease_query_train ]
-    
-    
-    #disease_query_train    = predict_survival_train["disease"].values == disease
     disease_survival_train = predict_survival_train[ disease_query_train ]
-    #T_train = disease_survival_train["T"].values
-    #E_train = disease_survival_train["E"].values
-    #Z_train = disease_survival_train[z_columns].values
     barcodes = disease_survival_train.index
     diseases = disease_survival_train["disease"].values
     disease_barcodes = [ "%s_%s"%(dis,barcode) for dis,barcode in zip(diseases,barcodes)]
     
     try:
       dna = self.dna_store.loc[ disease_barcodes ]
-      #dna = self.data_store[self.DNA_keys[0]].loc[ disease_barcodes ]
     except:
       print "No DNA for %s"%disease
       print "Not Saving!"
@@ -808,12 +793,31 @@ class TCGABatcherABC( object ):
         
     rec_z_space_tensors       = self.network.GetTensor( "rec_z_space" )
     
+    has_scaled = False
+    scaled_tensors = []
+    if self.network.HasLayer( "RNA_reduced" ):
+      scaled_tensors.append( self.network.GetTensor( "RNA_reduced" ) )
+      scaled_tensors.append( self.network.GetTensor( "miRNA_reduced" ) )
+      scaled_tensors.append( self.network.GetTensor( "METH_reduced" ) )
+      has_scaled = True
+    else:
+      print "Found no XX_reduced tensors"
+      
+    has_hidden = False
+    hidden_tensors = []
+    if self.network.HasLayer( "rec_hidden" ):
+      hidden_tensors.append( self.network.GetTensor( "rec_hidden" ) )  
+      has_hidden = True
+    else:
+      print "Found no XX_reduced tensors"
     # if self.network.HasLayer( "rec_z_space_rna" ):
     #   rna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_rna" )
     #   mirna_rec_z_space_tensors   = self.network.GetTensor( "rec_z_space_mirna" )
     #   meth_rec_z_space_tensors  = self.network.GetTensor( "rec_z_space_meth" )
   
     tensors = []
+    tensors.extend(scaled_tensors)
+    tensors.extend(hidden_tensors)
     tensors.extend(rec_z_space_tensors)
     # if self.network.HasLayer( "rec_z_space_rna" ):
     #   tensors.extend(rna_rec_z_space_tensors)
@@ -822,15 +826,53 @@ class TCGABatcherABC( object ):
 
     self.network.FillFeedDict( feed_dict, impute_dict )
     
-    z_eval = sess.run( tensors, feed_dict = feed_dict )
+    evals = sess.run( tensors, feed_dict = feed_dict )
+    
+    tensor_idx = 0
+    if has_scaled is True:
+      rna_scaled = evals[tensor_idx]
+      mirna_scaled = evals[tensor_idx+1]
+      meth_scaled = evals[tensor_idx+2]
+      
+      self.WriteRunFillScaled( epoch, {RNA:rna_scaled,miRNA:mirna_scaled,METH:meth_scaled}, barcodes, mode ) 
+      
+      tensor_idx+=3
+    
+    if has_hidden is True:
+      hidden = evals[tensor_idx]
+      tensor_idx += 1
+      self.WriteRunFillHidden( epoch, hidden, barcodes, mode ) 
+      
+    
+    z_eval_mu = evals[tensor_idx]; z_eval_var = evals[tensor_idx+1]
 
           
-    self.WriteRunFillZ( epoch, "Z", barcodes, self.z_columns, z_eval[0],z_eval[1], mode )      
+    self.WriteRunFillZ( epoch, "Z", barcodes, self.z_columns, z_eval_mu,z_eval_var, mode )      
     # if self.network.HasLayer( "rec_z_space_rna" ):
     #   self.WriteRunFillZ( epoch, RNA, barcodes, self.z_columns, z_eval[2],z_eval[3], mode )
     #   self.WriteRunFillZ( epoch, METH, barcodes, self.z_columns, z_eval[4],z_eval[5], mode )
     #   self.WriteRunFillZ( epoch, miRNA, barcodes, self.z_columns, z_eval[6],z_eval[7], mode )
 
+  def WriteRunFillScaled( self, epoch, source_eval_dict, barcodes, mode ):
+    self.fill_store.open()
+    
+    for source, X in source_eval_dict.iteritems():
+      S = self.fill_store["/scaled/%s"%(source)]
+      S.loc[ barcodes ] = X
+      self.fill_store["/scaled/%s"%(source)] = S
+      #pdb.set_trace()
+    self.fill_store.close()
+
+  def WriteRunFillHidden( self, epoch, X, barcodes, mode ):
+    self.fill_store.open()
+    
+    S = self.fill_store["/hidden/"]
+    S.loc[ barcodes ] = X
+    self.fill_store["/hidden/"] = S
+    #pdb.set_trace()
+    
+    self.fill_store.close()
+    
   def WriteRunFillZ( self, epoch, target, barcodes, columns, z_mu, z_var, mode ):
     #inputs = inputs2use[0]
     #for s in inputs2use[1:]:
@@ -1071,13 +1113,17 @@ class TCGABatcherABC( object ):
     
 
   def WriteRunFillLoglikelihood( self, epoch, target, barcodes, columns, X, mode ):
-    
+    if len( X ) == 0:
+      print "----------------"
+      print " no values for ", target, mode
+      print "----------------"
+      return
+      
     self.fill_store.open()
     if target == DNA:
       
       #for channel in range(self.n_dna_channels):
       s = "/Loglik/%s/%s/"%(mode,target )
-      #pdb.set_trace()
       self.fill_store[ s] = pd.DataFrame( X, index = barcodes, columns = columns )
         
     else:

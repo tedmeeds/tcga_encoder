@@ -185,7 +185,7 @@ def main( data_location, results_location ):
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   model_filename = os.path.join( results_path, "full_vae_model.h5" )
   
-  save_dir = os.path.join( results_path, "spearman" )
+  save_dir = os.path.join( results_path, "hallmark_clustering" )
   check_and_mkdir(save_dir)
   z_dir = os.path.join( save_dir, "z_pics" )
   check_and_mkdir(z_dir)
@@ -200,111 +200,84 @@ def main( data_location, results_location ):
   fill_store = pd.HDFStore( fill_filename, "r" )
   model_store = pd.HDFStore( model_filename, "r" )
   
-  print "next..."
   Z_train = fill_store["/Z/TRAIN/Z/mu"]
   Z_val = fill_store["/Z/VAL/Z/mu"]
-  Z = pd.concat( [Z_train, Z_val] )
-  barcodes = Z.index.values
-  try:
-    H = fill_store["hidden"].loc[barcodes]
-  except:
-    print "found no hidden"
-    H = pd.DataFrame( [], index = barcodes )
   
-  RNA_scale = fill_store["/scaled/RNA"].loc[barcodes]
-  miRNA_scale = fill_store["/scaled/miRNA"].loc[barcodes]
-  METH_scale = fill_store["/scaled/METH"].loc[barcodes]
-  fill_store.close()
+  #input_sources = ["METH","RNA","miRNA"]
+  input_sources = ["RNA","miRNA","METH"]
+  W_hidden = get_hidden_weights( model_store, input_sources, data_store )
+  W_hidden2z = get_hidden2z_weights( model_store )
   
-  rna_names = RNA_scale.columns
-  mirna_names = miRNA_scale.columns
-  meth_names = METH_scale.columns
-  h_names = H.columns
-  z_names = Z.columns
-  
-  n_rna   = len(rna_names)
-  n_mirna = len(mirna_names)
-  n_meth  = len(meth_names)
-  n_h     = len(h_names)
-  n_z     = len(z_names)
-  
-  
-  print "computing RNA-H spearman rho's"
-  rho_rna_h = stats.spearmanr( RNA_scale.values, H.values )
-  print "computing miRNA-H spearman rho's"
-  rho_mirna_h = stats.spearmanr( miRNA_scale.values, H.values )
-  print "computing METH-H spearman rho's"
-  rho_meth_h = stats.spearmanr( METH_scale.values, H.values )
-  
-  print "computing RNA-Z spearman rho's"
-  rho_rna_z = stats.spearmanr( RNA_scale.values, Z.values )
-  print "computing miRNA-Z spearman rho's"
-  rho_mirna_z = stats.spearmanr( miRNA_scale.values, Z.values )
-  print "computing METH-Z spearman rho's"
-  rho_meth_z = stats.spearmanr( METH_scale.values, Z.values )
-  
-  rna_rna_rho = pd.DataFrame( rho_rna_h[0][:n_rna,:][:,:n_rna], index = rna_names, columns=rna_names)
-  rna_rna_p   = pd.DataFrame( rho_rna_h[1][:n_rna,:][:,:n_rna], index = rna_names, columns=rna_names)
-  
-  rna_h_rho = pd.DataFrame( rho_rna_h[0][:n_rna,:][:,n_rna:], index = rna_names, columns=h_names)
-  rna_h_p   = pd.DataFrame( rho_rna_h[1][:n_rna,:][:,n_rna:], index = rna_names, columns=h_names)
+  size_per_unit = 0.25
+  size1 = max( min( 40, int( W_hidden["RNA"].values.shape[0]*size_per_unit ) ), 12 )
 
-  rna_z_rho = pd.DataFrame( rho_rna_z[0][:n_rna,:][:,n_rna:], index = rna_names, columns=z_names)
-  rna_z_p   = pd.DataFrame( rho_rna_z[1][:n_rna,:][:,n_rna:], index = rna_names, columns=z_names)
+  size2 = max( min( 40, int( W_hidden["miRNA"].values.shape[0]*size_per_unit )), 12 )
   
-  mirna_mirna_rho = pd.DataFrame( rho_mirna_h[0][:n_mirna,:][:,:n_mirna], index = mirna_names, columns=mirna_names)
-  mirna_mirna_p   = pd.DataFrame( rho_mirna_h[1][:n_mirna,:][:,:n_mirna], index = mirna_names, columns=mirna_names)
-  
-  mirna_h_rho = pd.DataFrame( rho_mirna_h[0][:n_mirna,:][:,n_mirna:], index = mirna_names, columns=h_names)
-  mirna_h_p   = pd.DataFrame( rho_mirna_h[1][:n_mirna,:][:,n_mirna:], index = mirna_names, columns=h_names)
+  #pdb.set_trace()
 
-  mirna_z_rho = pd.DataFrame( rho_mirna_z[0][:n_mirna,:][:,n_mirna:], index = mirna_names, columns=z_names)
-  mirna_z_p   = pd.DataFrame( rho_mirna_z[1][:n_mirna,:][:,n_mirna:], index = mirna_names, columns=z_names)
- 
-  meth_meth_rho = pd.DataFrame( rho_meth_h[0][:n_meth,:][:,:n_meth], index = meth_names, columns=meth_names)
-  meth_meth_p   = pd.DataFrame( rho_meth_h[1][:n_meth,:][:,:n_meth], index = meth_names, columns=meth_names)
+  cmap = sns.palplot(sns.light_palette((260, 75, 60), input="husl"))
+  htmap3 = sns.clustermap ( pd.concat( [W_hidden["RNA"],W_hidden["miRNA"]],0).T.corr(), cmap=cmap, square=True, figsize=(size1,size2) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_rna__mirna_clustermap.png", fmt="png", bbox_inches = "tight")
   
-  meth_h_rho = pd.DataFrame( rho_meth_h[0][:n_meth,:][:,n_meth:], index = meth_names, columns=h_names)
-  meth_h_p   = pd.DataFrame( rho_meth_h[1][:n_meth,:][:,n_meth:], index = meth_names, columns=h_names)
-  
-  meth_z_rho = pd.DataFrame( rho_meth_z[0][:n_meth,:][:,n_meth:], index = meth_names, columns=z_names)
-  meth_z_p   = pd.DataFrame( rho_meth_z[1][:n_meth,:][:,n_meth:], index = meth_names, columns=z_names)
+  #size2 = max( int( n_inputs*size_per_unit ), 12 )
+  size1 = max( min( 40, int( W_hidden["RNA"].values.shape[0]*size_per_unit )), 12 )
+  cmap = sns.palplot(sns.light_palette((260, 75, 60), input="husl"))
+  htmap3 = sns.clustermap ( W_hidden["RNA"].T.corr(), cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_rna_clustermap.png", fmt="png", bbox_inches = "tight")
+
+  size1 = max( min( 40, int( W_hidden["miRNA"].values.shape[0]*size_per_unit )), 12 )
+  htmap3 = sns.clustermap ( W_hidden["miRNA"].T.corr(), cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_mirna_clustermap.png", fmt="png", bbox_inches = "tight")
+
+  size1 = max(min( 40,  int( W_hidden["METH"].values.shape[0]*size_per_unit )), 12 )
+  htmap3 = sns.clustermap ( W_hidden["METH"].T.corr(), cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_meth_clustermap.png", fmt="png", bbox_inches = "tight")
 
   
-  #Z = np.vstack( (Z_train.values, Z_val.values) )
-  pdb.set_trace()
+  #pdb.set_trace()
+  weighted_z = join_weights( W_hidden2z, W_hidden )
+  
+  #pdb.set_trace()
+  Z = np.vstack( (Z_train.values, Z_val.values) )
   n_z = Z.shape[1]
-  #z_names = ["z_%d"%z_idx for z_idx in range(Z.shape[1])]
-  #Z = pd.DataFrame( Z, index = np.hstack( (Z_train.index.values, Z_val.index.values)), columns = z_names )
+  #pdb.set_trace()
+  z_names = ["z_%d"%z_idx for z_idx in range(Z.shape[1])]
+  Z = pd.DataFrame( Z, index = np.hstack( (Z_train.index.values, Z_val.index.values)), columns = z_names )
   
-  #barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
-  #barcodes = data_store["/CLINICAL/observed"][ data_store["/CLINICAL/observed"][["RNA","miRNA","METH"]].sum(1)==3 ].index.values
-  #
-  #
-  # #input_sources = ["METH","RNA","miRNA"]
-  # input_sources = ["RNA","miRNA","METH"]
-  # W_hidden = get_hidden_weights( model_store, input_sources, data_store )
-  # W_hidden2z = get_hidden2z_weights( model_store )
-  #
-  # size_per_unit = 0.25
-  # size1 = max( min( 40, int( W_hidden["RNA"].values.shape[0]*size_per_unit ) ), 12 )
-  #
-  # size2 = max( min( 40, int( W_hidden["miRNA"].values.shape[0]*size_per_unit )), 12 )
-  #
-  # weighted_z = join_weights( W_hidden2z, W_hidden )
-  #
-  # #pdb.set_trace()
-  #
-  # Z=Z.loc[barcodes]
-  # Z_values = Z.values
+  barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
+  barcodes = data_store["/CLINICAL/observed"][ data_store["/CLINICAL/observed"][["RNA","miRNA","METH","DNA"]].sum(1)==4 ].index.values
   
-  
+  Z=Z.loc[barcodes]
+  Z_values = Z.values
   tissues = data_store["/CLINICAL/TISSUE"].loc[barcodes]
   
-  rna   = RNA_scale #np.log(1+data_store["/RNA/RSEM"].loc[ barcodes ])
-  mirna = miRNA_scale #np.log(1+data_store["/miRNA/RSEM"].loc[ barcodes ])
-  meth  = METH_scale #np.log(0.1+data_store["/METH/METH"].loc[ barcodes ])
-  
+  rna   = np.log(1+data_store["/RNA/RSEM"].loc[ barcodes ])
+  mirna = np.log(1+data_store["/miRNA/RSEM"].loc[ barcodes ])
+  meth  = np.log(0.1+data_store["/METH/METH"].loc[ barcodes ])
   dna   = data_store["/DNA/channel/0"].loc[ barcodes ]
   
   
@@ -313,35 +286,35 @@ def main( data_location, results_location ):
   n = len(Z)
   n_tissues = len(tissue_names)
   
-  #n_h = W_hidden2z.shape[0]
-  #
-  # rna_normed = rna; mirna_normed = mirna; meth_normed = meth; dna_normed=2*dna-1
-  # for t_idx in range(n_tissues):
-  #   t_query = tissue_idx == t_idx
-  #
-  #   X = rna[t_query]
-  #   X -= X.mean(0)
-  #   X /= X.std(0)
-  #   rna_normed[t_query] = X
-  #
-  #   X = mirna[t_query]
-  #   X -= X.mean(0)
-  #   X /= X.std(0)
-  #   mirna_normed[t_query] = X
-  #
-  #   X = meth[t_query]
-  #   X -= X.mean(0)
-  #   X /= X.std(0)
-  #   meth_normed[t_query] = X
-  #
-  # #pdb.set_trace()
+  n_h = W_hidden2z.shape[0]
+  
+  rna_normed = rna; mirna_normed = mirna; meth_normed = meth; dna_normed=2*dna-1
+  for t_idx in range(n_tissues):
+    t_query = tissue_idx == t_idx
+    
+    X = rna[t_query]
+    X -= X.mean(0)
+    X /= X.std(0)
+    rna_normed[t_query] = X
+
+    X = mirna[t_query]
+    X -= X.mean(0)
+    X /= X.std(0)
+    mirna_normed[t_query] = X
+
+    X = meth[t_query]
+    X -= X.mean(0)
+    X /= X.std(0)
+    meth_normed[t_query] = X
+  
+  #pdb.set_trace()
     
   nbr = 20
   Z_keep_rna=[]
   Z_keep_mirna=[]
   Z_keep_meth=[]
   Z_keep_dna = []
-  for z_idx in range(0):
+  for z_idx in range(n_z):
     z_values = Z_values[:,z_idx]
     order_z = np.argsort(z_values)
 
@@ -375,22 +348,56 @@ def main( data_location, results_location ):
 
     rna_readable = pathway_info.CancerEnrichment(rna_w_ordered[:nbr].index, 1+0*np.abs( rna_w_ordered[:nbr].values)  )
     meth_readable = pathway_info.CancerEnrichment(meth_w_ordered[:nbr].index, 1+0*np.abs( meth_w_ordered[:nbr].values ) )
+    
+    
+    # rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:20]], 1+0*rna_w_ordered.values[pos_rna[:20]] )
+    # meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:20]], 1+0*meth_w_ordered.values[pos_meth[:20]])
+    # #
+    # rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:20]], -1+0*rna_w_ordered.values[neg_rna[:20]] )
+    # meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:20]], -1+0*meth_w_ordered.values[neg_meth[:20]] )
+
     rna_readable.name="rna"
     meth_readable.name="meth"
-
+    
+    # rna_readable_p.name="rna_p"
+    # meth_readable_p.name="meth_p"
+    # rna_readable_n.name="rna_n"
+    # meth_readable_n.name="meth_n"
+                         
+    #joined = pd.concat( [rna_readable[:20],\
+    #                     meth_readable[:20]], axis=1 )
+                         
     joined = pd.concat( [rna_readable,\
                          meth_readable], axis=1 )
+                         
+    # joined = pd.concat( [rna_readable_p,rna_readable_n,\
+    #                      meth_readable_p,meth_readable_n], axis=1 )
+    #
+    # maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
+    #
+    # joined=joined.loc[maxvalues]
+    # joined = joined[:25]
+
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
     br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
     
     max_ax = np.max( joined.values.flatten() )
     min_ax = np.min( joined.values.flatten() )
     max_ax = np.max( max_ax, -min_ax )
     min_ax = -max_ax
+    #pdb.set_trace()
+    #ax_pie1.set_xlim(min_ax,max_ax);
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=True,stacked=True, sort_columns=False); 
     pp.suptitle( "Z %d"%(z_idx))
     pp.savefig( z_dir + "/z%d_weighted.png"%(z_idx), format="png", dpi=300 )
+    #pp.show()
+    #pdb.set_trace()
     pp.close('all')
 
-  for z_idx in range(0):
+  for z_idx in range(n_h):
+    #z_values = Z_values[:,z_idx]
+    #order_z = np.argsort(z_values)
+
     rna_w = W_hidden["RNA"][ "h_%d"%(z_idx)]
     mirna_w = W_hidden["miRNA"][ "h_%d"%(z_idx)]
     meth_w = W_hidden["METH"][ "h_%d"%(z_idx)]
@@ -424,18 +431,46 @@ def main( data_location, results_location ):
     rna_readable = pathway_info.CancerEnrichment(rna_w_ordered[:nbr].index, 1+0*np.abs( rna_w_ordered[:nbr].values)  )
     meth_readable = pathway_info.CancerEnrichment(meth_w_ordered[:nbr].index, 1+0*np.abs( meth_w_ordered[:nbr].values ) )
     
+    
+    # rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:20]], 1+0*rna_w_ordered.values[pos_rna[:20]] )
+    # meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:20]], 1+0*meth_w_ordered.values[pos_meth[:20]])
+    # #
+    # rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:20]], -1+0*rna_w_ordered.values[neg_rna[:20]] )
+    # meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:20]], -1+0*meth_w_ordered.values[neg_meth[:20]] )
+
     rna_readable.name="rna"
     meth_readable.name="meth"
     
+    # rna_readable_p.name="rna_p"
+    # meth_readable_p.name="meth_p"
+    # rna_readable_n.name="rna_n"
+    # meth_readable_n.name="meth_n"
+                         
+    #joined = pd.concat( [rna_readable[:20],\
+    #                     meth_readable[:20]], axis=1 )
+                         
     joined = pd.concat( [rna_readable,\
                          meth_readable], axis=1 )
+                         
+    # joined = pd.concat( [rna_readable_p,rna_readable_n,\
+    #                      meth_readable_p,meth_readable_n], axis=1 )
+    #
+    # maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
+    #
+    # joined=joined.loc[maxvalues]
+    # joined = joined[:25]
+
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
     br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
     max_ax = np.max( joined.values.flatten() )
     min_ax = np.min( joined.values.flatten() )
     max_ax = np.max( max_ax, -min_ax )
     min_ax = -max_ax
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=True,stacked=True, sort_columns=False); 
     pp.suptitle( "H %d"%(z_idx))
     pp.savefig( h_dir + "/h%d_weighted.png"%(z_idx), format="png", dpi=300 )
+    #pp.show()
+    #pdb.set_trace()
     pp.close('all')
         
 
