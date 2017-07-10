@@ -1,6 +1,7 @@
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
-from tcga_encoder.data.pathway_data import Pathways
+#from tcga_encoder.data.pathway_data import Pathways
+from tcga_encoder.data.hallmark_data import Pathways
 from tcga_encoder.definitions.tcga import *
 #from tcga_encoder.definitions.nn import *
 from tcga_encoder.definitions.locations import *
@@ -117,13 +118,10 @@ def find_keepers_over_groups( z, groups, name, nbr2keep, stats2use ):
     
     pearsons = np.zeros( X.shape[1] )
     pvalues  = np.zeros( X.shape[1] )
-    pdb.set_trace()
     for x,x_idx in zip( X.values.T, range(X.shape[1])):
       
       if stat == "pearson":
         pearsons[x_idx], pvalues[x_idx] = stats.pearsonr( z, x )
-      elif stat == "spearman":
-        pearsons[x_idx], pvalues[x_idx] = stats.spearmanr( z, x )
       elif stat == "auc":
         true_y = (x>0).astype(int)
         auc, se, zvalue, pvalue = auc_test( true_y, z ) #np.sqrt( ses_tissue**2 + se_r_tissue**2 )
@@ -166,7 +164,6 @@ def find_keepers_over_groups( z, groups, name, nbr2keep, stats2use ):
   
 def find_keepers(z, X, name, nbr2keep):
   inner = pd.Series( np.dot( z, X ), index = X.columns, name=name )
-  pdb.set_trace()
   inner.sort_values(inplace=True)
   inner = inner / np.max(np.abs(inner))
   #signed = np.sign( inner )
@@ -188,7 +185,7 @@ def main( data_location, results_location ):
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   model_filename = os.path.join( results_path, "full_vae_model.h5" )
   
-  save_dir = os.path.join( results_path, "hidden_clustering" )
+  save_dir = os.path.join( results_path, "hallmark_clustering" )
   check_and_mkdir(save_dir)
   z_dir = os.path.join( save_dir, "z_pics" )
   check_and_mkdir(z_dir)
@@ -211,6 +208,57 @@ def main( data_location, results_location ):
   W_hidden = get_hidden_weights( model_store, input_sources, data_store )
   W_hidden2z = get_hidden2z_weights( model_store )
   
+  size_per_unit = 0.25
+  size1 = max( min( 40, int( W_hidden["RNA"].values.shape[0]*size_per_unit ) ), 12 )
+
+  size2 = max( min( 40, int( W_hidden["miRNA"].values.shape[0]*size_per_unit )), 12 )
+  
+  #pdb.set_trace()
+
+  cmap = sns.palplot(sns.light_palette((260, 75, 60), input="husl"))
+  htmap3 = sns.clustermap ( pd.concat( [W_hidden["RNA"],W_hidden["miRNA"]],0).T.corr(), cmap=cmap, square=True, figsize=(size1,size2) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_rna__mirna_clustermap.png", fmt="png", bbox_inches = "tight")
+  
+  #size2 = max( int( n_inputs*size_per_unit ), 12 )
+  size1 = max( min( 40, int( W_hidden["RNA"].values.shape[0]*size_per_unit )), 12 )
+  cmap = sns.palplot(sns.light_palette((260, 75, 60), input="husl"))
+  htmap3 = sns.clustermap ( W_hidden["RNA"].T.corr(), cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_rna_clustermap.png", fmt="png", bbox_inches = "tight")
+
+  size1 = max( min( 40, int( W_hidden["miRNA"].values.shape[0]*size_per_unit )), 12 )
+  htmap3 = sns.clustermap ( W_hidden["miRNA"].T.corr(), cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_mirna_clustermap.png", fmt="png", bbox_inches = "tight")
+
+  size1 = max(min( 40,  int( W_hidden["METH"].values.shape[0]*size_per_unit )), 12 )
+  htmap3 = sns.clustermap ( W_hidden["METH"].T.corr(), cmap=cmap, square=True, figsize=(size1,size1) )
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+  pp.setp(htmap3.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+  pp.setp(htmap3.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+  htmap3.ax_row_dendrogram.set_visible(False)
+  htmap3.ax_col_dendrogram.set_visible(False)
+  pp.savefig( save_dir + "/weights_meth_clustermap.png", fmt="png", bbox_inches = "tight")
+
+  
+  #pdb.set_trace()
   weighted_z = join_weights( W_hidden2z, W_hidden )
   
   #pdb.set_trace()
@@ -258,14 +306,15 @@ def main( data_location, results_location ):
     X -= X.mean(0)
     X /= X.std(0)
     meth_normed[t_query] = X
+  
+  #pdb.set_trace()
     
-  nbr = 15
+  nbr = 20
   Z_keep_rna=[]
   Z_keep_mirna=[]
   Z_keep_meth=[]
   Z_keep_dna = []
   for z_idx in range(n_z):
-    print z_idx
     z_values = Z_values[:,z_idx]
     order_z = np.argsort(z_values)
 
@@ -284,7 +333,7 @@ def main( data_location, results_location ):
    
     f = pp.figure( figsize = (12,8))
     ax1 = f.add_subplot(321);ax2 = f.add_subplot(323);ax3 = f.add_subplot(325);
-    ax_pie1 = f.add_subplot(222); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
+    ax_pie1 = f.add_subplot(133); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
     
     max_ax = np.max( np.hstack( (rna_w_ordered[:nbr].values,meth_w_ordered[:nbr].values,mirna_w_ordered[:nbr].values) ) )
     min_ax = np.min( np.hstack( (rna_w_ordered[:nbr].values,meth_w_ordered[:nbr].values,mirna_w_ordered[:nbr].values) ) )
@@ -297,17 +346,15 @@ def main( data_location, results_location ):
     neg_rna = pp.find( rna_w_ordered.values<0) ; pos_rna = pp.find( rna_w_ordered.values>0)
     neg_meth = pp.find( meth_w_ordered.values<0) ; pos_meth = pp.find( meth_w_ordered.values>0) 
 
+    rna_readable = pathway_info.CancerEnrichment(rna_w_ordered[:nbr].index, 1+0*np.abs( rna_w_ordered[:nbr].values)  )
+    meth_readable = pathway_info.CancerEnrichment(meth_w_ordered[:nbr].index, 1+0*np.abs( meth_w_ordered[:nbr].values ) )
     
-    #rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index, np.abs( rna_w_ordered.values)  )
-    #meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index, np.abs( meth_w_ordered.values ) )
-    rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index[:50], np.abs( rna_w_ordered.values[:50])  )
-    meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index[:50], np.abs( meth_w_ordered.values[:50] ) )
-
-    # rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna], np.abs( rna_w_ordered.values[pos_rna]) )
-    # meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth], np.abs( meth_w_ordered.values[pos_meth]))
-    #
-    # rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna], np.abs( rna_w_ordered.values[neg_rna] ) )
-    # meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth], np.abs( meth_w_ordered.values[neg_meth]) )
+    
+    # rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:20]], 1+0*rna_w_ordered.values[pos_rna[:20]] )
+    # meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:20]], 1+0*meth_w_ordered.values[pos_meth[:20]])
+    # #
+    # rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:20]], -1+0*rna_w_ordered.values[neg_rna[:20]] )
+    # meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:20]], -1+0*meth_w_ordered.values[neg_meth[:20]] )
 
     rna_readable.name="rna"
     meth_readable.name="meth"
@@ -317,15 +364,30 @@ def main( data_location, results_location ):
     # rna_readable_n.name="rna_n"
     # meth_readable_n.name="meth_n"
                          
-    joined = pd.concat( [rna_readable[:20],\
-                         meth_readable[:20]], axis=1 )
-    
-    maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
-    
-    joined=joined.loc[maxvalues]
-    joined = joined[:25]
+    #joined = pd.concat( [rna_readable[:20],\
+    #                     meth_readable[:20]], axis=1 )
+                         
+    joined = pd.concat( [rna_readable,\
+                         meth_readable], axis=1 )
+                         
+    # joined = pd.concat( [rna_readable_p,rna_readable_n,\
+    #                      meth_readable_p,meth_readable_n], axis=1 )
+    #
+    # maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
+    #
+    # joined=joined.loc[maxvalues]
+    # joined = joined[:25]
 
-    br = joined.plot(kind="bar",ax=ax_pie1,color=["red","blue"],legend=True,stacked=True, sort_columns=False); 
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
+    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
+    
+    max_ax = np.max( joined.values.flatten() )
+    min_ax = np.min( joined.values.flatten() )
+    max_ax = np.max( max_ax, -min_ax )
+    min_ax = -max_ax
+    #pdb.set_trace()
+    #ax_pie1.set_xlim(min_ax,max_ax);
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=True,stacked=True, sort_columns=False); 
     pp.suptitle( "Z %d"%(z_idx))
     pp.savefig( z_dir + "/z%d_weighted.png"%(z_idx), format="png", dpi=300 )
     #pp.show()
@@ -351,7 +413,7 @@ def main( data_location, results_location ):
    
     f = pp.figure( figsize = (12,8))
     ax1 = f.add_subplot(321);ax2 = f.add_subplot(323);ax3 = f.add_subplot(325);
-    ax_pie1 = f.add_subplot(222); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
+    ax_pie1 = f.add_subplot(133); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
     
     max_ax = np.max( np.hstack( (rna_w_ordered[:nbr].values,meth_w_ordered[:nbr].values,mirna_w_ordered[:nbr].values) ) )
     min_ax = np.min( np.hstack( (rna_w_ordered[:nbr].values,meth_w_ordered[:nbr].values,mirna_w_ordered[:nbr].values) ) )
@@ -365,14 +427,16 @@ def main( data_location, results_location ):
     neg_meth = pp.find( meth_w_ordered.values<0) ; pos_meth = pp.find( meth_w_ordered.values>0) 
 
     
-    rna_kegg,rna_readable = pathway_info.CancerEnrichment(rna_w_ordered.index[:50], np.abs( rna_w_ordered.values[:50])  )
-    meth_kegg,meth_readable = pathway_info.CancerEnrichment(meth_w_ordered.index[:50], np.abs( meth_w_ordered.values[:50] ) )
-
-    #rna_kegg_p,rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna], np.abs( rna_w_ordered.values[pos_rna]) ) 
-    #meth_kegg_p,meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth], np.abs( meth_w_ordered.values[pos_meth]))
-
-    #rna_kegg_n,rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna], np.abs( rna_w_ordered.values[neg_rna] ) )
-    #meth_kegg_n,meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth], np.abs( meth_w_ordered.values[neg_meth]) )
+    
+    rna_readable = pathway_info.CancerEnrichment(rna_w_ordered[:nbr].index, 1+0*np.abs( rna_w_ordered[:nbr].values)  )
+    meth_readable = pathway_info.CancerEnrichment(meth_w_ordered[:nbr].index, 1+0*np.abs( meth_w_ordered[:nbr].values ) )
+    
+    
+    # rna_readable_p   = pathway_info.CancerEnrichment(rna_w_ordered.index[pos_rna[:20]], 1+0*rna_w_ordered.values[pos_rna[:20]] )
+    # meth_readable_p = pathway_info.CancerEnrichment(meth_w_ordered.index[pos_meth[:20]], 1+0*meth_w_ordered.values[pos_meth[:20]])
+    # #
+    # rna_readable_n   = pathway_info.CancerEnrichment(rna_w_ordered.index[neg_rna[:20]], -1+0*rna_w_ordered.values[neg_rna[:20]] )
+    # meth_readable_n = pathway_info.CancerEnrichment(meth_w_ordered.index[neg_meth[:20]], -1+0*meth_w_ordered.values[neg_meth[:20]] )
 
     rna_readable.name="rna"
     meth_readable.name="meth"
@@ -382,15 +446,27 @@ def main( data_location, results_location ):
     # rna_readable_n.name="rna_n"
     # meth_readable_n.name="meth_n"
                          
-    joined = pd.concat( [rna_readable[:20],\
-                         meth_readable[:20]], axis=1 )
-    
-    maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
-    
-    joined=joined.loc[maxvalues]
-    joined = joined[:25]
+    #joined = pd.concat( [rna_readable[:20],\
+    #                     meth_readable[:20]], axis=1 )
+                         
+    joined = pd.concat( [rna_readable,\
+                         meth_readable], axis=1 )
+                         
+    # joined = pd.concat( [rna_readable_p,rna_readable_n,\
+    #                      meth_readable_p,meth_readable_n], axis=1 )
+    #
+    # maxvalues = joined.index[ np.argsort( -np.abs(joined.fillna(0)).sum(1).values ) ]
+    #
+    # joined=joined.loc[maxvalues]
+    # joined = joined[:25]
 
-    br = joined.plot(kind="bar",ax=ax_pie1,color=["red","blue"],legend=True,stacked=True, sort_columns=False); 
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","red","blue","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
+    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
+    max_ax = np.max( joined.values.flatten() )
+    min_ax = np.min( joined.values.flatten() )
+    max_ax = np.max( max_ax, -min_ax )
+    min_ax = -max_ax
+    #br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=True,stacked=True, sort_columns=False); 
     pp.suptitle( "H %d"%(z_idx))
     pp.savefig( h_dir + "/h%d_weighted.png"%(z_idx), format="png", dpi=300 )
     #pp.show()

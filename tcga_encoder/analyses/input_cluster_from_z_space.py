@@ -61,6 +61,8 @@ def find_keepers_over_groups( z, groups, name, nbr2keep, stats2use ):
       
       if stat == "pearson":
         pearsons[x_idx], pvalues[x_idx] = stats.pearsonr( z, x )
+      elif stat == "spearman":
+        pearsons[x_idx], pvalues[x_idx] = stats.spearmanr( z, x )
       elif stat == "auc":
         true_y = (x>0).astype(int)
         auc, se, zvalue, pvalue = auc_test( true_y, z ) #np.sqrt( ses_tissue**2 + se_r_tissue**2 )
@@ -123,7 +125,7 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  save_dir = os.path.join( results_path, "input_clustering" )
+  save_dir = os.path.join( results_path, "input_clustering2" )
   check_and_mkdir(save_dir)
   z_dir = os.path.join( save_dir, "z_pics" )
   check_and_mkdir(z_dir)
@@ -205,13 +207,13 @@ def main( data_location, results_location ):
     #
     # keep_rna = ordered_rna[:nbr]
     # keep_rna = keep_rna.sort_values()
-    keep_rna,keep_mirna,keep_meth,keep_dna = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), nbr, stats2use=["pearson","pearson","pearson","auc"])
+    keep_rna,keep_mirna,keep_meth,keep_dna = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), nbr, stats2use=["spearman","spearman","spearman","auc"])
     
     # keep_rna = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), nbr )
     # keep_mirna = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), nbr )
     # keep_meth = find_keepers( z_values, meth_normed, "z_%d"%(z_idx), nbr )
     
-    keep_rna_big,keep_mirna_big,keep_meth_big,keep_dna_big = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), 2*nbr, stats2use=["pearson","pearson","pearson","auc"])
+    keep_rna_big,keep_mirna_big,keep_meth_big,keep_dna_big = find_keepers_over_groups( z_values, [rna_normed,mirna_normed,meth_normed,dna_normed], "z_%d"%(z_idx), 2*nbr, stats2use=["spearman","spearman","spearman","auc"])
     
     # keep_rna_big = find_keepers( z_values, rna_normed, "z_%d"%(z_idx), 3*nbr )
     # keep_mirna_big = find_keepers( z_values, mirna_normed, "z_%d"%(z_idx), 3*nbr )
