@@ -38,7 +38,7 @@ def add_variables( var_dict, data_dict ):
   var_dict["meth_dim"]   = data_dict['dataset'].GetDimension("METH")
   var_dict["rna_dim"]    = data_dict['dataset'].GetDimension("RNA")
   var_dict["mirna_dim"]    = data_dict['dataset'].GetDimension("miRNA")
-  var_dict["tissue_dim"] = data_dict['dataset'].GetDimension("TISSUE")
+  var_dict["tissue_dim"] = data_dict['dataset'].GetDimension("TISSUE_USED")
   
   if data_dict.has_key( "dna_genes"):
     var_dict["dna_dim"]  = len(data_dict["dna_genes"])
@@ -67,6 +67,8 @@ def main(yaml_file):
   logging_dict[SAVEDIR] = os.path.join( HOME_DIR, os.path.join( logging_dict[LOCATION], logging_dict[EXPERIMENT] ) )
   # #networks = load_architectures( y[ARCHITECTURES], y[DATA] )
   #add_variables( arch_dict[VARIABLES], data_dict )
+  
+  
   network = load_architecture( arch_dict, data_dict )
   network_name = arch_dict[NAME]
 

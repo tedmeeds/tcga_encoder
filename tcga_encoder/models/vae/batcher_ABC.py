@@ -149,7 +149,7 @@ class TCGABatcherABC( object ):
       
     # store keys
     self.OBSERVED_key = CLINICAL+"/"+OBSERVED
-    self.TISSUE_key   = CLINICAL+"/"+TISSUE
+    self.TISSUE_key   = CLINICAL+"_USED/"+TISSUE
     self.RNA_key      = RNA+"/"+self.RNA_data
     self.miRNA_key      = miRNA+"/"+self.miRNA_data
     self.METH_key     = METH+"/"+self.METH_data
@@ -325,32 +325,32 @@ class TCGABatcherABC( object ):
     #   pdb.set_trace()
     #
     #coad_bc = "coad_tcga-t9-a92h"
+    
+    #pdb.set_trace()
     for tissue in self.validation_tissues:
-      i=self.data_store["/CLINICAL/TISSUE"][tissue]==1
-      self.validation_tissue2barcodes[ tissue ] = self.data_store["/CLINICAL/TISSUE"][i].index
+      i=self.data_store[self.TISSUE_key][tissue]==1
+      self.validation_tissue2barcodes[ tissue ] = self.data_store[self.TISSUE_key][i].index
       
-      for bc in self.validation_tissue2barcodes[ tissue ]:
-        found = False
-        for tissue in self.validation_tissues:
-          if bc.split("_")[0] == tissue:
-            found = True
-            break
-        assert found is True, "could not find " + bc
-      
-      ids = self.observation_tissues==tissue
+      # for bc in self.validation_tissue2barcodes[ tissue ]:
+      #   found = False
+      #   for tissue in self.validation_tissues:
+      #     if bc.split("_")[0] == tissue:
+      #       found = True
+      #       break
+      #   assert found is True, "could not find " + bc
+      #pdb.set_trace()
+      #ids = self.observation_tissues==tissue
       for bc in self.validation_tissue2barcodes[ tissue ]:
         self.validation_obs_query[ self.obs_store_bc_2idx[bc] ] = True
       print tissue, self.validation_obs_query.sum()
-      
+    
     self.validation_obs_query *= self.usable_query 
     self.not_validation_query = (1-self.validation_obs_query).astype(bool)
     
-    #pdb.set_trace()
     self.validation_barcodes = self.data_store[self.OBSERVED_key][self.validation_obs_query].index
     self.usable_observed_query = self.usable_query*self.not_validation_query
     self.train_barcodes = self.data_store[self.OBSERVED_key][self.usable_observed_query].index
     self.test_barcodes = []
-    #pdb.set_trace()
     assert len(np.intersect1d( self.train_barcodes, self.validation_barcodes)) == 0, "train and test are not mutually exclusive!!"
 
     if self.algo_dict.has_key( "xval_fold" ):

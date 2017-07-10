@@ -8,7 +8,13 @@ def load_data_from_dict( y ):
   y['name_of_store'] = y['name_of_store']
   
   y['dataset'] = MultiSourceData( y['location'], y['name_of_store'] )
+  
+  y['dataset'].RemoveTissues( ["gbm"] )
+  y['dataset'].MergeTissues( [["coad","read"]] )
   y['store'] = y['dataset'].store
+  
+  
+  #pdb.set_trace()
   
 def fair_rank( x ):
   #ranks = []
@@ -92,6 +98,8 @@ class MultiSourceData(object):
   def GetDimension( self, source_name ):
     if source_name == TISSUE:
       return len(self.store[CLINICAL + "/" + TISSUE].columns)
+    if source_name == TISSUE+"_USED":
+      return len(self.store[CLINICAL + "_USED/" + TISSUE].columns)
     elif source_name == RNA:
       return len(self.store[RNA + "/" + FAIR].columns)
     elif source_name == miRNA:
@@ -205,6 +213,67 @@ class MultiSourceData(object):
         except:
           assert False, "Problem assigning to tissue"
         #pdb.set_trace()
+
+  def RemoveTissues( self, tissues2remove = [] ):
+
+
+    for tissue in tissues2remove:
+      print "Dropping ", tissue
+      self.store[ CLINICAL + "_USED" + "/" + TISSUE ]  = self.store[ CLINICAL + "/" + TISSUE ]
+
+      tissues = self.store[ CLINICAL + "_USED" + "/" + TISSUE ]
+
+      tissues = tissues.drop( tissue, axis = 1 )
+      
+      bcs = tissues[ tissues.sum(1)==1 ].index.values
+
+      tissues = tissues.loc[bcs]
+
+      self.store[ CLINICAL + "_USED" + "/" + TISSUE ] = tissues
+      self.store[ CLINICAL + "_USED" + "/" + OBSERVED ] = self.store[ CLINICAL + "/" + OBSERVED ].loc[ bcs ]
+      #
+      # obs = self.store[ CLINICAL + "/" + OBSERVED ]
+      #
+      # data =  self.store[ CLINICAL + "/" + DATA ]
+      # info =  self.store[ CLINICAL + "/" + INFO ]
+      # /CLINICAL/TISSUE                          frame        (shape->[11245,33])
+      # /CLINICAL/data                            frame        (shape->[1,26])
+      # /CLINICAL/info                            frame        (shape->[1,2])
+      # /CLINICAL/observed                        frame        (shape->[11245,6])
+
+      #tissue_bcs = tissues[ tissues[tissue]==1 ].index.values
+      #pdb.set_trace()
+      
+  def MergeTissues( self, tissues2merge = []):
+  
+      for tissue_group in tissues2merge:
+        print "Merging ",tissue_group
+
+        #self.store[ CLINICAL + "_USED" + "/" + TISSUE ]  = self.store[ CLINICAL + "/" + TISSUE ]
+
+        tissues = self.store[ CLINICAL + "_USED" + "/" + TISSUE ]
+
+        new_column = "".join(tissue_group)
+        new_values = tissues[tissue_group].sum(1)
+        
+        tissues[ new_column ] = new_values
+        tissues = tissues.drop( tissue_group, axis = 1 )
+        
+        self.store[ CLINICAL + "_USED" + "/" + TISSUE ] = tissues
+        #pdb.set_trace()
+        #tissues = tissues.drop( tissue, axis = 1 )
+      
+        #bcs = tissues[ tissues.sum(1)==1 ].index.values
+
+        #tissues = tissues.loc[bcs]
+
+        #self.store[ CLINICAL + "_USED" + "/" + TISSUE ] = tissues
+        
+        #self.store[ CLINICAL + "_USED" + "/" + OBSERVED ] = self.store[ CLINICAL + "/" + OBSERVED ].loc[ bcs ]
+      
+      
+    
+      
     
   def AddDNA( self, broad_location, filename, h5store, h5store_raw, mutation_channels, genes2keep = None, diseases = None, min_nbr_in_pan = None ):
     print "*****************************************"
