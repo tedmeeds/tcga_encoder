@@ -228,7 +228,6 @@ def main( data_location, results_location ):
   n_h     = len(h_names)
   n_z     = len(z_names)
   
-  
   print "computing RNA-H spearman rho's"
   rho_rna_h = stats.spearmanr( RNA_scale.values, H.values )
   print "computing miRNA-H spearman rho's"
@@ -270,35 +269,40 @@ def main( data_location, results_location ):
   meth_z_rho = pd.DataFrame( rho_meth_z[0][:n_meth,:][:,n_meth:], index = meth_names, columns=z_names)
   meth_z_p   = pd.DataFrame( rho_meth_z[1][:n_meth,:][:,n_meth:], index = meth_names, columns=z_names)
 
+  rna_rna_rho.to_csv( save_dir + "/rna_rna_rho.csv" )
+  rna_rna_p.to_csv( save_dir + "/rna_rna_p.csv" )
+  rna_h_rho.to_csv( save_dir + "/rna_h_rho.csv" )
+  rna_h_p.to_csv( save_dir + "/rna_h_p.csv" )
+  rna_z_rho.to_csv( save_dir + "/rna_z_rho.csv" )
+  rna_z_p.to_csv( save_dir + "/rna_z_p.csv" )
+  
+  mirna_mirna_rho.to_csv( save_dir + "/mirna_mirna_rho.csv" )
+  mirna_mirna_p.to_csv( save_dir + "/mirna_mirna_p.csv" )
+  mirna_h_rho.to_csv( save_dir + "/mirna_h_rho.csv" )
+  mirna_h_p.to_csv( save_dir + "/mirna_h_p.csv" )
+  mirna_z_rho.to_csv( save_dir + "/mirna_z_rho.csv" )
+  mirna_z_p.to_csv( save_dir + "/mirna_z_p.csv" )
+  
+
+  meth_meth_rho.to_csv( save_dir + "/meth_meth_rho.csv" )
+  meth_meth_p.to_csv( save_dir + "/meth_meth_p.csv" )
+  meth_h_rho.to_csv( save_dir + "/meth_h_rho.csv" )
+  meth_h_p.to_csv( save_dir + "/meth_h_p.csv" )
+  meth_z_rho.to_csv( save_dir + "/meth_z_rho.csv" )
+  meth_z_p.to_csv( save_dir + "/meth_z_p.csv" )
+  
+  
   
   #Z = np.vstack( (Z_train.values, Z_val.values) )
-  pdb.set_trace()
+  #pdb.set_trace()
   n_z = Z.shape[1]
-  #z_names = ["z_%d"%z_idx for z_idx in range(Z.shape[1])]
-  #Z = pd.DataFrame( Z, index = np.hstack( (Z_train.index.values, Z_val.index.values)), columns = z_names )
-  
-  #barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
-  #barcodes = data_store["/CLINICAL/observed"][ data_store["/CLINICAL/observed"][["RNA","miRNA","METH"]].sum(1)==3 ].index.values
-  #
-  #
-  # #input_sources = ["METH","RNA","miRNA"]
-  # input_sources = ["RNA","miRNA","METH"]
-  # W_hidden = get_hidden_weights( model_store, input_sources, data_store )
-  # W_hidden2z = get_hidden2z_weights( model_store )
-  #
+
   # size_per_unit = 0.25
   # size1 = max( min( 40, int( W_hidden["RNA"].values.shape[0]*size_per_unit ) ), 12 )
   #
   # size2 = max( min( 40, int( W_hidden["miRNA"].values.shape[0]*size_per_unit )), 12 )
   #
-  # weighted_z = join_weights( W_hidden2z, W_hidden )
-  #
-  # #pdb.set_trace()
-  #
-  # Z=Z.loc[barcodes]
-  # Z_values = Z.values
-  
-  
+
   tissues = data_store["/CLINICAL/TISSUE"].loc[barcodes]
   
   rna   = RNA_scale #np.log(1+data_store["/RNA/RSEM"].loc[ barcodes ])
@@ -314,129 +318,58 @@ def main( data_location, results_location ):
   n_tissues = len(tissue_names)
   
   #n_h = W_hidden2z.shape[0]
-  #
-  # rna_normed = rna; mirna_normed = mirna; meth_normed = meth; dna_normed=2*dna-1
-  # for t_idx in range(n_tissues):
-  #   t_query = tissue_idx == t_idx
-  #
-  #   X = rna[t_query]
-  #   X -= X.mean(0)
-  #   X /= X.std(0)
-  #   rna_normed[t_query] = X
-  #
-  #   X = mirna[t_query]
-  #   X -= X.mean(0)
-  #   X /= X.std(0)
-  #   mirna_normed[t_query] = X
-  #
-  #   X = meth[t_query]
-  #   X -= X.mean(0)
-  #   X /= X.std(0)
-  #   meth_normed[t_query] = X
-  #
-  # #pdb.set_trace()
+
     
   nbr = 20
-  Z_keep_rna=[]
-  Z_keep_mirna=[]
-  Z_keep_meth=[]
-  Z_keep_dna = []
-  for z_idx in range(0):
-    z_values = Z_values[:,z_idx]
-    order_z = np.argsort(z_values)
+  for z_idx,z_name in zip( range(n_z), z_names):
+    print "viewing ", z_name
+    rna_p   = rna_z_p[ z_name ].sort_values()[:nbr]
+    mirna_p = mirna_z_p[ z_name ].sort_values()[:nbr]
+    meth_p  = meth_z_p[ z_name ].sort_values()[:nbr]
+    
+    rna_rho = rna_z_rho[ z_name ].loc[ rna_p.index ].sort_values()
+    mirna_rho = mirna_z_rho[ z_name ].loc[ mirna_p.index ].sort_values()
+    meth_rho = meth_z_rho[ z_name ].loc[ meth_p.index ].sort_values()
 
-    rna_w = weighted_z["RNA"][ "z_%d"%(z_idx)]
-    mirna_w = weighted_z["miRNA"][ "z_%d"%(z_idx)]
-    meth_w = weighted_z["METH"][ "z_%d"%(z_idx)]
-    
-    order_rna = np.argsort( -np.abs(rna_w.values) )
-    order_mirna = np.argsort( -np.abs(mirna_w.values) )
-    order_meth = np.argsort( -np.abs(meth_w.values) )
-    
-    rna_w_ordered = pd.Series( rna_w.values[ order_rna ], index = rna_w.index[order_rna], name="RNA")
-    mirna_w_ordered = pd.Series( mirna_w.values[ order_mirna ], index = mirna_w.index[order_mirna], name="miRNA")
-    meth_w_ordered = pd.Series( meth_w.values[ order_meth ], index = meth_w.index[order_meth], name="METH")
-    
-   
     f = pp.figure( figsize = (12,8))
-    ax1 = f.add_subplot(321);ax2 = f.add_subplot(323);ax3 = f.add_subplot(325);
-    ax_pie1 = f.add_subplot(133); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
+    ax_rna = f.add_subplot(131); ax_mirna = f.add_subplot(133); ax_meth = f.add_subplot(132);
+    #ax_pie1 = f.add_subplot(133); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
     
-    max_ax = np.max( np.hstack( (rna_w_ordered[:nbr].values,meth_w_ordered[:nbr].values,mirna_w_ordered[:nbr].values) ) )
-    min_ax = np.min( np.hstack( (rna_w_ordered[:nbr].values,meth_w_ordered[:nbr].values,mirna_w_ordered[:nbr].values) ) )
+    max_ax = np.max( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
+    min_ax = np.min( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
     
-    h1=rna_w_ordered[:nbr].sort_values(ascending=False).plot(kind='barh',ax=ax1,color="red",legend=False,title=None,fontsize=8); ax1.set_xlim(min_ax,max_ax); ax1.set_title(""); h1.set_xticklabels([]); ax1.legend(["RNA"])
-    h2=meth_w_ordered[:nbr].sort_values(ascending=False).plot(kind='barh',ax=ax2,color="blue",legend=False,title=None,fontsize=8);ax2.set_xlim(min_ax,max_ax); ax2.set_title(""); h2.set_xticklabels([]); ax2.legend(["METH"])
-    h3=mirna_w_ordered[:nbr].sort_values(ascending=False).plot(kind='barh',ax=ax3,color="black",legend=False,title=None,fontsize=8); ax3.set_xlim(min_ax,max_ax); ax3.set_title("");ax3.legend(["miRNA"])
-    
-    
-    neg_rna = pp.find( rna_w_ordered.values<0) ; pos_rna = pp.find( rna_w_ordered.values>0)
-    neg_meth = pp.find( meth_w_ordered.values<0) ; pos_meth = pp.find( meth_w_ordered.values>0) 
+    h1=rna_rho.plot(kind='barh',ax=ax_rna,color="red",legend=False,title="RNA",fontsize=8); ax_rna.set_xlim(min_ax,max_ax);  
+    h2=meth_rho.plot(kind='barh',ax=ax_meth,color="blue",legend=False,title="METH",fontsize=8);ax_meth.set_xlim(min_ax,max_ax); 
+    h3=mirna_rho.plot(kind='barh',ax=ax_mirna,color="black",legend=False,title="miRNA",fontsize=8); ax_mirna.set_xlim(min_ax,max_ax); 
 
-    rna_readable = pathway_info.CancerEnrichment(rna_w_ordered[:nbr].index, 1+0*np.abs( rna_w_ordered[:nbr].values)  )
-    meth_readable = pathway_info.CancerEnrichment(meth_w_ordered[:nbr].index, 1+0*np.abs( meth_w_ordered[:nbr].values ) )
-    rna_readable.name="rna"
-    meth_readable.name="meth"
-
-    joined = pd.concat( [rna_readable,\
-                         meth_readable], axis=1 )
-    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
-    
-    max_ax = np.max( joined.values.flatten() )
-    min_ax = np.min( joined.values.flatten() )
-    max_ax = np.max( max_ax, -min_ax )
-    min_ax = -max_ax
-    pp.suptitle( "Z %d"%(z_idx))
-    pp.savefig( z_dir + "/z%d_weighted.png"%(z_idx), format="png", dpi=300 )
+    pp.suptitle( z_name)
+    pp.savefig( z_dir + "/%s_spearmanr.png"%(z_name), format="png", dpi=300 )
     pp.close('all')
 
-  for z_idx in range(0):
-    rna_w = W_hidden["RNA"][ "h_%d"%(z_idx)]
-    mirna_w = W_hidden["miRNA"][ "h_%d"%(z_idx)]
-    meth_w = W_hidden["METH"][ "h_%d"%(z_idx)]
+  for h_idx, h_name in zip( range(n_h), h_names ):
+    print "viewing ", z_name
+    rna_p   = rna_h_p[ h_name ].sort_values()[:nbr]
+    mirna_p = mirna_h_p[ h_name ].sort_values()[:nbr]
+    meth_p  = meth_h_p[ h_name ].sort_values()[:nbr]
     
-    order_rna = np.argsort( -np.abs(rna_w.values) )
-    order_mirna = np.argsort( -np.abs(mirna_w.values) )
-    order_meth = np.argsort( -np.abs(meth_w.values) )
-    
-    rna_w_ordered = pd.Series( rna_w.values[ order_rna ], index = rna_w.index[order_rna], name="RNA")
-    mirna_w_ordered = pd.Series( mirna_w.values[ order_mirna ], index = mirna_w.index[order_mirna], name="miRNA")
-    meth_w_ordered = pd.Series( meth_w.values[ order_meth ], index = meth_w.index[order_meth], name="METH")
-    
-   
-    f = pp.figure( figsize = (12,8))
-    ax1 = f.add_subplot(321);ax2 = f.add_subplot(323);ax3 = f.add_subplot(325);
-    ax_pie1 = f.add_subplot(133); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
-    
-    max_ax = np.max( np.hstack( (rna_w_ordered[:nbr].values,meth_w_ordered[:nbr].values,mirna_w_ordered[:nbr].values) ) )
-    min_ax = np.min( np.hstack( (rna_w_ordered[:nbr].values,meth_w_ordered[:nbr].values,mirna_w_ordered[:nbr].values) ) )
-    
-    h1=rna_w_ordered[:nbr].sort_values(ascending=False).plot(kind='barh',ax=ax1,color="red",legend=False,title=None,fontsize=8); ax1.set_xlim(min_ax,max_ax); ax1.set_title(""); h1.set_xticklabels([]); ax1.legend(["RNA"])
-    h2=meth_w_ordered[:nbr].sort_values(ascending=False).plot(kind='barh',ax=ax2,color="blue",legend=False,title=None,fontsize=8);ax2.set_xlim(min_ax,max_ax); ax2.set_title(""); h2.set_xticklabels([]); ax2.legend(["METH"])
-    h3=mirna_w_ordered[:nbr].sort_values(ascending=False).plot(kind='barh',ax=ax3,color="black",legend=False,title=None,fontsize=8); ax3.set_xlim(min_ax,max_ax); ax3.set_title("");ax3.legend(["miRNA"])
-    
-    
-    neg_rna = pp.find( rna_w_ordered.values<0) ; pos_rna = pp.find( rna_w_ordered.values>0)
-    neg_meth = pp.find( meth_w_ordered.values<0) ; pos_meth = pp.find( meth_w_ordered.values>0) 
+    rna_rho = rna_h_rho[ h_name ].loc[ rna_p.index ].sort_values()
+    mirna_rho = mirna_h_rho[ h_name ].loc[ mirna_p.index ].sort_values()
+    meth_rho = meth_h_rho[ h_name ].loc[ meth_p.index ].sort_values()
 
+    f = pp.figure( figsize = (12,8))
+    ax_rna = f.add_subplot(131); ax_mirna = f.add_subplot(133); ax_meth = f.add_subplot(132);
+
+    max_ax = np.max( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
+    min_ax = np.min( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
     
-    
-    rna_readable = pathway_info.CancerEnrichment(rna_w_ordered[:nbr].index, 1+0*np.abs( rna_w_ordered[:nbr].values)  )
-    meth_readable = pathway_info.CancerEnrichment(meth_w_ordered[:nbr].index, 1+0*np.abs( meth_w_ordered[:nbr].values ) )
-    
-    rna_readable.name="rna"
-    meth_readable.name="meth"
-    
-    joined = pd.concat( [rna_readable,\
-                         meth_readable], axis=1 )
-    br = joined.plot(kind="barh",ax=ax_pie1,color=["red","blue"],legend=False,stacked=True, sort_columns=False,fontsize=8); 
-    max_ax = np.max( joined.values.flatten() )
-    min_ax = np.min( joined.values.flatten() )
-    max_ax = np.max( max_ax, -min_ax )
-    min_ax = -max_ax
-    pp.suptitle( "H %d"%(z_idx))
-    pp.savefig( h_dir + "/h%d_weighted.png"%(z_idx), format="png", dpi=300 )
+    h1=rna_rho.plot(kind='barh',ax=ax_rna,color="red",legend=False,title="RNA",fontsize=8); ax_rna.set_xlim(min_ax,max_ax);  
+    h2=meth_rho.plot(kind='barh',ax=ax_meth,color="blue",legend=False,title="METH",fontsize=8);ax_meth.set_xlim(min_ax,max_ax); 
+    h3=mirna_rho.plot(kind='barh',ax=ax_mirna,color="black",legend=False,title="miRNA",fontsize=8); ax_mirna.set_xlim(min_ax,max_ax); 
+
+    pp.suptitle( h_name )
+    pp.savefig( h_dir + "/%s_spearmanr.png"%(h_name), format="png", dpi=300 )
     pp.close('all')
+
         
 
   
