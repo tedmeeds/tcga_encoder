@@ -200,6 +200,10 @@ class TCGABatcherAdversarial( TCGABatcher ):
     network.GetLayer( "target_prediction_neg" ).SetWeights( sess, network.GetLayer( "target_prediction_pos" ).EvalWeights() )
     network.GetLayer( "target_prediction_neg" ).SetBiases( sess, network.GetLayer( "target_prediction_pos" ).EvalBiases() )
     
+    if network.HasLayer("target_prediction_pos_hidden") is True:
+      network.GetLayer( "target_prediction_neg_hidden" ).SetWeights( sess, network.GetLayer( "target_prediction_pos_hidden" ).EvalWeights() )
+      network.GetLayer( "target_prediction_neg_hidden" ).SetBiases( sess, network.GetLayer( "target_prediction_pos_hidden" ).EvalBiases() )
+      
     self.fill_store.open()
     #pdb.set_trace()
     barcodes = cb_info[BATCH_FEED_IMPUTATION]["barcodes"]
@@ -735,6 +739,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
         else:
           groups0.append(dna_gene)
           ok_val.append(False)
+          val_predictions.append( 0.5*np.ones(n_val))
         if set_train_2_val is True:
           train_auc = val_auc
           train_cnt = val_cnt
@@ -753,7 +758,7 @@ class TCGABatcherAdversarial( TCGABatcher ):
     aucs = np.array(aucs)
     train_predictions = np.array(train_predictions).T
     val_predictions = np.array(val_predictions).T
-    
+    #pdb.set_trace()
     val_predictions = pd.DataFrame( val_predictions, columns = self.dna_genes )
     train_predictions = pd.DataFrame( train_predictions, columns = self.dna_genes )
     ok_val.append(False)

@@ -317,58 +317,60 @@ def main( data_location, results_location ):
   n = len(Z)
   n_tissues = len(tissue_names)
   
-  #n_h = W_hidden2z.shape[0]
+  rna_rna_neighbourhoods = np.dot( (1.0-rna_h_p), (1.0-rna_h_p).T )
+  rna_rna_neighbourhoods = np.dot( rna_h_rho, rna_h_rho.T )
+  pdb.set_trace()
 
     
-  nbr = 20
-  for z_idx,z_name in zip( range(n_z), z_names):
-    print "viewing ", z_name
-    rna_p   = rna_z_p[ z_name ].sort_values()[:nbr]
-    mirna_p = mirna_z_p[ z_name ].sort_values()[:nbr]
-    meth_p  = meth_z_p[ z_name ].sort_values()[:nbr]
-    
-    rna_rho = rna_z_rho[ z_name ].loc[ rna_p.index ].sort_values()
-    mirna_rho = mirna_z_rho[ z_name ].loc[ mirna_p.index ].sort_values()
-    meth_rho = meth_z_rho[ z_name ].loc[ meth_p.index ].sort_values()
-
-    f = pp.figure( figsize = (12,8))
-    ax_rna = f.add_subplot(131); ax_mirna = f.add_subplot(133); ax_meth = f.add_subplot(132);
-    #ax_pie1 = f.add_subplot(133); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
-    
-    max_ax = np.max( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
-    min_ax = np.min( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
-    
-    h1=rna_rho.plot(kind='barh',ax=ax_rna,color="red",legend=False,title="RNA",fontsize=8); ax_rna.set_xlim(min_ax,max_ax);  
-    h2=meth_rho.plot(kind='barh',ax=ax_meth,color="blue",legend=False,title="METH",fontsize=8);ax_meth.set_xlim(min_ax,max_ax); 
-    h3=mirna_rho.plot(kind='barh',ax=ax_mirna,color="black",legend=False,title="miRNA",fontsize=8); ax_mirna.set_xlim(min_ax,max_ax); 
-
-    pp.suptitle( z_name)
-    pp.savefig( z_dir + "/%s_spearmanr.png"%(z_name), format="png", dpi=300 )
-    pp.close('all')
-
-  for h_idx, h_name in zip( range(n_h), h_names ):
-    print "viewing ", z_name
-    rna_p   = rna_h_p[ h_name ].sort_values()[:nbr]
-    mirna_p = mirna_h_p[ h_name ].sort_values()[:nbr]
-    meth_p  = meth_h_p[ h_name ].sort_values()[:nbr]
-    
-    rna_rho = rna_h_rho[ h_name ].loc[ rna_p.index ].sort_values()
-    mirna_rho = mirna_h_rho[ h_name ].loc[ mirna_p.index ].sort_values()
-    meth_rho = meth_h_rho[ h_name ].loc[ meth_p.index ].sort_values()
-
-    f = pp.figure( figsize = (12,8))
-    ax_rna = f.add_subplot(131); ax_mirna = f.add_subplot(133); ax_meth = f.add_subplot(132);
-
-    max_ax = np.max( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
-    min_ax = np.min( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
-    
-    h1=rna_rho.plot(kind='barh',ax=ax_rna,color="red",legend=False,title="RNA",fontsize=8); ax_rna.set_xlim(min_ax,max_ax);  
-    h2=meth_rho.plot(kind='barh',ax=ax_meth,color="blue",legend=False,title="METH",fontsize=8);ax_meth.set_xlim(min_ax,max_ax); 
-    h3=mirna_rho.plot(kind='barh',ax=ax_mirna,color="black",legend=False,title="miRNA",fontsize=8); ax_mirna.set_xlim(min_ax,max_ax); 
-
-    pp.suptitle( h_name )
-    pp.savefig( h_dir + "/%s_spearmanr.png"%(h_name), format="png", dpi=300 )
-    pp.close('all')
+  # nbr = 20
+  # for z_idx,z_name in zip( range(n_z), z_names):
+  #   print "viewing ", z_name
+  #   rna_p   = rna_z_p[ z_name ].sort_values()[:nbr]
+  #   mirna_p = mirna_z_p[ z_name ].sort_values()[:nbr]
+  #   meth_p  = meth_z_p[ z_name ].sort_values()[:nbr]
+  #
+  #   rna_rho = rna_z_rho[ z_name ].loc[ rna_p.index ].sort_values()
+  #   mirna_rho = mirna_z_rho[ z_name ].loc[ mirna_p.index ].sort_values()
+  #   meth_rho = meth_z_rho[ z_name ].loc[ meth_p.index ].sort_values()
+  #
+  #   f = pp.figure( figsize = (12,8))
+  #   ax_rna = f.add_subplot(131); ax_mirna = f.add_subplot(133); ax_meth = f.add_subplot(132);
+  #   #ax_pie1 = f.add_subplot(133); #ax_pie3 = f.add_subplot(424); ax_pie4 = f.add_subplot(426)
+  #
+  #   max_ax = np.max( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
+  #   min_ax = np.min( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
+  #
+  #   h1=rna_rho.plot(kind='barh',ax=ax_rna,color="red",legend=False,title="RNA",fontsize=8); ax_rna.set_xlim(min_ax,max_ax);
+  #   h2=meth_rho.plot(kind='barh',ax=ax_meth,color="blue",legend=False,title="METH",fontsize=8);ax_meth.set_xlim(min_ax,max_ax);
+  #   h3=mirna_rho.plot(kind='barh',ax=ax_mirna,color="black",legend=False,title="miRNA",fontsize=8); ax_mirna.set_xlim(min_ax,max_ax);
+  #
+  #   pp.suptitle( z_name)
+  #   pp.savefig( z_dir + "/%s_spearmanr.png"%(z_name), format="png", dpi=300 )
+  #   pp.close('all')
+  #
+  # for h_idx, h_name in zip( range(n_h), h_names ):
+  #   print "viewing ", h_name
+  #   rna_p   = rna_h_p[ h_name ].sort_values()[:nbr]
+  #   mirna_p = mirna_h_p[ h_name ].sort_values()[:nbr]
+  #   meth_p  = meth_h_p[ h_name ].sort_values()[:nbr]
+  #
+  #   rna_rho = rna_h_rho[ h_name ].loc[ rna_p.index ].sort_values()
+  #   mirna_rho = mirna_h_rho[ h_name ].loc[ mirna_p.index ].sort_values()
+  #   meth_rho = meth_h_rho[ h_name ].loc[ meth_p.index ].sort_values()
+  #
+  #   f = pp.figure( figsize = (12,8))
+  #   ax_rna = f.add_subplot(131); ax_mirna = f.add_subplot(133); ax_meth = f.add_subplot(132);
+  #
+  #   max_ax = np.max( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
+  #   min_ax = np.min( np.hstack( (rna_rho.values,mirna_rho.values,meth_rho.values) ) )
+  #
+  #   h1=rna_rho.plot(kind='barh',ax=ax_rna,color="red",legend=False,title="RNA",fontsize=8); ax_rna.set_xlim(min_ax,max_ax);
+  #   h2=meth_rho.plot(kind='barh',ax=ax_meth,color="blue",legend=False,title="METH",fontsize=8);ax_meth.set_xlim(min_ax,max_ax);
+  #   h3=mirna_rho.plot(kind='barh',ax=ax_mirna,color="black",legend=False,title="miRNA",fontsize=8); ax_mirna.set_xlim(min_ax,max_ax);
+  #
+  #   pp.suptitle( h_name )
+  #   pp.savefig( h_dir + "/%s_spearmanr.png"%(h_name), format="png", dpi=300 )
+  #   pp.close('all')
 
         
 

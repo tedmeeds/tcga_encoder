@@ -38,13 +38,15 @@ def plot_survival_by_splits( times, events, split_indices, at_risk_counts=False,
   ax= f.add_subplot(111)
   kmf = KaplanMeierFitter()
   c = pp.get_cmap(cmap)
+  colors = c( np.linspace(0,256,len(split_indices)).astype(int) )
   
   k=0
   for splits in split_indices:
-    rgb_color = c( float(k) / (len(split_indices)+1 ) )
-    
-    kmf.fit(times[splits], event_observed=events[splits], label="q=%d/%d"%(k+1,split_nbr), color=rgb_color  )
-    ax=kmf.plot(ax=ax,at_risk_counts=at_risk_counts,show_censors=show_censors,ci_show=ci_show)
+    #rgb_color = c( int( c.N*float(k) / (len(split_indices)+1 ) ) )
+    #print rgb_color, k, c.N*float(k) / (len(split_indices)+1 )
+    #pdb.set_trace()
+    kmf.fit(times[splits], event_observed=events[splits], label="q=%d/%d"%(k+1,split_nbr)  )
+    ax=kmf.plot(ax=ax,at_risk_counts=at_risk_counts,show_censors=show_censors,ci_show=ci_show, color=colors[k])
     k+=1
   pp.ylim(0,1)
   
