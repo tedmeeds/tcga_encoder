@@ -266,7 +266,7 @@ def main( data_location, results_location, alpha=0.02 ):
     
     z_cohort   = Z.loc[bcs_cohort]
     dna_cohort = dna.loc[bcs_cohort]
-    dna_genes = dna_cohort.sum(0).sort_values(ascending=False)[:20].index.values
+    dna_genes = dna_cohort.sum(0).sort_values(ascending=False)[:100].index.values
     #pdb.set_trace()
     for dna_gene in dna_genes:
       
@@ -274,6 +274,8 @@ def main( data_location, results_location, alpha=0.02 ):
       n_1 = dna_values.sum()
       n_0 = len(dna_values)-n_1
       
+      if n_1 == 0:
+        continue
       true_y = dna_values.values
       
       print "     %s"%(dna_gene)
