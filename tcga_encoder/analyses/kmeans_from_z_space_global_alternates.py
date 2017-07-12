@@ -326,7 +326,7 @@ def main( data_location, results_location ):
           kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
           ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp],ci_show=False)
       pp.title("%s p-value = %0.5f"%(tissue_name,p_value))
-      pp.savefig( z_dir + "/%s_survival_%0.5f.png"%(tissue_name,p_value), format="png", dpi=300)
+      pp.savefig( z_dir + "/%s_survival.png"%(tissue_name,p_value), format="png", dpi=300)
     
 
   
