@@ -360,6 +360,28 @@ def main( data_location, project_location, results_location, alpha=0.02 ):
   auc_by_gene.to_csv( dna_dir + "/auc_by_gene.csv" )
   se_by_gene.to_csv( dna_dir + "/se_by_gene.csv") 
   se_by_gene_random.to_csv( dna_dir + "/se_by_gene_random.csv" )
+  
+  f=pp.figure()
+  ax1 = f.add_subplot(121)
+  ax2 = f.add_subplot(122)
+  ax1.hist( p_values_by_gene.values.flatten(), bins = np.linspace(0,0.5,41), lw=2, histtype="step", normed=True, range=(0,0.5) )
+  ax2.hist( auc_by_gene.values.flatten(), bins = np.linspace(0.5,1,41), lw=2, histtype="step", normed=True, range=(0.5,1) )
+  pp.savefig( dna_dir + "/global_p_values_and_auc.png", fmt = "png", dpi=300)
+  f=pp.figure()
+  ax1 = f.add_subplot(121)
+  ax2 = f.add_subplot(122)
+  ax1.hist( p_values_by_gene.values.flatten(), bins = np.linspace(0,0.5,61), lw=2, histtype="step", normed=True, range=(0,0.5) )
+  ax2.hist( auc_by_gene.values.flatten(), bins = np.linspace(0.5,1,61), lw=2, histtype="step", normed=True, range=(0.5,1) )
+  pp.savefig( dna_dir + "/global_p_values_and_auc2.png", fmt = "png", dpi=300)
+
+  f=pp.figure()
+  ax1 = f.add_subplot(121)
+  ax2 = f.add_subplot(122)
+  ax1.hist( p_values_by_gene.values.flatten(), bins = np.linspace(0,0.5,101), lw=2, histtype="step", normed=True, range=(0,0.5) )
+  ax2.hist( auc_by_gene.values.flatten(), bins = np.linspace(0.5,1,101), lw=2, histtype="step", normed=True, range=(0.5,1) )
+  pp.savefig( dna_dir + "/global_p_values_and_auc3.png", fmt = "png", dpi=300)
+  
+  
   from sklearn.cluster import MiniBatchKMeans
   K_z = 10
   kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_values.T)
