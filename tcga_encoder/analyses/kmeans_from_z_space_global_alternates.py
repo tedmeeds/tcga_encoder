@@ -134,7 +134,7 @@ def main( data_location, results_location ):
     
   Z_quantized = pd.DataFrame(Z_quantized, index=barcodes, columns=z_names )
   Z_quantized.to_csv( save_dir + "/Z_quantized.csv")
-  
+  Z_quantized=Z
   sub_bcs = np.array([ x+"_"+y for x,y in np.array(data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].index.tolist(),dtype=str)] )
   sub_values = np.array( data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].values, dtype=str )
   subtypes = pd.Series( sub_values, index = sub_bcs, name="subtypes")
@@ -214,7 +214,7 @@ def main( data_location, results_location ):
 
   n = len(Z)
   n_tissues = len(tissue_names)
-  K_p = 5
+  K_p = 4
   K_z = 20
   k_pallette = sns.hls_palette(K_p)
   
