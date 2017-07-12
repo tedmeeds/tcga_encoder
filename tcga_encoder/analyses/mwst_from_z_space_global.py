@@ -298,7 +298,7 @@ def main( data_location, results_location ):
     i+=1
   g_weights = np.array(g_weights)
   
-  return save_dir,G, g_weights, g_edge_weights, node_colors, json_node, links    
+  return save_dir,G, g_weights, g_edge_weights, node_colors, json_node, links, s_form    
   #pdb.set_trace()
   #   i+=1
   # layout=nx.spring_layout
@@ -507,7 +507,7 @@ if __name__ == "__main__":
   data_location = sys.argv[1]
   results_location = sys.argv[2]
   
-  save_dir,G, g_weights, g_edge_weights, node_colors, json_node, links=main( data_location, results_location )
+  save_dir, G, g_weights, g_edge_weights, node_colors, json_node, links, s_form =main( data_location, results_location )
   I=np.argsort( -g_weights )
   
    
