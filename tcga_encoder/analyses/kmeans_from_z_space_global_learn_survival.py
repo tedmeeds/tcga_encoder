@@ -339,13 +339,16 @@ def main( data_location, results_location ):
     lambda_l2=1.0
     #cost = np.log( results.p_value + 1e-12 ) +lambda_l2*np.sum( np.abs(w))
     cost = get_cost( times, events, z_train, w, K_p, lambda_l1, lambda_l2 )
-    epsilon = 0.0001
+    epsilon = 0.001
     learning_rate = 0.0001
     mom = 0*w
     alpha=0.1
     print -1, cost
     for step in range(500):
       bernouilli = np.sign( np.random.randn(dims ))
+      delta_w = epsilon*np.random.randn(dims)
+      random_off = np.random.permutation(dims)[:dims/2]
+      delta_w[random_off]=0
       w_delta_plus = w + epsilon*np.random.randn(dims) #bernouilli
       #w_delta_neg  = w - epsilon*bernouilli
       
