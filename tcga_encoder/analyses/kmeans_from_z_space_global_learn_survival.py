@@ -103,13 +103,16 @@ def get_cost( times, events, z, w, K, lambda_l1, lambda_l2 ):
   I_splits = survival_splits( e, np.argsort(y), K )
   bad_order=False
   z_score = 0
-  for k1 in range(2-1):
-    g1 = I_splits[k1]
-    g2 = I_splits[k1+1]
+  # for k1 in range(K-1):
+  #   g1 = I_splits[k1]
+  #   g2 = I_splits[k1+1]
+  #   z_score -= logrank_test( t[g1], t[g2], e[g1], e[g2] ).test_statistic
+  z_score +=  np.log( logrank_test( t[I_splits[0]], t[I_splits[-1]], e[I_splits[0]], e[I_splits[-1]] ).p_value)
+  z_score +=  np.log( logrank_test( t[I_splits[1]], t[I_splits[-2]], e[I_splits[1]], e[I_splits[-2]] ).p_value)
+  #z_score -= logrank_test( t[I_splits[2]], t[I_splits[-3]], e[I_splits[2]], e[I_splits[-3]] ).test_statistic
+  #z_score -= logrank_test( t[g1], t[g2], e[g1], e[g2] ).test_statistic
 
-    z_score -= logrank_test( t[g1], t[g2], e[g1], e[g2] ).test_statistic
-
-  return cost+z_score+ np.log( results.pvalue+1e-12 )
+  return cost+ z_score+ np.log( results.pvalue+1e-12 )
       
   # groups = groups_by_splits( len(z), I_splits )
   #
@@ -139,7 +142,7 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  save_dir = os.path.join( results_path, "kmeans_with_z_global_learn_survival2" )
+  save_dir = os.path.join( results_path, "kmeans_with_z_global_learn_survival4" )
   check_and_mkdir(save_dir)
   size_per_unit = 0.25
   print "HOME_DIR: ", HOME_DIR
@@ -158,14 +161,14 @@ def main( data_location, results_location ):
   #pdb.set_trace()
   z_names = ["z_%d"%z_idx for z_idx in range(Z.shape[1])]
   Z = pd.DataFrame( Z, index = np.hstack( (Z_train.index.values, Z_val.index.values)), columns = z_names )
-  
-  barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
+  barcodes = Z.index.values
+  #barcodes = np.union1d( Z_train.index.values, Z_val.index.values )
   quantiles = (len(Z)*np.array( [0,0.33, 0.66, 1.0] )).astype(int)
   quantiles = (len(Z)*np.array( [0,0.2, 0.4,0.6,0.8,1.0] )).astype(int)
-  quantiles = (len(Z)*np.linspace(0,1,61)).astype(int)
+  #quantiles = (len(Z)*np.linspace(0,1,61)).astype(int)
   n_quantiles = len(quantiles)-1
   start_q_id = -(n_quantiles-1)/2
-  Z=Z.loc[barcodes]
+  #Z=Z.loc[barcodes]
   
   std_z = Z.values.std(0)
   
@@ -282,25 +285,25 @@ def main( data_location, results_location ):
   #   global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
   #   fit.append( global_kmeans_patients.inertia_)
   #   print fit
-  global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
-  global_kmeans_patients_labels = global_kmeans_patients.labels_
-  #pdb.set_trace()
-  global_kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_quantized.values.T)
-  global_kmeans_z_labels = global_kmeans_z.labels_
-
-  bicluster_means = np.zeros( (K_p,K_z), dtype=float )
-  for kp in range(K_p):
-    ip = pp.find( global_kmeans_patients_labels==kp )
-    z_p = Z_quantized.values[ip,:]
-    for kz in range(K_z):
-      iz = pp.find( global_kmeans_z_labels==kz )
-      z_pz = z_p[:,iz]
-      bicluster_means[kp,kz]=z_pz.mean()
-  
-  spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
-  spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
-  order_rows = np.argsort(spread_rows)
-  order_cols = np.argsort(spread_cols)
+  # global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values)
+  # global_kmeans_patients_labels = global_kmeans_patients.labels_
+  # #pdb.set_trace()
+  # global_kmeans_z = MiniBatchKMeans(n_clusters=K_z, random_state=0).fit(Z_quantized.values.T)
+  # global_kmeans_z_labels = global_kmeans_z.labels_
+  #
+  # bicluster_means = np.zeros( (K_p,K_z), dtype=float )
+  # for kp in range(K_p):
+  #   ip = pp.find( global_kmeans_patients_labels==kp )
+  #   z_p = Z_quantized.values[ip,:]
+  #   for kz in range(K_z):
+  #     iz = pp.find( global_kmeans_z_labels==kz )
+  #     z_pz = z_p[:,iz]
+  #     bicluster_means[kp,kz]=z_pz.mean()
+  #
+  # spread_rows = bicluster_means.max(1)-bicluster_means.min(1)
+  # spread_cols = bicluster_means.max(0)-bicluster_means.min(0)
+  # order_rows = np.argsort(spread_rows)
+  # order_cols = np.argsort(spread_cols)
       
   # for k_z in range(K_z):
   #
@@ -355,7 +358,7 @@ def main( data_location, results_location ):
     
     results = multivariate_logrank_test(times, groups=groups, event_observed=events )
     #split_p_values[ split_nbr ]["z_%d"%(z_idx)].loc[tissue_name] = results.p_value
-    lambda_l1=5.0
+    lambda_l1=10.0
     lambda_l2=1.0
     #cost = np.log( results.p_value + 1e-12 ) +lambda_l2*np.sum( np.abs(w))
     cost = get_cost( times, events, z_train, w, K_p, lambda_l1, lambda_l2 )
@@ -372,7 +375,7 @@ def main( data_location, results_location ):
     mom = 0*w
     alpha=0.1
     print -1, cost
-    for step in range(100):
+    for step in range(200):
       bernouilli = np.sign( np.random.randn(dims ))
       delta_w = epsilon*np.random.randn(dims)
       random_off = np.random.permutation(dims)[:dims/4]
@@ -409,7 +412,7 @@ def main( data_location, results_location ):
     size1 = max( min( int( n_z*size_per_unit ), 12), 16 )
     size2 = max( min( int( n_tissue*size_per_unit), 12), 16)
     
-    z_order = np.argsort( w )
+    z_order = np.argsort( -np.abs(w) )
     patient_order = np.argsort(y)
     #print "patient_order",patient_order
     #pdb.set_trace()
@@ -417,7 +420,8 @@ def main( data_location, results_location ):
     m_times_1 = times.values[ I_splits[-1]][ events[I_splits[-1]].values==1].mean()
     
     k_pallette = sns.hls_palette(K_p)
-    k_pallette = sns.color_palette("RdBu", K_p)
+    k_pallette = sns.color_palette("rainbow", K_p)
+    k_pallette.reverse()
     if m_times_1 < m_times_0:
       # reverse pallette
       k_pallette.reverse()
@@ -470,13 +474,14 @@ def main( data_location, results_location ):
       if len(k_bcs) > 1:
         #kmf = KaplanMeierFitter()
         kmf.fit(times[i_split], event_observed=events[i_split], label="k%d"%(kp)  )
-        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp],ci_show=False)
+        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp],ci_show=False,lw=4)
         #kmfs.append(kmf)
       kp += 1
     #pdb.set_trace()
+    pp.ylim(0,1)
     pp.title("%s p-value = %0.5f"%(tissue_name,p_value))
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
-    #return kmf
+  return Z
 
   
 if __name__ == "__main__":
