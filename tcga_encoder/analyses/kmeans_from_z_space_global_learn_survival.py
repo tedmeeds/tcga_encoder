@@ -11,7 +11,7 @@ from scipy.spatial.distance import pdist, squareform
 from scipy.spatial.distance import squareform
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
-
+from scipy import stats
 from lifelines import CoxPHFitter
 from lifelines.datasets import load_regression_dataset
 from lifelines.utils import k_fold_cross_validation
@@ -82,16 +82,34 @@ from tcga_encoder.analyses.survival_functions import *
 def get_cost( times, events, z, w, K, lambda_l1, lambda_l2 ):
   cost = lambda_l1*np.sum( np.abs(w) ) + lambda_l2*np.sum(w*w)
   
-  I_splits = survival_splits( events, np.argsort(np.dot( z, w )), K )
   
-  for k1 in range(K-1):
+  ok = pp.find( pp.isnan( times.values) == False  )
+  
+  y = np.dot( z[ok], w )
+  e = events.values[ok]
+  t = times.values[ok]
+  ids = e==1
+  #pdb.set_trace()
+  
+  
+  #results = stats.spearmanr( y, t )
+  results = stats.spearmanr( y[ids], t[ids] )
+  if np.isnan( results.pvalue ):
+    pdb.set_trace()
+  #print results
+  #return cost + np.log( results.pvalue+1e-12 )
+  #results = stats.spearmanr( y[ids], times.values[ids] )
+  #return cost + np.sign(results.correlation)*np.log( results.pvalue+1e-12 )
+  I_splits = survival_splits( e, np.argsort(y), K )
+  bad_order=False
+  z_score = 0
+  for k1 in range(2-1):
     g1 = I_splits[k1]
     g2 = I_splits[k1+1]
-      
-    #logrank_test(times[I_splits[0]], times[I_splits[1]], events[I_splits[0]], events[I_splits[1]] )
-    results = logrank_test( times[g1], times[g2], events[g1], events[g2] )
-    cost += np.log(results.p_value+1e-12)
-  return cost
+
+    z_score -= logrank_test( t[g1], t[g2], e[g1], e[g2] ).test_statistic
+
+  return cost+z_score+ np.log( results.pvalue+1e-12 )
       
   # groups = groups_by_splits( len(z), I_splits )
   #
@@ -121,7 +139,7 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  save_dir = os.path.join( results_path, "kmeans_with_z_global_learn_survival" )
+  save_dir = os.path.join( results_path, "kmeans_with_z_global_learn_survival2" )
   check_and_mkdir(save_dir)
   size_per_unit = 0.25
   print "HOME_DIR: ", HOME_DIR
@@ -296,17 +314,15 @@ def main( data_location, results_location ):
   #   print z_k_names
   #   Z_k = Z_quantized[ z_k_names ]
   for t_idx in range(n_tissues):
-
+    #t_idx=1
     tissue_name = tissue_names[t_idx]
     print "working %s"%(tissue_name)
   
     t_ids_cohort = tissue_idx == t_idx
     n_tissue = np.sum(t_ids_cohort)
     
-
-  
-  
     if n_tissue < 1:
+      print "skipping ",tissue_name
       continue
     #pdb.set_trace()
     Z_cohort = Z_quantized[ t_ids_cohort ]
@@ -319,17 +335,21 @@ def main( data_location, results_location ):
     #pdb.set_trace()
     times  = S_cohort["T"]
     
-    #times[ pp.find(np.isnan(times))]=0
+    ok = np.isnan(times.values)==False
+    bcs = S_cohort.index.values[ok]
     
-    kmeans_patients_labels = global_kmeans_patients_labels[ t_ids_cohort ]
-    cohort_k = np.unique(kmeans_patients_labels)
+    Z_cohort = Z_cohort.loc[bcs]
+    S_cohort = S_cohort.loc[bcs]
+    events = S_cohort["E"]
+    #pdb.set_trace()
+    times  = S_cohort["T"]
     
     z_train = Z_cohort.values
     dims = z_train.shape[1]
     w = 0.01*np.random.randn( dims )
     y = np.dot( z_train, w )
     I = np.argsort(y)
-    
+    n_tissue=len(y)
     I_splits = survival_splits( events, I, K_p )
     groups = groups_by_splits( n_tissue, I_splits )
     
@@ -339,32 +359,29 @@ def main( data_location, results_location ):
     lambda_l2=1.0
     #cost = np.log( results.p_value + 1e-12 ) +lambda_l2*np.sum( np.abs(w))
     cost = get_cost( times, events, z_train, w, K_p, lambda_l1, lambda_l2 )
-    epsilon = 0.001
+    min_cost = cost
+    for i in range(20):
+      xw = 0.01*np.random.randn( dims )
+      cost = get_cost( times, events, z_train, xw, K_p, lambda_l1, lambda_l2 )
+      if cost < min_cost:
+        min_cost = cost
+        w = xw
+    y = np.dot( z_train, w )
+    epsilon = 0.01
     learning_rate = 0.0001
     mom = 0*w
     alpha=0.1
     print -1, cost
-    for step in range(500):
+    for step in range(100):
       bernouilli = np.sign( np.random.randn(dims ))
       delta_w = epsilon*np.random.randn(dims)
-      random_off = np.random.permutation(dims)[:dims/2]
+      random_off = np.random.permutation(dims)[:dims/4]
       delta_w[random_off]=0
       w_delta_plus = w + epsilon*np.random.randn(dims) #bernouilli
       #w_delta_neg  = w - epsilon*bernouilli
       
       cost_delta_plus = get_cost( times, events, z_train, w_delta_plus, K_p, lambda_l1, lambda_l2 )
-      
-      # cost_delta_plus = np.log( \
-      #                     multivariate_logrank_test( \
-      #                          times, \
-      #                          groups=groups_by_splits( \
-      #                                         n_tissue, \
-      #                                         survival_splits( events, np.argsort(np.dot( z_train, w_delta_plus )), \
-      #                                         K_p ) ), event_observed=events ).p_value + 1e-12 ) \
-      #                    +lambda_l2*np.sum( np.abs(w_delta_plus))
-      #cost_delta_neg  = -np.log( multivariate_logrank_test(times, groups=groups_by_splits( n_tissue, survival_splits( events, np.argsort(np.dot( z_train, w_delta_neg )), 2 ) ), event_observed=events ).p_value + 1e-12 )+lambda_l2*np.sum(np.abs(w_delta_neg))
-    
-      #grad = (1-alpha)*(cost_delta_plus-cost_delta_neg)*bernouilli/(2*epsilon) + 0.001*np.random.randn(dims) +np.sign(w) + alpha*mom
+      epsilon *= 0.995
       
       if cost_delta_plus < cost:
        w = w_delta_plus
@@ -376,30 +393,46 @@ def main( data_location, results_location ):
   
     #times = S_cohort["T"].values
     #events = S_cohort["E"].values
-    
+    n_tissue=len(y)
     y = np.dot( z_train, w )
     I = np.argsort(y)
     
     I_splits = survival_splits( events, I, K_p )
     groups = groups_by_splits( n_tissue, I_splits )
     
-    if len(np.unique(kmeans_patients_labels))>0:
-      results = multivariate_logrank_test(times, groups=groups, event_observed=events )
-      p_value = results.p_value
-    else:
-      p_value = 1
+    #if len(np.unique(kmeans_patients_labels))>0:
+    results = multivariate_logrank_test(times, groups=groups, event_observed=events )
+    p_value = results.p_value
+    #else:
+    #  p_value = 1
     
     size1 = max( min( int( n_z*size_per_unit ), 12), 16 )
     size2 = max( min( int( n_tissue*size_per_unit), 12), 16)
     
     z_order = np.argsort( w )
     patient_order = np.argsort(y)
+    #print "patient_order",patient_order
     #pdb.set_trace()
-    #order_labels = np.argsort()
+    m_times_0 = times.values[ I_splits[0]][ events[I_splits[0]].values==1].mean()
+    m_times_1 = times.values[ I_splits[-1]][ events[I_splits[-1]].values==1].mean()
+    
+    k_pallette = sns.hls_palette(K_p)
+    k_pallette = sns.color_palette("RdBu", K_p)
+    if m_times_1 < m_times_0:
+      # reverse pallette
+      k_pallette.reverse()
+    
+    
     k_colors = np.array([k_pallette[int(i)] for i in groups[patient_order]] )
     #pdb.set_trace()
-    sorted_Z = Z_cohort
-    sorted_Z = pd.DataFrame( sorted_Z.values[:,z_order][patient_order,:], index = sorted_Z.index.values[patient_order], columns=sorted_Z.columns[z_order] )
+    sorted_Z = Z_cohort.values
+    sorted_Z = sorted_Z[patient_order,:]
+    sorted_Z = sorted_Z[:,z_order]
+    
+    
+    #so
+    sorted_Z = pd.DataFrame( sorted_Z, index = Z_cohort.index.values[patient_order], columns=Z_cohort.columns[z_order] )
+    #pdb.set_trace()
     h = sns.clustermap( sorted_Z, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(size1,size2) )
     #h = sns.clustermap( sorted_Z, row_colors=None, row_cluster=False, col_cluster=False, figsize=(size1,size2) )
     #pdb.set_trace()
@@ -414,15 +447,17 @@ def main( data_location, results_location ):
     #h.ax_heatmap.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *h.ax_heatmap.get_ylim(), color="black", lw=5)
 
 
-    pp.savefig( save_dir + "/%s_learned.png"%(tissue_name), fmt="png", dpi=300, bbox_inches='tight')
+    pp.savefig( save_dir + "/%s_learned.png"%(tissue_name), fmt="png" )#, dpi=300, bbox_inches='tight')
     pp.close('all')
     
     
     f = pp.figure()
     ax= f.add_subplot(111)
-    kmf = KaplanMeierFitter()
+    
    
     kp = 0
+    #kmfs = []
+    kmf = KaplanMeierFitter()
     for i_split in I_splits:
       #ids = pp.find( np.array(kmeans_patients_labels)==kp )
       k_bcs = bcs[ i_split ]
@@ -431,14 +466,17 @@ def main( data_location, results_location ):
     
       #times = S_cohort_k["T"].values
       #events = S_cohort_k["E"].values
-  
+      
       if len(k_bcs) > 1:
+        #kmf = KaplanMeierFitter()
         kmf.fit(times[i_split], event_observed=events[i_split], label="k%d"%(kp)  )
         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp],ci_show=False)
+        #kmfs.append(kmf)
       kp += 1
+    #pdb.set_trace()
     pp.title("%s p-value = %0.5f"%(tissue_name,p_value))
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
-  
+    #return kmf
 
   
 if __name__ == "__main__":
@@ -446,4 +484,4 @@ if __name__ == "__main__":
   data_location = sys.argv[1]
   results_location = sys.argv[2]
   
-  Z = main( data_location, results_location )
+  kmf = main( data_location, results_location )
