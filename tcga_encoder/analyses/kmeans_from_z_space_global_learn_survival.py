@@ -82,7 +82,7 @@ from tcga_encoder.analyses.survival_functions import *
 def get_cost( times, events, z, w, K, lambda_l1, lambda_l2 ):
   cost = lambda_l1*np.sum( np.abs(w) ) + lambda_l2*np.sum(w*w)
   
-  I_splits = survival_splits( events, np.argsort(np.dot( z_train, w_delta_plus )), K )
+  I_splits = survival_splits( events, np.argsort(np.dot( z, w_delta_plus )), K )
   
   for k1 in range(K-1):
     g1 = I_splits[k1]
