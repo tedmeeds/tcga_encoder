@@ -78,7 +78,33 @@ from tcga_encoder.analyses.survival_functions import *
 # custard  #fffd78
 # darkish pink  #da467d
 
- 
+# get_cost( times, events, z_train, w_delta_plus, K_p, lambda_l1, lambda_l2 )
+def get_cost( times, events, z, w, K, lambda_l1, lambda_l2 ):
+  cost = lambda_l1*np.sum( np.abs(w) ) + lambda_l2*np.sum(w*w)
+  
+  I_splits = survival_splits( events, np.argsort(np.dot( z_train, w_delta_plus )), K )
+  
+  for k1 in range(K-1):
+    g1 = I_splits[k1]
+    g2 = I_splits[k1+1]
+      
+    #logrank_test(times[I_splits[0]], times[I_splits[1]], events[I_splits[0]], events[I_splits[1]] )
+    results = logrank_test( logrank_test(times[g1], times[g2], events[g1], events[g2] ) )
+    cost += np.log(results.p_value+1e-12)
+  return cost
+      
+  # groups = groups_by_splits( len(z), I_splits )
+  #
+  #       cost_delta_plus = np.log( \
+  #                         multivariate_logrank_test( \
+  #                              times, \
+  #                              groups=groups_by_splits( \
+  #                                             n_tissue, \
+  #                                             survival_splits( events, np.argsort(np.dot( z_train, w_delta_plus )), \
+  #                                             K_p ) ), event_observed=events ).p_value + 1e-12 ) \
+  #                        +lambda_l2*np.sum( np.abs(w_delta_plus))
+
+
 
 tissue_color_names = ["windows blue", "amber", "greyish", "faded green", "dusty purple",\
                 "nice blue","rosy pink","sand brown","baby purple",\
@@ -309,8 +335,10 @@ def main( data_location, results_location ):
     
     results = multivariate_logrank_test(times, groups=groups, event_observed=events )
     #split_p_values[ split_nbr ]["z_%d"%(z_idx)].loc[tissue_name] = results.p_value
-    lambda_l2=50.1
-    cost = np.log( results.p_value + 1e-12 ) +lambda_l2*np.sum( np.abs(w))
+    lambda_l1=5.0
+    lambda_l2=1.0
+    #cost = np.log( results.p_value + 1e-12 ) +lambda_l2*np.sum( np.abs(w))
+    cost = get_cost( times, events, z_train, w, K_p, lambda_l1, lambda_l2 )
     epsilon = 0.0001
     learning_rate = 0.0001
     mom = 0*w
@@ -321,14 +349,16 @@ def main( data_location, results_location ):
       w_delta_plus = w + epsilon*np.random.randn(dims) #bernouilli
       #w_delta_neg  = w - epsilon*bernouilli
       
-      cost_delta_plus = np.log( \
-                          multivariate_logrank_test( \
-                               times, \
-                               groups=groups_by_splits( \
-                                              n_tissue, \
-                                              survival_splits( events, np.argsort(np.dot( z_train, w_delta_plus )), \
-                                              K_p ) ), event_observed=events ).p_value + 1e-12 ) \
-                         +lambda_l2*np.sum( np.abs(w_delta_plus))
+      cost_delta_plus = get_cost( times, events, z_train, w_delta_plus, K_p, lambda_l1, lambda_l2 )
+      
+      # cost_delta_plus = np.log( \
+      #                     multivariate_logrank_test( \
+      #                          times, \
+      #                          groups=groups_by_splits( \
+      #                                         n_tissue, \
+      #                                         survival_splits( events, np.argsort(np.dot( z_train, w_delta_plus )), \
+      #                                         K_p ) ), event_observed=events ).p_value + 1e-12 ) \
+      #                    +lambda_l2*np.sum( np.abs(w_delta_plus))
       #cost_delta_neg  = -np.log( multivariate_logrank_test(times, groups=groups_by_splits( n_tissue, survival_splits( events, np.argsort(np.dot( z_train, w_delta_neg )), 2 ) ), event_observed=events ).p_value + 1e-12 )+lambda_l2*np.sum(np.abs(w_delta_neg))
     
       #grad = (1-alpha)*(cost_delta_plus-cost_delta_neg)*bernouilli/(2*epsilon) + 0.001*np.random.randn(dims) +np.sign(w) + alpha*mom
