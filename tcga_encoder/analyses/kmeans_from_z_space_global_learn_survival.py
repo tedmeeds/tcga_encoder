@@ -17,6 +17,7 @@ from lifelines.datasets import load_regression_dataset
 from lifelines.utils import k_fold_cross_validation
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test, multivariate_logrank_test
+from tcga_encoder.analyses.survival_functions import *
 # cloudy blue  #acc2d9
 # dark pastel green  #56ae57
 # dust  #b2996e
@@ -94,7 +95,7 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  save_dir = os.path.join( results_path, "kmeans_with_z_global_alternate4" )
+  save_dir = os.path.join( results_path, "kmeans_with_z_global_learn_survival" )
   check_and_mkdir(save_dir)
   size_per_unit = 0.25
   print "HOME_DIR: ", HOME_DIR
@@ -197,13 +198,14 @@ def main( data_location, results_location ):
   s_barcodes = s_barcodes[ok_followup]
   NEW_SURVIVAL = NEW_SURVIVAL.loc[s_barcodes]
 
+  
   # S = Z.loc[s_barcodes]
   # S["E"] = Events
   # S["T"] = Times
   # S["Age"] = np.log(Age)
   
   S = pd.DataFrame( np.vstack((Events,Times)).T, index = s_barcodes, columns=["E","T"])
-  #pdb.set_trace()
+
   # -----------------------------
   # -----------------------------
 
@@ -226,7 +228,7 @@ def main( data_location, results_location ):
 
   n = len(Z)
   n_tissues = len(tissue_names)
-  K_p = 5
+  K_p = 4
   K_z = 10
   k_pallette = sns.hls_palette(K_p)
   
@@ -256,92 +258,154 @@ def main( data_location, results_location ):
   order_rows = np.argsort(spread_rows)
   order_cols = np.argsort(spread_cols)
       
-  for k_z in range(K_z):
-    
-    z_dir = os.path.join( save_dir, "z_cluster_%d"%(k_z) )
-    check_and_mkdir(z_dir)
-    zs = pp.find(global_kmeans_z_labels==k_z)
-    global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values[:,zs])
-    global_kmeans_patients_labels = global_kmeans_patients.labels_
-    #print "zs ", zs
-    z_k_names = ["z_%d"%zi for zi in zs]
-    print z_k_names
-    Z_k = Z_quantized[ z_k_names ]
-    for t_idx in range(5):
-      tissue_name = tissue_names[t_idx]
-    
-      print "working %s"%(tissue_name)
-    
-      t_ids_cohort = tissue_idx == t_idx
-      n_tissue = np.sum(t_ids_cohort)
- 
-    
-    
-      if n_tissue < 1:
-        continue
-      #pdb.set_trace()
-      Z_cohort = Z_k[ t_ids_cohort ]
-    
-      bcs = barcodes[t_ids_cohort]
-      kmeans_patients_labels = global_kmeans_patients_labels[ t_ids_cohort ]
-      cohort_k = np.unique(kmeans_patients_labels)
+  # for k_z in range(K_z):
+  #
+  #   z_dir = os.path.join( save_dir, "z_cluster_%d"%(k_z) )
+  #   check_and_mkdir(z_dir)
+  #   zs = pp.find(global_kmeans_z_labels==k_z)
+  #   global_kmeans_patients = MiniBatchKMeans(n_clusters=K_p, random_state=0).fit(Z_quantized.values[:,zs])
+  #   global_kmeans_patients_labels = global_kmeans_patients.labels_
+  #   #print "zs ", zs
+  #   z_k_names = ["z_%d"%zi for zi in zs]
+  #   print z_k_names
+  #   Z_k = Z_quantized[ z_k_names ]
+  for t_idx in range(n_tissues):
 
+    tissue_name = tissue_names[t_idx]
+    print "working %s"%(tissue_name)
+  
+    t_ids_cohort = tissue_idx == t_idx
+    n_tissue = np.sum(t_ids_cohort)
     
-      kmeans_patients_labels = [order_rows[idx] for idx in kmeans_patients_labels]
-      order_labels = np.argsort(kmeans_patients_labels)
-      #order_labels_z = np.argsort(kmeans_z_labels)
-      sorted_Z = pd.DataFrame( Z_cohort.values[order_labels,:], index=Z_cohort.index[order_labels], columns=Z_cohort.columns)
 
-      size1 = max( min( int( len(zs)*size_per_unit ), 12), 16 )
-      size2 = max( min( int( n_tissue*size_per_unit), 12), 16)
-
-      k_colors = np.array([k_pallette[kmeans_patients_labels[i]] for i in order_labels] )
-      #pdb.set_trace()
-      h = sns.clustermap( sorted_Z, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(size1,size2) )
-      #pdb.set_trace()
-      pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-      pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-      pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
-      pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
-      h.ax_row_dendrogram.set_visible(False)
-      h.ax_col_dendrogram.set_visible(False)
-      h.cax.set_visible(False)
-      h.ax_heatmap.hlines(len(kmeans_patients_labels)-pp.find(np.diff(np.array(kmeans_patients_labels)[order_labels]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
-      #h.ax_heatmap.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *h.ax_heatmap.get_ylim(), color="black", lw=5)
-
-
-      pp.savefig( z_dir + "/%s_kmeans.png"%(tissue_name), fmt="png", dpi=300, bbox_inches='tight')
-      pp.close('all')
+  
+  
+    if n_tissue < 1:
+      continue
+    #pdb.set_trace()
+    Z_cohort = Z_quantized[ t_ids_cohort ]
     
-      S_cohort = S.loc[bcs]
+    bcs = barcodes[t_ids_cohort]
+    S_cohort = S.loc[bcs]
+    #
     
-      times = S_cohort["T"].values
-      events = S_cohort["E"].values
-      if len(np.unique(kmeans_patients_labels))>0:
-        results = multivariate_logrank_test(times, groups=kmeans_patients_labels, event_observed=events )
-        p_value = results.p_value
-      else:
-        p_value = 1
+    events = S_cohort["E"]
+    #pdb.set_trace()
+    times  = S_cohort["T"]
+    
+    #times[ pp.find(np.isnan(times))]=0
+    
+    kmeans_patients_labels = global_kmeans_patients_labels[ t_ids_cohort ]
+    cohort_k = np.unique(kmeans_patients_labels)
+    
+    z_train = Z_cohort.values
+    dims = z_train.shape[1]
+    w = 0.01*np.random.randn( dims )
+    y = np.dot( z_train, w )
+    I = np.argsort(y)
+    
+    I_splits = survival_splits( events, I, K_p )
+    groups = groups_by_splits( n_tissue, I_splits )
+    
+    results = multivariate_logrank_test(times, groups=groups, event_observed=events )
+    #split_p_values[ split_nbr ]["z_%d"%(z_idx)].loc[tissue_name] = results.p_value
+    lambda_l2=50.1
+    cost = np.log( results.p_value + 1e-12 ) +lambda_l2*np.sum( np.abs(w))
+    epsilon = 0.0001
+    learning_rate = 0.0001
+    mom = 0*w
+    alpha=0.1
+    print -1, cost
+    for step in range(500):
+      bernouilli = np.sign( np.random.randn(dims ))
+      w_delta_plus = w + epsilon*np.random.randn(dims) #bernouilli
+      #w_delta_neg  = w - epsilon*bernouilli
       
-      f = pp.figure()
-      ax= f.add_subplot(111)
-      kmf = KaplanMeierFitter()
+      cost_delta_plus = np.log( \
+                          multivariate_logrank_test( \
+                               times, \
+                               groups=groups_by_splits( \
+                                              n_tissue, \
+                                              survival_splits( events, np.argsort(np.dot( z_train, w_delta_plus )), \
+                                              K_p ) ), event_observed=events ).p_value + 1e-12 ) \
+                         +lambda_l2*np.sum( np.abs(w_delta_plus))
+      #cost_delta_neg  = -np.log( multivariate_logrank_test(times, groups=groups_by_splits( n_tissue, survival_splits( events, np.argsort(np.dot( z_train, w_delta_neg )), 2 ) ), event_observed=events ).p_value + 1e-12 )+lambda_l2*np.sum(np.abs(w_delta_neg))
     
-      for kp in range(K_p):
-        ids = pp.find( np.array(kmeans_patients_labels)==kp )
-        k_bcs = bcs[ ids ]
-        #pdb.set_trace()
-        S_cohort_k = S_cohort.loc[ k_bcs ]
+      #grad = (1-alpha)*(cost_delta_plus-cost_delta_neg)*bernouilli/(2*epsilon) + 0.001*np.random.randn(dims) +np.sign(w) + alpha*mom
       
-        times = S_cohort_k["T"].values
-        events = S_cohort_k["E"].values
+      if cost_delta_plus < cost:
+       w = w_delta_plus
+       cost = cost_delta_plus
+       print step, cost, cost_delta_plus, np.sum(np.abs(w)), multivariate_logrank_test(times, groups=groups_by_splits( n_tissue, survival_splits( events, np.argsort(np.dot( z_train, w )), K_p ) ), event_observed=events ).p_value
+    print step, cost, cost_delta_plus, np.sum(np.abs(w)), multivariate_logrank_test(times, groups=groups_by_splits( n_tissue, survival_splits( events, np.argsort(np.dot( z_train, w )), K_p ) ), event_observed=events ).p_value
+
+    #S_cohort = S.loc[bcs]
+  
+    #times = S_cohort["T"].values
+    #events = S_cohort["E"].values
     
-        if len(k_bcs) > 1:
-          kmf.fit(times, event_observed=events, label="k%d"%(kp)  )
-          ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp],ci_show=False)
-      pp.title("%s p-value = %0.5f"%(tissue_name,p_value))
-      pp.savefig( z_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
+    y = np.dot( z_train, w )
+    I = np.argsort(y)
     
+    I_splits = survival_splits( events, I, K_p )
+    groups = groups_by_splits( n_tissue, I_splits )
+    
+    if len(np.unique(kmeans_patients_labels))>0:
+      results = multivariate_logrank_test(times, groups=groups, event_observed=events )
+      p_value = results.p_value
+    else:
+      p_value = 1
+    
+    size1 = max( min( int( n_z*size_per_unit ), 12), 16 )
+    size2 = max( min( int( n_tissue*size_per_unit), 12), 16)
+    
+    z_order = np.argsort( w )
+    patient_order = np.argsort(y)
+    #pdb.set_trace()
+    #order_labels = np.argsort()
+    k_colors = np.array([k_pallette[int(i)] for i in groups[patient_order]] )
+    #pdb.set_trace()
+    sorted_Z = Z_cohort
+    sorted_Z = pd.DataFrame( sorted_Z.values[:,z_order][patient_order,:], index = sorted_Z.index.values[patient_order], columns=sorted_Z.columns[z_order] )
+    h = sns.clustermap( sorted_Z, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(size1,size2) )
+    #h = sns.clustermap( sorted_Z, row_colors=None, row_cluster=False, col_cluster=False, figsize=(size1,size2) )
+    #pdb.set_trace()
+    pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+    pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+    h.ax_row_dendrogram.set_visible(False)
+    h.ax_col_dendrogram.set_visible(False)
+    h.cax.set_visible(False)
+    h.ax_heatmap.hlines(n_tissue-pp.find(np.diff(groups[patient_order]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
+    #h.ax_heatmap.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *h.ax_heatmap.get_ylim(), color="black", lw=5)
+
+
+    pp.savefig( save_dir + "/%s_learned.png"%(tissue_name), fmt="png", dpi=300, bbox_inches='tight')
+    pp.close('all')
+    
+    
+    f = pp.figure()
+    ax= f.add_subplot(111)
+    kmf = KaplanMeierFitter()
+   
+    kp = 0
+    for i_split in I_splits:
+      #ids = pp.find( np.array(kmeans_patients_labels)==kp )
+      k_bcs = bcs[ i_split ]
+      #pdb.set_trace()
+      #S_cohort_k = S_cohort.loc[ k_bcs ]
+    
+      #times = S_cohort_k["T"].values
+      #events = S_cohort_k["E"].values
+  
+      if len(k_bcs) > 1:
+        kmf.fit(times[i_split], event_observed=events[i_split], label="k%d"%(kp)  )
+        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[kp],ci_show=False)
+      kp += 1
+    pp.title("%s p-value = %0.5f"%(tissue_name,p_value))
+    pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
+  
 
   
 if __name__ == "__main__":
