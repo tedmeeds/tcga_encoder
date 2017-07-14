@@ -167,7 +167,8 @@ def main( data_location, results_location ):
           pp.savefig( survival_curves_dir_split + "/%s_z%d.png"%(tissue_name, z_idx), format="png" ) #, dpi=300)
           pp.savefig( survival_curves_dir_split + "/z%d_%s.png"%(z_idx, tissue_name), format="png")#, dpi=300)
           pp.savefig( survival_curves_dir_z + "/%s_q%d.png"%(tissue_name, split_nbr), format="png")#, dpi=300)
-          pp.savefig( survival_curves_dir_z + "/q%d_%s.png"%(split_nbr, tissue_name), format="png")#, dpi=300)
+          pp.savefig( survival_curves_dir_z + "/q%d_%s.png"%(split_nbr, tissue_name), format="png")#, dpi=300)  pp.close('all')
+          pp.close('all')
 
   
   f=pp.figure()
@@ -186,6 +187,7 @@ def main( data_location, results_location ):
     pp.title( "%d splits"%(split_nbr) )
     #pp.legend(["random","z-space"])
     pp.savefig( survival_dir + "/p_values.png", format="png")#, dpi=300)
+    pp.close('all')
     
   data_store.close()
   fill_store.close()
