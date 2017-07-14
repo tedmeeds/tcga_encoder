@@ -142,7 +142,7 @@ def main( data_location, results_location ):
   data_filename = os.path.join( data_path, "data.h5")
   fill_filename = os.path.join( results_path, "full_vae_fill.h5" )
   
-  save_dir = os.path.join( results_path, "kmeans_with_z_global_learn_survival4" )
+  save_dir = os.path.join( results_path, "kmeans_with_z_global_learn_survival5" )
   check_and_mkdir(save_dir)
   size_per_unit = 0.25
   print "HOME_DIR: ", HOME_DIR
@@ -172,7 +172,7 @@ def main( data_location, results_location ):
   
   std_z = Z.values.std(0)
   
-  keep_z = pp.find( std_z > 0.5 )
+  keep_z = pp.find( std_z > 0.0 )
   z_names = ["z_%d"%(z_idx) for z_idx in keep_z]
   Z = Z[z_names]
   n_z = len(z_names)
@@ -358,24 +358,24 @@ def main( data_location, results_location ):
     
     results = multivariate_logrank_test(times, groups=groups, event_observed=events )
     #split_p_values[ split_nbr ]["z_%d"%(z_idx)].loc[tissue_name] = results.p_value
-    lambda_l1=10.0
-    lambda_l2=1.0
+    lambda_l1=100.0
+    lambda_l2=10.0
     #cost = np.log( results.p_value + 1e-12 ) +lambda_l2*np.sum( np.abs(w))
     cost = get_cost( times, events, z_train, w, K_p, lambda_l1, lambda_l2 )
     min_cost = cost
     for i in range(20):
-      xw = 0.01*np.random.randn( dims )
+      xw = 0.001*np.random.randn( dims )
       cost = get_cost( times, events, z_train, xw, K_p, lambda_l1, lambda_l2 )
       if cost < min_cost:
         min_cost = cost
         w = xw
     y = np.dot( z_train, w )
-    epsilon = 0.01
+    epsilon = 0.001
     learning_rate = 0.0001
     mom = 0*w
     alpha=0.1
     print -1, cost
-    for step in range(200):
+    for step in range(500):
       bernouilli = np.sign( np.random.randn(dims ))
       delta_w = epsilon*np.random.randn(dims)
       random_off = np.random.permutation(dims)[:dims/4]
