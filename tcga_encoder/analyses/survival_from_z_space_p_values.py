@@ -158,7 +158,7 @@ def main( data_location, results_location ):
         results = multivariate_logrank_test(times, groups=groups, event_observed=events )
         split_p_values[ split_nbr ]["z_%d"%(z_idx)].loc[tissue_name] = results.p_value
         
-        if results.p_value < 0.01:
+        if results.p_value < 0.0001:
           check_and_mkdir(survival_curves_dir_z)
           check_and_mkdir(survival_curves_dir_split)
           f=pp.figure()
