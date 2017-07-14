@@ -164,10 +164,10 @@ def main( data_location, results_location ):
           f=pp.figure()
           ax = plot_survival_by_splits( times, events, I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow")
           pp.title( "%s z%d p-value = %g"%( tissue_name, z_idx, results.p_value ) )
-          pp.savefig( survival_curves_dir_split + "/%s_z%d.png"%(tissue_name, z_idx), format="png", dpi=300)
-          pp.savefig( survival_curves_dir_split + "/z%d_%s.png"%(z_idx, tissue_name), format="png", dpi=300)
-          pp.savefig( survival_curves_dir_z + "/%s_q%d.png"%(tissue_name, split_nbr), format="png", dpi=300)
-          pp.savefig( survival_curves_dir_z + "/q%d_%s.png"%(split_nbr, tissue_name), format="png", dpi=300)
+          pp.savefig( survival_curves_dir_split + "/%s_z%d.png"%(tissue_name, z_idx), format="png" ) #, dpi=300)
+          pp.savefig( survival_curves_dir_split + "/z%d_%s.png"%(z_idx, tissue_name), format="png")#, dpi=300)
+          pp.savefig( survival_curves_dir_z + "/%s_q%d.png"%(tissue_name, split_nbr), format="png")#, dpi=300)
+          pp.savefig( survival_curves_dir_z + "/q%d_%s.png"%(split_nbr, tissue_name), format="png")#, dpi=300)
 
   
   f=pp.figure()
@@ -185,7 +185,7 @@ def main( data_location, results_location ):
     #pdb.set_trace()
     pp.title( "%d splits"%(split_nbr) )
     #pp.legend(["random","z-space"])
-    pp.savefig( survival_dir + "/p_values.png", format="png", dpi=300)
+    pp.savefig( survival_dir + "/p_values.png", format="png")#, dpi=300)
     
   data_store.close()
   fill_store.close()
