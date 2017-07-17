@@ -3,11 +3,11 @@ from tcga_encoder.data.data import *
 from tcga_encoder.analyses.everything_functions import *
 from tcga_encoder.analyses.survival_functions import *
 import networkx as nx
-try:
-  from networkx.drawing.nx_agraph import graphviz_layout as g_layout
-except:
-  print "could not import graphviz "
-  from networkx.drawing.nx_agraph import spring_layout as g_layout
+#try:
+from networkx.drawing.nx_agraph import graphviz_layout as g_layout
+#except:
+#  print "could not import graphviz "
+from networkx.drawing.nx_agraph import spring_layout 
   
 def load_data_and_fill( data_location, results_location ):
   input_sources = ["RNA","miRNA","METH"]
@@ -124,7 +124,10 @@ def make_graph_from_correlations( C, t ):
   
 def draw_graph( G, save_name, node_colors=[], with_labels=True, alpha=1, font_size=12 ):
   layout=g_layout
-  pos=layout(G)
+  try:
+    pos=layout(G)
+  except:
+    pos = spring_layout(G)
   pp.figure(figsize=(20,20))
   nx.draw( G, pos, \
               node_color=node_colors, 
