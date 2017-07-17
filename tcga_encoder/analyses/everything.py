@@ -7,7 +7,7 @@ import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout as g_layout
 #except:
 #  print "could not import graphviz "
-from networkx.drawing.nx_agraph import spring_layout 
+#from networkx.drawing.nx_agraph import spring_layout 
   
 def load_data_and_fill( data_location, results_location ):
   input_sources = ["RNA","miRNA","METH"]
@@ -127,7 +127,7 @@ def draw_graph( G, save_name, node_colors=[], with_labels=True, alpha=1, font_si
   try:
     pos=layout(G)
   except:
-    pos = spring_layout(G)
+    pos = nx.spring_layout(G)
   pp.figure(figsize=(20,20))
   nx.draw( G, pos, \
               node_color=node_colors, 
