@@ -78,6 +78,26 @@ from tcga_encoder.analyses.survival_functions import *
 # custard  #fffd78
 # darkish pink  #da467d
 
+def viz_graph( G, node_colors, location, name, with_labels = False ):
+  
+  #from networkx.drawing.nx_agraph import graphviz_layout
+  layout=graphviz_layout
+  #layout=nx.spring_layout
+  print "laying out graph"
+  pos=layout(G)
+  
+  pp.figure(figsize=(20,20))
+  print "drawing graph"
+  nx.draw(G,pos,node_color=node_colors, 
+              with_labels=with_labels, hold=False, alpha=0.85, font_size=12
+              )
+  # d = json_graph.node_link_data(G)
+  
+  #G.clear()
+
+  pp.savefig(save_dir + "/%s"%(name), fmt='png',dpi=300)
+  pp.close('all')
+  
 # get_cost( times, events, z_train, w_delta_plus, K_p, lambda_l1, lambda_l2 )
 def get_global_cost( data, w, K, lambda_l1, lambda_l2 ):
   cost = lambda_l1*np.sum( np.abs(w) ) + lambda_l2*np.sum(w*w)
@@ -205,6 +225,8 @@ def main( data_location, results_location ):
   Z_quantized = pd.DataFrame(Z_quantized, index=barcodes, columns=z_names )
   Z_quantized.to_csv( save_dir + "/Z_quantized.csv")
   Z_quantized=Z
+  return Z, save_dir
+  pdb.set_trace()
   sub_bcs = np.array([ x+"_"+y for x,y in np.array(data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].index.tolist(),dtype=str)] )
   sub_values = np.array( data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].values, dtype=str )
   subtypes = pd.Series( sub_values, index = sub_bcs, name="subtypes")
@@ -434,12 +456,57 @@ def main( data_location, results_location ):
     pp.ylim(0,1)
     pp.title("%s p-value = %0.5f"%(tissue_name,p_value))
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
-  return Z
+  return Z, save_dir
 
   
 if __name__ == "__main__":
   
   data_location = sys.argv[1]
   results_location = sys.argv[2]
+  import networkx as nx
+  import json
+  from networkx.readwrite import json_graph
+  from networkx.drawing.nx_agraph import graphviz_layout
   
-  kmf = main( data_location, results_location )
+  
+  Z, save_dir = main( data_location, results_location )
+  z_names = Z.columns
+  d_mat = 1-np.abs(Z.corr())
+  csr = csr_matrix(d_mat.values)
+  Tcsr = minimum_spanning_tree(csr)
+  
+  print "graph edges..."
+  G=nx.Graph()
+  
+  node_colors = []
+  json_node = []
+  for z_name in Z.columns:
+    #print tissue, bc
+    G.add_node( z_name )
+    #tissue = bc.split("_")[0]
+    #node_colors.append( tissue2color[bc.split("_")[0]] )
+    json_node.append( {"size":10,"id":z_name})
+  i=0
+  tau=600
+  g_weights = []
+  g_edge_weights = []
+  links=[]
+  for x in Tcsr:
+    #print x, x.indices, x.data
+    indices = x.indices
+    weights = x.data
+
+    for j,w in zip(indices,weights):
+      if w > 0.5:
+        print "adding edge %s to %s with weight %f"%(z_names[i], z_names[j],w)
+        #G.add_edge(barcodes[i][-7:], barcodes[j][-7:], weight=w)
+        G.add_edge(z_names[i], z_names[j], weight=w)
+        g_weights.append(w)
+        g_edge_weights.append([z_names[i], z_names[j],w])
+        links.append( {"source":int(i),"target":int(j),"w":float(w)} )
+    i+=1
+  g_weights = np.array(g_weights)
+  
+  viz_graph( G, [], save_dir, "z_corr", with_labels=True)
+  
+  

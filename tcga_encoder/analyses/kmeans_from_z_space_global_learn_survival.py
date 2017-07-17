@@ -78,9 +78,19 @@ from tcga_encoder.analyses.survival_functions import *
 # custard  #fffd78
 # darkish pink  #da467d
 
-def get_global_cost( data, w, K, lambda_l1, lambda_l2 ):
-  cost = 0.0 #lambda_l1*np.sum( np.abs(w) ) + lambda_l2*np.sum(w*w)
+# def get_global_cost( data, w, K, lambda_l1, lambda_l2, idx ):
+#   cost = 0.0 #lambda_l1*np.sum( np.abs(w) ) + lambda_l2*np.sum(w*w)
+#   d = data[ idx]
+#   times = d["times"]
+#   events = d["events"]
+#   z = d["z"]
+#   n = len(times)
+#   cost = get_cost( times, events, z, w, K, lambda_l1, lambda_l2 )/n
+#   return cost
   
+def get_global_cost( data, w, K, lambda_l1, lambda_l2, idx ):
+  cost = 0.0 #lambda_l1*np.sum( np.abs(w) ) + lambda_l2*np.sum(w*w)
+
   for d in data:
     times = d["times"]
     events = d["events"]
@@ -112,14 +122,14 @@ def get_cost( times, events, z, w, K, lambda_l1, lambda_l2 ):
   #return cost + np.log( results.pvalue+1e-12 )
   #results = stats.spearmanr( y[ids], times.values[ids] )
   #return cost + np.sign(results.correlation)*np.log( results.pvalue+1e-12 )
-  I_splits = survival_splits( e, np.argsort(y), K )
+  I_splits = survival_splits( e, np.argsort(y), 2 )
   bad_order=False
   z_score = 0
   # for k1 in range(K-1):
   #   g1 = I_splits[k1]
   #   g2 = I_splits[k1+1]
   #   z_score -= logrank_test( t[g1], t[g2], e[g1], e[g2] ).test_statistic
-  #z_score +=  np.log( logrank_test( t[I_splits[0]], t[I_splits[-1]], e[I_splits[0]], e[I_splits[-1]] ).p_value)
+  z_score +=  np.log( logrank_test( t[I_splits[0]], t[I_splits[-1]], e[I_splits[0]], e[I_splits[-1]] ).p_value)
   #z_score +=  np.log( logrank_test( t[I_splits[1]], t[I_splits[-2]], e[I_splits[1]], e[I_splits[-2]] ).p_value)
   #z_score -= logrank_test( t[I_splits[2]], t[I_splits[-3]], e[I_splits[2]], e[I_splits[-3]] ).test_statistic
   #z_score -= logrank_test( t[g1], t[g2], e[g1], e[g2] ).test_statistic
@@ -292,6 +302,7 @@ def main( data_location, results_location ):
   K_z = 10
   k_pallette = sns.hls_palette(K_p)
   data = []
+  
   for t_idx in range(n_tissues):
     #t_idx=1
     tissue_name = tissue_names[t_idx]
@@ -324,13 +335,13 @@ def main( data_location, results_location ):
   dims = len(z_names)
   w = 0.001*np.random.randn( dims )
 
-  epsilon = 0.00001
-  learning_rate = 0.000002
+  epsilon = 0.001
+  learning_rate = 0.001
   mom = 0*w
-  alpha=0.99
-  lambda_l1=100.0
-  lambda_l2=10.0
-  cost = get_global_cost( data, w, K_p, lambda_l1, lambda_l2 )
+  alpha=0.95
+  lambda_l1=0.0
+  lambda_l2=0.0
+  cost = get_global_cost( data, w, K_p, lambda_l1, lambda_l2, 0 )
   print "prelim cost ", -1, cost 
   min_cost = cost
   for i in range(0):
@@ -341,14 +352,23 @@ def main( data_location, results_location ):
       min_cost = cost
       w = xw
   cost=min_cost
-  repeats = range(100)
+  repeats = range(2)
   print -1, cost
   #dX = mc*dXprev + lr*(1-mc)*dperf/dX
   old_dw=0.0
-  for step in range(50):
+  costs=[]
+  all_costs=[]
+  pp.close('all')
+  # f=pp.figure()
+  # pp.show()
+  # pp.ion()
+  # pp.plot( [-1], [cost], 'ro')
+  for step in range(500):
     grad = np.zeros(dims)
-    random_off = np.random.permutation(dims)[:dims/3]
+    random_off = [] #np.random.permutation(dims)[:dims-10]
+    
     for r in repeats:
+      idx = np.random.randint(len(data))
       bernoulli = 2*stats.bernoulli( 0.5 ).rvs(dims) - 1
       delta_w = epsilon*bernoulli #np.random.randn(dims)
       #random_off = np.random.permutation(dims)[:dims/3]
@@ -358,29 +378,52 @@ def main( data_location, results_location ):
       w_delta_neg = w - delta_w
 
 
-      cost_delta_plus = get_global_cost( data, w_delta_plus, K_p, lambda_l1, lambda_l2 )
-      cost_delta_neg  = get_global_cost( data, w_delta_neg, K_p, lambda_l1, lambda_l2 )
+      cost_delta_plus = get_global_cost( data, w_delta_plus, K_p, lambda_l1, lambda_l2, idx )
+      cost_delta_neg  = get_global_cost( data, w_delta_neg, K_p, lambda_l1, lambda_l2, idx )
       
       grad += bernoulli*(cost_delta_plus-cost_delta_neg)/(2*epsilon)
     grad /= len(repeats)  
     grad += lambda_l2*w + lambda_l1*np.sign(w)
+    
+    grad = grad / np.linalg.norm(grad)
     #grad[random_off] = 0
     
     if step==0:
       dw = learning_rate*grad
     else:  
-      dw = alpha*old_dw + learning_rate*(1-alpha)*grad
+      dw = alpha*old_dw + learning_rate*grad
     #w -= learning_rate*grad
     dw =learning_rate*grad 
-    w -= dw
+    w -= dw + 0*learning_rate*np.random.randn(dims)
     old_dw = dw
     #epsilon *= 0.995
-    print "train cost_delta_plus ", step, cost_delta_plus, cost_delta_neg 
+    if np.random.rand()<0.1:
+      print "train cost_delta_plus ", step, cost_delta_plus, cost_delta_neg 
     if cost_delta_plus < cost:
-     #w = w_delta_plus
-     cost = cost_delta_plus
-     learning_rate *= 0.995
-     print "***", step, cost, cost_delta_plus, np.sum(np.abs(w))
+      #w = w_delta_plus
+      cost = cost_delta_plus
+      learning_rate *= 1.0
+      dw = learning_rate*grad
+      print "***", step, cost, cost_delta_plus, np.sum(np.abs(w))
+    else:
+      learning_rate /= 1
+      
+    costs.append(cost)
+    all_costs.append(cost_delta_plus)
+    #
+    # pp.plot( [step], [cost], 'ro')
+    # pp.plot( [step], [cost_delta_plus], 'b.')
+    # pp.plot( [step], [cost_delta_neg], 'b.')
+    
+    # if np.random.rand()<0.01:
+    #   pp.draw()
+  # pp.ioff()
+  # pdb.set_trace()
+  pp.figure()
+  pp.plot(all_costs,'o-')
+  pp.plot(costs,'o-')
+  pp.savefig( save_dir + "/costs.png", fmt="png" )
+  #pp.show()
   print step, cost, cost_delta_plus, np.sum(np.abs(w))
 
 
