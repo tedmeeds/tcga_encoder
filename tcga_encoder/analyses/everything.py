@@ -526,13 +526,86 @@ def cluster_genes_by_latent_weights_spectral( data, Ks = [400,200,100] ):
   data.input2z_w_clustering = results
 
 def hidden_neighbours(data, nbr = 2):
+  X = data.H
+  
   save_dir = os.path.join( data.save_dir, "hidden_%d_nn"%(nbr) )
   check_and_mkdir(save_dir) 
   results = {}
+  data.data_store.open()
+  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_pallette = sns.hls_palette(len(T.columns))
+  #k_pallette[kp]
   
-  X = data.H
+  bcs = X.index.values
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
   
+  
+  
+  V = X.values
+  K=100
+  nc=10; nr=10
+  
+  print "running kmeans"
+  kmeans = MiniBatchKMeans(n_clusters=K, random_state=0).fit(V)
+  yv = kmeans.labels_
+  
+  # print "making graph"
+  # #MV = SpectralClustering(n_clusters=K, affinity="precomputed", n_init=50)
+  # #yv = MV.fit_predict( V )
+  #
+  # GV=make_graph_from_labels( V, yv, X.index.values, [] )
+  #
+  # draw_graph(GV, save_dir+"/spectral.png" )
 
+  subgraphs = []
+
+  #for subgraph in nx.connected_component_subgraphs(G):
+  f = pp.figure( figsize=(20,20))
+  for k in range(K):
+    I = pp.find( yv==k )  
+    #nodes = subgraph.nodes()
+    nodes = list( np.sort( X.index.values[I] ) )
+    subgraphs.append(nodes)
+    
+    ax = f.add_subplot( nr,nc,k+1)
+    print "working ", k
+    for t_idx,tissue_name in zip( range(len(T.columns)), T.columns ):
+      
+      tids = pp.find( T[tissue_name]==1 )
+      
+      if len(tids)==0:
+        continue
+        
+      ids = np.intersect1d( I,tids)
+      if len(ids)<=5:
+        continue
+      kmf = KaplanMeierFitter()
+      if k == K-1:
+        kmf.fit(times[ids], event_observed=events[ids], label="%s"%(tissue_name)  )
+      else:
+        kmf.fit(times[ids], event_observed=events[ids]  )
+      #pdb.set_trace()
+      kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=tissue_pallette[t_idx],ci_show=False,lw=2)
+      #ax.set_ylim(0,1)
+
+    kmf = KaplanMeierFitter()
+    kmf.fit(times[I], event_observed=events[I], label=""  )
+    kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color="black",ci_show=False,lw=4)
+    ax.set_ylim(0,1)
+    ax.set_xlim(0,6000)
+    if k == K-1:
+      ax.legend(loc=5)
+    else:
+      ax.legend([])
+  pp.savefig(save_dir + "/survival_spectral.png", fmt='png',dpi=300)
+  pp.close('all')
+  
+  fptr = open( save_dir + "/spectral_K_%d.yaml"%(K),"w+" )
+  fptr.write( yaml.dump(subgraphs))
+  fptr.close()
+  return
   
   print "generating KD tree"
   kdt =  KDTree(X.values, leaf_size=20, metric='euclidean')
@@ -609,19 +682,20 @@ def latent_neighbours(data, nbr = 2):
   #V = np.exp( -s_form / beta)
   #V = np.abs( X.T.corr() )
   V = X.values
-  K=100
-  nc=10; nr=10
+  K=20
+  nc=4; nr=5
   
+  print "running kmeans"
   kmeans = MiniBatchKMeans(n_clusters=K, random_state=0).fit(V)
   yv = kmeans.labels_
   
-  
-  #MV = SpectralClustering(n_clusters=K, affinity="precomputed", n_init=50)
-  #yv = MV.fit_predict( V )
-  
-  GV=make_graph_from_labels( V, yv, X.index.values, [] )
-    
-  draw_graph(GV, save_dir+"/spectral.png" )
+  # print "making graph"
+  # #MV = SpectralClustering(n_clusters=K, affinity="precomputed", n_init=50)
+  # #yv = MV.fit_predict( V )
+  #
+  # GV=make_graph_from_labels( V, yv, X.index.values, [] )
+  #
+  # draw_graph(GV, save_dir+"/spectral.png" )
 
   subgraphs = []
 
@@ -755,8 +829,8 @@ if __name__ == "__main__":
   #result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
   #result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
   
-  #result = hidden_neighbours( data, nbr=3 )
-  result = latent_neighbours( data, nbr=3 )
+  result = hidden_neighbours( data, nbr=3 )
+  #result = latent_neighbours( data, nbr=3 )
   # G=data.nn_latent["full_G"]
   # adj_dict = G.adj
   # n = len(adj_dict)
