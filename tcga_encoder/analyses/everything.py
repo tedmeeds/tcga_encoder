@@ -432,14 +432,14 @@ def cluster_genes_by_hidden_weights_spectral( data, Ks = [400,200,100] ):
     #for subgraph in nx.connected_component_subgraphs(G):
     K = len(np.unique(y))
     for k in range(K):
-      I = pp.find( y == k ) #[K]==k )  
+      I = pp.find( y[K]==k )  
       print len(I)
       #nodes = subgraph.nodes()
       nodes = list( np.sort( X.columns[I] ) )
       subgraphs.append(nodes)
     
-    #fptr = open( save_dir + "/clusters_K_%d.yaml"%(K),"w+" )
-    fptr = open( save_dir + "/K=%d_lists.yaml"%(K),"w+" )
+    fptr = open( save_dir + "/clusters_K_%d.yaml"%(K),"w+" )
+    #fptr = open( save_dir + "/K=%d_lists.yaml"%(K),"w+" )
     fptr.write( yaml.dump(subgraphs))
     fptr.close()
     
