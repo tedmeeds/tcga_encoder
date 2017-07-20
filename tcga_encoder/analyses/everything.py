@@ -608,8 +608,9 @@ def latent_neighbours(data, nbr = 2):
   beta=20.0
   #V = np.exp( -s_form / beta)
   V = np.abs( X.T.corr() )
-  K=50
-  nc=5; nr=10
+  V = X.values
+  K=100
+  nc=10; nr=10
   
   kmeans = MiniBatchKMeans(n_clusters=K, random_state=0).fit(V)
   yv = kmeans.labels_
