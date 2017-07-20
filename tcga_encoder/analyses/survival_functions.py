@@ -2,13 +2,13 @@ from tcga_encoder.utils.helpers import *
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test, multivariate_logrank_test
 
-def PanCancerSurvival(object):
+class PanCancerSurvival(object):
   def __init__( self, data_store ):
     ALL_SURVIVAL = data_store["/CLINICAL/data"][["patient.days_to_last_followup","patient.days_to_death","patient.days_to_birth"]]
     tissue_barcodes = np.array( ALL_SURVIVAL.index.tolist(), dtype=str )
     surv_barcodes = np.array([ x+"_"+y for x,y in tissue_barcodes])
     NEW_SURVIVAL = pd.DataFrame( ALL_SURVIVAL.values, index =surv_barcodes, columns = ALL_SURVIVAL.columns )
-    NEW_SURVIVAL = NEW_SURVIVAL.loc[barcodes]
+    NEW_SURVIVAL = NEW_SURVIVAL.loc[surv_barcodes]
     #clinical = data_store["/CLINICAL/data"].loc[barcodes]
 
     Age = NEW_SURVIVAL[ "patient.days_to_birth" ].values.astype(int)
@@ -17,12 +17,12 @@ def PanCancerSurvival(object):
 
     ok_age_query = Age<-10
     ok_age = pp.find(ok_age_query )
-    tissues = tissues[ ok_age_query ]
+    #tissues = tissues[ ok_age_query ]
     #pdb.set_trace()
     Age=-Age[ok_age]
     Times = Times[ok_age]
     Events = Events[ok_age]
-    s_barcodes = barcodes[ok_age]
+    s_barcodes = surv_barcodes[ok_age]
     NEW_SURVIVAL = NEW_SURVIVAL.loc[s_barcodes]
 
     bad_followup_query = NEW_SURVIVAL[ "patient.days_to_last_followup" ].fillna(0).values.astype(int)<0
