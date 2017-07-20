@@ -605,7 +605,7 @@ def hidden_neighbours(data, nbr = 2):
   fptr = open( save_dir + "/spectral_K_%d.yaml"%(K),"w+" )
   fptr.write( yaml.dump(subgraphs))
   fptr.close()
-  return
+  #return
   
   print "generating KD tree"
   kdt =  KDTree(X.values, leaf_size=20, metric='euclidean')
@@ -743,7 +743,7 @@ def latent_neighbours(data, nbr = 2):
   fptr = open( save_dir + "/spectral_K_%d.yaml"%(K),"w+" )
   fptr.write( yaml.dump(subgraphs))
   fptr.close()
-  return
+  #return
   #pdb.set_trace()
   
   print "generating KD tree"
@@ -826,11 +826,11 @@ if __name__ == "__main__":
   
   data = load_data_and_fill( data_location, results_location )
   
-  #result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
-  #result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
+  result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
+  result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
   
   result = hidden_neighbours( data, nbr=3 )
-  #result = latent_neighbours( data, nbr=3 )
+  result = latent_neighbours( data, nbr=3 )
   # G=data.nn_latent["full_G"]
   # adj_dict = G.adj
   # n = len(adj_dict)
