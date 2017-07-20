@@ -430,7 +430,7 @@ def cluster_genes_by_hidden_weights_spectral( data, Ks = [400,200,100] ):
     subgraphs = []
     
     #for subgraph in nx.connected_component_subgraphs(G):
-    K = len(np.unique(y))
+    #K = len(np.unique(y))
     for k in range(K):
       I = pp.find( y[K]==k )  
       print len(I)
