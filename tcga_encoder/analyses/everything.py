@@ -607,7 +607,7 @@ def latent_neighbours(data, nbr = 2):
   
   beta=20.0
   #V = np.exp( -s_form / beta)
-  V = np.abs( X.T.corr() )
+  #V = np.abs( X.T.corr() )
   V = X.values
   K=100
   nc=10; nr=10
