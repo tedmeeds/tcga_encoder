@@ -104,3 +104,28 @@ def get_hidden_weights( model_store, input_sources, data_store ):
       W[ input_source ] = pd.DataFrame( w, index=rows, columns = columns )
   model_store.close()
   return W
+  
+def quantize( Z, q_range =[0,0.2, 0.4,0.6,0.8,1.0] ):
+  #n_z = len(Z)
+  n_z = len(Z.columns)
+  #quantiles = (len(Z)*np.array( [0,0.33, 0.66, 1.0] )).astype(int)
+  quantiles = (len(Z)*np.array( q_range )).astype(int)
+  #quantiles = (len(Z)*np.array( [0,0.1, 0.2,0.3,0.4,0.6,0.7,0.8,0.9,1.0] )).astype(int)
+  n_quantiles = len(quantiles)-1
+  start_q_id = -(n_quantiles-1)/2
+  #Z=Z.loc[barcodes]
+  Z_values = Z.values
+  
+  argsort_Z = np.argsort( Z_values, 0 )
+  
+  Z_quantized = np.zeros( Z_values.shape, dtype=int )
+  for start_q, end_q in zip( quantiles[:-1], quantiles[1:] ):
+    for z_idx in range(n_z):
+      z_idx_order = argsort_Z[:,z_idx] 
+      Z_quantized[ z_idx_order[start_q:end_q], z_idx] = start_q_id
+    start_q_id+=1
+    
+  Z_quantized = pd.DataFrame(Z_quantized, index=Z.index, columns=Z.columns )
+  
+  return Z_quantized
+  
