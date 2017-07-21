@@ -1149,6 +1149,7 @@ def cosine_within_tissue_neighbour_differences(data, X, Ws, title, nbr = 10):
   check_and_mkdir(save_dir) 
   results = {}
   data.data_store.open()
+  pdb.set_trace()
   T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
   data.data_store.close()
   tissue_pallette = sns.hls_palette(len(T.columns))
