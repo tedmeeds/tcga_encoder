@@ -4,7 +4,8 @@ from tcga_encoder.data.data import *
 
 class EverythingObject(object):
   def __init__(self):
-    pass
+    self.results = {}
+    
     
 def load_store( location, name, mode="r" ):
   store_path = os.path.join( HOME_DIR, location )

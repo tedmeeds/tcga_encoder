@@ -818,19 +818,628 @@ def cluster_patients_by_latent(data):
 # analyses:  find what makes two patients "neighbours" at local/global level
 # cluster patients within and wthout cohorts.  how much difference?
 # find survival directions, survival clusters
+
+def neighbour_differences(data, X, Ws, title, nbr = 10):
+  #X = data.H
+  X=X[:100]
+  W = pd.concat( Ws.values() )
+  I_W = np.argsort( W, 0 )
+  
+  orders = []
+  for h in I_W.columns:
+    orders.append( I_W[h].sort_values() )
+    
+  save_dir = os.path.join( data.save_dir, "%s_nn_differences_K%d"%(title,nbr) )
+  check_and_mkdir(save_dir) 
+  results = {}
+  data.data_store.open()
+  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_pallette = sns.hls_palette(len(T.columns))
+  bcs = X.index.values
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
   
   
+  print "generating KD tree"
+  kdt =  KDTree(X.values, leaf_size=20, metric='euclidean')
+
+  print "computing distances"
+  distances, indices = kdt.query(X.values, k=nbr, return_distance=True)
+  
+  #KDTree(data.H.values, leaf_size=30, metric='euclidean')
+  print "making graphs"
+  data.data_store.open()
+  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_graphs = {}
+  for tissue_name in T.columns:
+    print "working ", tissue_name
+    ids = pp.find( T[tissue_name]==1 )
+    
+    subgraphs = []
+    for idx in ids:
+      this_indices = indices[idx,:]
+      this_distances = distances[idx,:]
+      bc = bcs[this_indices[0]]
+      r = {}
+      r["a_node"]      = bc
+      r["a_p_event"]      = int( events[this_indices[0]] ) #[int(data.survival.data.loc[bc].values[0])
+      r["a_p_time"]       = int( times[this_indices[0]] ) #int(data.survival.data.loc[bc].values[1])
+      #r["neighbors"] = []
+      neighbors = []
+      x = X.values[this_indices[0]]
+      for other_index, other_distance in zip(this_indices[1:], this_distances[1:]):
+        n = {}
+        bc = bcs[other_index]
+        n["b_node"] = bc
+        n["distance"] = float(other_distance)
+        n["b_s_event"]      = int( events[other_index])# int(data.survival.data.loc[bc].values[0])
+        n["b_s_time"]       = int( times[other_index] ) #int(data.survival.data.loc[bc].values[1])
+        #n = {"node":bcs[other_index],"distance":float(other_distance)}
+        y = X.values[other_index]
+        
+        most_similar = np.argsort( np.square( x-y) )
+        n["most_similar"] = []
+        n["top_gene"] = []
+        for j in range(10):
+          h_idx = most_similar[j]
+          #h_order = I_W["h_%d"%(h_idx)].sort_values()
+          n["most_similar"].append( int(h_idx) )
+          #pdb.set_trace()
+          n["top_gene"].append( orders[h_idx].index[0]  )
+          #n["s_event"].append( )
+        #n["most_similar"] = list(most_similar[:10].astype(int))
+        neighbors.append(n)
+      #pdb.set_trace()
+      r["neighbors"] = neighbors
+      subgraphs.append(r)
+    
+    #G = make_graph_from_indices( indices[ids,:nbr], X.index.values )
+    print "  drawing graph"
+    #draw_graph( G, save_dir+"/nn_hidden_%s.png"%(tissue_name) )
+    #tissue_graphs[tissue_name] = G
+    
+    #subgraphs = []
+    #
+    # for subgraph in nx.connected_component_subgraphs(G):
+    #   nodes = subgraph.nodes()
+    #   subgraphs.append(nodes)
+    
+    fptr = open( save_dir + "/%s_clusters_%s.yaml"%(title,tissue_name),"w+" )
+    fptr.write( yaml.dump(subgraphs))
+    fptr.close()
+  
+  G = make_graph_from_indices( indices[:,:nbr], X.index.values )
+  subgraphs = []
+  
+  for subgraph in nx.connected_component_subgraphs(G):
+    nodes = subgraph.nodes()
+    subgraphs.append(nodes)
+  
+  fptr = open( save_dir + "/FULL_%s_clusters.yaml"%title,"w+" )
+  fptr.write( yaml.dump(subgraphs))
+  fptr.close()
+  
+  print "gathering results"
+  results["distances"] = distances
+  results["indices"] = indices
+  results["tissue_G"] = tissue_graphs
+  results["full_G"] = G
+  results["save_dir"] = save_dir
+  data.results["nn_%s_dif"%title] = results
+
+def within_tissue_neighbour_differences(data, X, Ws, title, nbr = 10):
+  #X = data.H
+  #X=X[:100]
+  W = pd.concat( Ws.values() )
+  I_W = np.argsort( W, 0 )
+  
+  orders = []
+  for h in I_W.columns:
+    orders.append( I_W[h].sort_values() )
+    
+  save_dir = os.path.join( data.save_dir, "%s_nn_differences_K%d"%(title,nbr) )
+  check_and_mkdir(save_dir) 
+  results = {}
+  data.data_store.open()
+  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_pallette = sns.hls_palette(len(T.columns))
+  bcs = X.index.values
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  good = pp.find( np.isnan(times) == False )
+  #pdb.set_trace()
+
+  bcs = bcs[good]
+  X = X.loc[bcs]
+  T = T.loc[bcs]
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  data.data_store.open()
+  dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
+  data.data_store.close()
+  #KDTree(data.H.values, leaf_size=30, metric='euclidean')
+  print "making graphs"
+  data.data_store.open()
+  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_graphs = {}
+  for tissue_name in T.columns:
+    print "working ", tissue_name
+    ids = pp.find( T[tissue_name]==1 )
+    
+    if len(ids)==0:
+      continue
+    print "  generating KD tree"
+    kdt =  KDTree(X.values[ids,:], leaf_size=20, metric='euclidean')
+
+    print "  computing distances"
+    distances, indices = kdt.query(X.values[ids,:], k=nbr, return_distance=True)
+    
+    subgraphs = []
+    mean_times = []
+    for this_indices,this_distances in zip(indices, distances):
+      
+      #this_indices = indices[idx,:]
+      #this_distances = distances[idx,:]
+      #pdb.set_trace()
+      bc = bcs[ ids[this_indices[0]] ]
+      r = {}
+      r["a_node"]      = bc
+      try:
+        r["a_p_event"]      = int( events[ids[ this_indices[0]]] ) 
+      except:
+        r["a_p_event"]      = np.nan
+      
+      try:  
+        r["a_p_time"]       = int( times[ids[this_indices[0]]] ) 
+      except:
+        r["a_p_time"]       = np.nan
+      if r["a_p_event"] <1:
+        continue
+      r["b_events"] = []
+      r["b_times"] = []
+      top_dna_genes = Counter()
+      neighbors = []
+      x = X.values[ids[this_indices[0]]]
+      
+      #pdb.set_trace()
+      dna_series = dna.loc[bc].sort_values()[-10:]
+
+      top_dna_genes.update(dict( zip(dna_series.index.values, dna_series.values) ))
+      
+      top_genes=Counter()
+      n_bcs = []
+      for other_index, other_distance in zip(this_indices[1:], this_distances[1:]):
+        n = {}
+        bc = bcs[ids[other_index]]
+        dna_series = dna.loc[bc].sort_values()[-10:]
+        top_dna_genes.update(dict( zip(dna_series.index.values, dna_series.values) ))
+        n["b_node"] = bc
+        n_bcs.append(bc)
+        n["distance"] = float(other_distance)
+        try:
+          n["b_s_event"]      = int( events[ids[other_index]])
+        except:
+          n["b_s_event"]      = np.nan  
+          # int(data.survival.data.loc[bc].values[0])
+        r["b_events"].append( n["b_s_event"] )
+        try:
+          n["b_s_time"]       = int( times[ids[other_index]] )
+        except:
+          n["b_s_time"]       = np.nan
+        r["b_times"].append( n["b_s_time"] ) #int(data.survival.data.loc[bc].values[1])
+        #n = {"node":bcs[other_index],"distance":float(other_distance)}
+        y = X.values[ids[other_index]]
+        
+        most_similar = np.argsort( np.square( x-y) )
+        n["most_similar"] = []
+        n["top_gene"] = []
+        
+        for j in range(20):
+          h_idx = most_similar[j]
+          #h_order = I_W["h_%d"%(h_idx)].sort_values()
+          n["most_similar"].append( int(h_idx) )
+          #pdb.set_trace()
+          n["top_gene"].extend( orders[h_idx].index[:20]  )
+          
+          #n["s_event"].append( )
+        #n["most_similar"] = list(most_similar[:10].astype(int))
+        neighbors.append(n)
+        top_genes.update(n["top_gene"])
+      #pdb.set_trace()
+      
+      r["a_top_genes"] = []
+      for gene,cnt in top_genes.most_common()[:10]:
+        if cnt>2:
+          r["a_top_genes"].append(gene)
+      r["a_top_dna"] = []
+      r["a_top_dna_cnt"] = []
+      for gene,cnt in top_dna_genes.most_common()[:20]:
+        r["a_top_dna_cnt"].append( int(cnt) )
+        r["a_top_dna"].append( gene )
+      
+      r["neighbors"] = n_bcs #neighbors
+      
+      r["mean_time"] = float(np.mean(r["b_times"]))
+      r["mean_event_time"] = float(np.sum(r["b_events"])) #float(np.sum( np.array(r["b_times"])*np.array(r["b_events"])/float(np.sum(r["b_events"]))))
+      mean_times.append( r["mean_event_time"] )
+      #mean_times.append( r["a_p_time"] )
+      subgraphs.append(r)
+    mean_times = np.array(mean_times)
+    #G = make_graph_from_indices( indices[ids,:nbr], X.index.values )
+    print "  drawing graph"
+    subgraphs2 = [subgraphs[jj] for jj in np.argsort(mean_times)]
+    
+    bsc_high = [ subgraphs2[0]["a_node"] ]
+    bsc_high.extend( subgraphs2[0]["neighbors"] )
+    bsc_high.extend( subgraphs2[1]["neighbors"] )
+    bsc_high.extend( [ subgraphs2[1]["a_node"] ] )
+    bsc_high = np.unique(bsc_high)
+    
+    bsc_low = [ subgraphs2[-1]["a_node"] ]
+    bsc_low.extend( subgraphs2[-1]["neighbors"] )
+    bsc_low.extend( subgraphs2[-2]["neighbors"] )
+    bsc_low.extend( [ subgraphs2[-2]["a_node"] ] )
+    bsc_low = np.unique(bsc_low)
+    
+    s_low = data.survival.data.loc[ bsc_low ] #["T"].values
+    s_high = data.survival.data.loc[ bsc_high ]
+    #events = data.survival.data.loc[ bcs ]["E"].values
+    
+    f = pp.figure()
+    ax = f.add_subplot(111)
+    kmf = KaplanMeierFitter()
+    kmf.fit(s_low["T"].values, event_observed=s_low["E"].values, label="low %s"%(tissue_name)  )
+    kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color="blue",ci_show=False,lw=2)
+    
+    kmf.fit(s_high["T"].values, event_observed=s_high["E"].values, label="high %s"%(tissue_name)  )
+    kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color="red",ci_show=False,lw=2)
+    pp.savefig( save_dir + "/survival_%s.png"%(tissue_name), fmt="png", dpi=300 )
+    pp.close('all')
+    #draw_graph( G, save_dir+"/nn_hidden_%s.png"%(tissue_name) )
+    #tissue_graphs[tissue_name] = G
+    
+    #subgraphs = []
+    #
+    # for subgraph in nx.connected_component_subgraphs(G):
+    #   nodes = subgraph.nodes()
+    #   subgraphs.append(nodes)
+    
+    fptr = open( save_dir + "/by_tissue_%s_clusters_%s.yaml"%(title,tissue_name),"w+" )
+    fptr.write( yaml.dump(subgraphs2))
+    fptr.close()
+    
+    
+  
+  # G = make_graph_from_indices( indices[:,:nbr], X.index.values )
+  # subgraphs = []
+  #
+  # for subgraph in nx.connected_component_subgraphs(G):
+  #   nodes = subgraph.nodes()
+  #   subgraphs.append(nodes)
+  #
+  # fptr = open( save_dir + "/FULL_%s_clusters.yaml"%title,"w+" )
+  # fptr.write( yaml.dump(subgraphs))
+  # fptr.close()
+  #
+  print "gathering results"
+  results["distances"] = distances
+  results["indices"] = indices
+  results["tissue_G"] = tissue_graphs
+  #results["full_G"] = G
+  results["save_dir"] = save_dir
+  data.results["nn_by_tissue_%s_dif"%title] = results    
+
+def cosine_within_tissue_neighbour_differences(data, X, Ws, title, nbr = 10):
+  #X = data.H
+  #X=X[:100]
+  W = pd.concat( Ws.values() )
+  I_W = np.argsort( W, 0 )
+  
+  orders = []
+  for h in I_W.columns:
+    orders.append( I_W[h].sort_values() )
+    
+  save_dir = os.path.join( data.save_dir, "cosine_%s_nn_differences_K%d"%(title,nbr) )
+  check_and_mkdir(save_dir) 
+  results = {}
+  data.data_store.open()
+  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_pallette = sns.hls_palette(len(T.columns))
+  bcs = X.index.values
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  good = pp.find( np.isnan(times) == False )
+  #pdb.set_trace()
+
+  bcs = bcs[good]
+  X = X.loc[bcs]
+  T = T.loc[bcs]
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  data.data_store.open()
+  dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
+  data.data_store.close()
+  #KDTree(data.H.values, leaf_size=30, metric='euclidean')
+  print "making graphs"
+  data.data_store.open()
+  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_graphs = {}
+  for tissue_name in T.columns:
+    print "working ", tissue_name
+    ids = pp.find( T[tissue_name]==1 )
+    
+    if len(ids)==0:
+      continue
+      
+    print "  computing cosine distance"
+    XN = X.values[ids,:]
+    XN = XN / np.sqrt(np.sum( XN*XN,1)[:,np.newaxis])
+    cosine_distance = 1.0 - np.dot( XN, XN.T )
+    cosine_distance = np.maximum(cosine_distance,0)
+    indices = np.argsort( cosine_distance, 1 )[:,:nbr]
+    distances = []
+
+    print " computing indices"
+    
+    subgraphs = []
+    mean_times = []
+    for this_indices in indices:
+      
+      #this_indices = indices[idx,:]
+      this_distances = cosine_distance[ this_indices[0], :][ this_indices ]
+      #pdb.set_trace()
+      bc = bcs[ ids[this_indices[0]] ]
+      r = {}
+      r["a_node"]      = bc
+      try:
+        r["a_p_event"]      = int( events[ids[ this_indices[0]]] ) 
+      except:
+        r["a_p_event"]      = np.nan
+      
+      try:  
+        r["a_p_time"]       = int( times[ids[this_indices[0]]] ) 
+      except:
+        r["a_p_time"]       = np.nan
+      if r["a_p_event"] <1:
+        continue
+      r["b_events"] = []
+      r["b_times"] = []
+      top_dna_genes = Counter()
+      neighbors = []
+      x = X.values[ids[this_indices[0]]]
+      
+      #pdb.set_trace()
+      dna_series = dna.loc[bc].sort_values()[-10:]
+
+      top_dna_genes.update(dict( zip(dna_series.index.values, dna_series.values) ))
+      
+      top_genes=Counter()
+      n_bcs = []
+      for other_index, other_distance in zip(this_indices[1:], this_distances[1:]):
+        n = {}
+        bc = bcs[ids[other_index]]
+        dna_series = dna.loc[bc].sort_values()[-10:]
+        top_dna_genes.update(dict( zip(dna_series.index.values, dna_series.values) ))
+        n["b_node"] = bc
+        n_bcs.append(bc)
+        n["distance"] = float(other_distance)
+        try:
+          n["b_s_event"]      = int( events[ids[other_index]])
+        except:
+          n["b_s_event"]      = np.nan  
+          # int(data.survival.data.loc[bc].values[0])
+        r["b_events"].append( n["b_s_event"] )
+        try:
+          n["b_s_time"]       = int( times[ids[other_index]] )
+        except:
+          n["b_s_time"]       = np.nan
+        r["b_times"].append( n["b_s_time"] ) #int(data.survival.data.loc[bc].values[1])
+        #n = {"node":bcs[other_index],"distance":float(other_distance)}
+        y = X.values[ids[other_index]]
+        
+        most_similar = np.argsort( np.square( x-y) )
+        n["most_similar"] = []
+        n["top_gene"] = []
+        
+        for j in range(20):
+          h_idx = most_similar[j]
+          #h_order = I_W["h_%d"%(h_idx)].sort_values()
+          n["most_similar"].append( int(h_idx) )
+          #pdb.set_trace()
+          n["top_gene"].extend( orders[h_idx].index[:20]  )
+          
+          #n["s_event"].append( )
+        #n["most_similar"] = list(most_similar[:10].astype(int))
+        neighbors.append(n)
+        top_genes.update(n["top_gene"])
+      #pdb.set_trace()
+      
+      r["a_top_genes"] = []
+      for gene,cnt in top_genes.most_common()[:10]:
+        if cnt>2:
+          r["a_top_genes"].append(gene)
+      r["a_top_dna"] = []
+      r["a_top_dna_cnt"] = []
+      for gene,cnt in top_dna_genes.most_common()[:20]:
+        r["a_top_dna_cnt"].append( int(cnt) )
+        r["a_top_dna"].append( gene )
+      
+      r["neighbors"] = n_bcs #neighbors
+      
+      r["mean_time"] = float(np.mean(r["b_times"]))
+      r["mean_event_time"] = float(np.sum(r["b_events"])) #float(np.sum( np.array(r["b_times"])*np.array(r["b_events"])/float(np.sum(r["b_events"]))))
+      mean_times.append( r["mean_time"] )
+      #mean_times.append( r["a_p_time"] )
+      subgraphs.append(r)
+    mean_times = np.array(mean_times)
+    #G = make_graph_from_indices( indices[ids,:nbr], X.index.values )
+    print "  drawing graph"
+    subgraphs2 = [subgraphs[jj] for jj in np.argsort(mean_times)]
+    
+    bsc_high = [ subgraphs2[0]["a_node"] ]
+    bsc_high.extend( subgraphs2[0]["neighbors"] )
+    bsc_high.extend( subgraphs2[1]["neighbors"] )
+    bsc_high.extend( [ subgraphs2[1]["a_node"] ] )
+    bsc_high = np.unique(bsc_high)
+    
+    bsc_low = [ subgraphs2[-1]["a_node"] ]
+    bsc_low.extend( subgraphs2[-1]["neighbors"] )
+    bsc_low.extend( subgraphs2[-2]["neighbors"] )
+    bsc_low.extend( [ subgraphs2[-2]["a_node"] ] )
+    bsc_low = np.unique(bsc_low)
+    
+    s_low = data.survival.data.loc[ bsc_low ] #["T"].values
+    s_high = data.survival.data.loc[ bsc_high ]
+    #events = data.survival.data.loc[ bcs ]["E"].values
+    
+    f = pp.figure()
+    ax = f.add_subplot(111)
+    kmf = KaplanMeierFitter()
+    kmf.fit(s_low["T"].values, event_observed=s_low["E"].values, label="low %s"%(tissue_name)  )
+    kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color="blue",ci_show=False,lw=2)
+    
+    kmf.fit(s_high["T"].values, event_observed=s_high["E"].values, label="high %s"%(tissue_name)  )
+    kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color="red",ci_show=False,lw=2)
+    pp.savefig( save_dir + "/survival_%s.png"%(tissue_name), fmt="png", dpi=300 )
+    pp.close('all')
+
+    
+    fptr = open( save_dir + "/by_tissue_%s_clusters_%s.yaml"%(title,tissue_name),"w+" )
+    fptr.write( yaml.dump(subgraphs2))
+    fptr.close()
+  #
+  print "gathering results"
+  results["distances"] = distances
+  results["indices"] = indices
+  results["tissue_G"] = tissue_graphs
+  #results["full_G"] = G
+  results["save_dir"] = save_dir
+  data.results["cosine_nn_by_tissue_%s_dif"%title] = results    
+
+  
+# def latent_neighbour_differences(data, nbr = 10):
+#   X = data.Z#[:100]
+#   Ws = data.W_input2h
+#
+#   save_dir = os.path.join( data.save_dir, "latent_nn_differences_K%d"%(nbr) )
+#   check_and_mkdir(save_dir)
+#   results = {}
+#   data.data_store.open()
+#   T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+#   data.data_store.close()
+#   tissue_pallette = sns.hls_palette(len(T.columns))
+#   bcs = X.index.values
+#   times = data.survival.data.loc[ bcs ]["T"].values
+#   events = data.survival.data.loc[ bcs ]["E"].values
+#
+#
+#   print "generating KD tree"
+#   kdt =  KDTree(X.values, leaf_size=20, metric='euclidean')
+#
+#   print "computing distances"
+#   distances, indices = kdt.query(X.values, k=nbr, return_distance=True)
+#
+#   #KDTree(data.H.values, leaf_size=30, metric='euclidean')
+#   print "making graphs"
+#   data.data_store.open()
+#   T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+#   data.data_store.close()
+#   tissue_graphs = {}
+#   for tissue_name in T.columns:
+#     print "working ", tissue_name
+#     ids = pp.find( T[tissue_name]==1 )
+#
+#     subgraphs = []
+#     for idx in ids:
+#       this_indices = indices[idx,:]
+#       this_distances = distances[idx,:]
+#
+#       r = {}
+#       r["a_node"]      = bcs[this_indices[0]]
+#       #r["neighbors"] = []
+#       neighbors = []
+#
+#       x = X.values[this_indices[0]]
+#       for other_index, other_distance in zip(this_indices[1:], this_distances[1:]):
+#         n = {}
+#         n["b_node"] = bcs[other_index]
+#         n["distance"] = float(other_distance)
+#         #n = {"node":bcs[other_index],"distance":float(other_distance)}
+#         y = X.values[other_index]
+#
+#         most_similar = np.argsort( np.square( x-y) )
+#         n["most_similar"] = []
+#         for j in range(10):
+#           n["most_similar"].append( int(most_similar[j]) )
+#         #n["most_similar"] = list(most_similar[:10].astype(int))
+#         neighbors.append(n)
+#       #pdb.set_trace()
+#       r["neighbors"] = neighbors
+#       subgraphs.append(r)
+#
+#     #G = make_graph_from_indices( indices[ids,:nbr], X.index.values )
+#     print "  drawing graph"
+#     #draw_graph( G, save_dir+"/nn_hidden_%s.png"%(tissue_name) )
+#     #tissue_graphs[tissue_name] = G
+#
+#     #subgraphs = []
+#     #
+#     # for subgraph in nx.connected_component_subgraphs(G):
+#     #   nodes = subgraph.nodes()
+#     #   subgraphs.append(nodes)
+#
+#     fptr = open( save_dir + "/latent_clusters_%s.yaml"%(tissue_name),"w+" )
+#     fptr.write( yaml.dump(subgraphs))
+#     fptr.close()
+#
+#   G = make_graph_from_indices( indices[:,:nbr], X.index.values )
+#   subgraphs = []
+#
+#   for subgraph in nx.connected_component_subgraphs(G):
+#     nodes = subgraph.nodes()
+#     subgraphs.append(nodes)
+#
+#   fptr = open( save_dir + "/FULL_latent_clusters.yaml","w+" )
+#   fptr.write( yaml.dump(subgraphs))
+#   fptr.close()
+#
+#   print "gathering results"
+#   results["distances"] = distances
+#   results["indices"] = indices
+#   results["tissue_G"] = tissue_graphs
+#   results["full_G"] = G
+#   results["save_dir"] = save_dir
+#   data.nn_latent_dif = results
 if __name__ == "__main__":
   data_location = sys.argv[1]
   results_location = sys.argv[2]
   
   data = load_data_and_fill( data_location, results_location )
   
-  result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
-  result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
+  # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
+  # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
+  #
+  # result = hidden_neighbours( data, nbr=3 )
+  # result = latent_neighbours( data, nbr=3 )
   
-  result = hidden_neighbours( data, nbr=3 )
-  result = latent_neighbours( data, nbr=3 )
+  #result = neighbour_differences( data, data.Z, data.weighted_W_h2z, "latent", nbr = 10)
+  #result = neighbour_differences( data, data.H, data.W_input2h, "hidden", nbr=10 )
+  #within_tissue_neighbour_differences( data, data.Z, data.weighted_W_h2z, "within_tissue_latent", nbr = 20 )
+  #within_tissue_neighbour_differences( data, data.H, data.W_input2h, "within_tissue_hidden", nbr = 20 )
+
+  cosine_within_tissue_neighbour_differences( data, data.Z, data.weighted_W_h2z, "within_tissue_latent", nbr = 20 )
+  cosine_within_tissue_neighbour_differences( data, data.H, data.W_input2h, "within_tissue_hidden", nbr = 20 )
+
   # G=data.nn_latent["full_G"]
   # adj_dict = G.adj
   # n = len(adj_dict)
