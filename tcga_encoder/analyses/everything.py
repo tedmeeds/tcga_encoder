@@ -19,6 +19,7 @@ from lifelines.utils import k_fold_cross_validation
 from lifelines import KaplanMeierFitter
 from lifelines.statistics import logrank_test, multivariate_logrank_test
 from sklearn.cluster import MiniBatchKMeans
+from sklearn.mixture import GaussianMixture
 #except:
 #  print "could not import graphviz "
 #from networkx.drawing.nx_agraph import spring_layout 
@@ -1609,7 +1610,7 @@ def repeat_gmm( data, K = 20, repeats=10 ):
   #X = quantize(X)
   #X = normalize(X)
   
-  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d_std"%(K) )
+  save_dir = os.path.join( data.save_dir, "repeat_gmm_K%d_std"%(K) )
   check_and_mkdir(save_dir) 
   results = {}
   data.data_store.open()
@@ -1665,12 +1666,12 @@ def repeat_gmm( data, K = 20, repeats=10 ):
       train_X -= mn; train_X /= std
       test_X -= mn; test_X /= std
       
-      kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
+      kmeans = GaussianMixture(n_components=K, covariance_type ='diag', random_state=r ).fit( train_X )
       kmeans_labels = kmeans.predict(test_X ) #labels_
       
       for k in range(K):
         Ik = test_ids[ pp.find( kmeans_labels == k ) ]
-        new_X[Ik,:] += kmeans.cluster_centers_[k]
+        new_X[Ik,:] += kmeans.means_[k]
 
       print "switching ids"
       train_ids = shuffle_ids[n_ids /2: ]
@@ -1684,12 +1685,12 @@ def repeat_gmm( data, K = 20, repeats=10 ):
       train_X -= mn; train_X /= std
       test_X -= mn; test_X /= std
       
-      kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
+      kmeans = GaussianMixture(n_components=K, covariance_type ='diag', random_state=r ).fit( train_X )
       kmeans_labels = kmeans.predict(test_X ) #labels_
       
       for k in range(K):
         Ik = test_ids[ pp.find( kmeans_labels == k ) ]
-        new_X[Ik,:] += kmeans.cluster_centers_[k]
+        new_X[Ik,:] += kmeans.means_[k]
         
         # for i in Ik:
         #   for j in Ik:
@@ -1753,7 +1754,8 @@ if __name__ == "__main__":
   
   #cluster_latent_space_by_inputs( data )
   
-  repeat_kmeans( data, K = 4, repeats=1000 )
+  #repeat_kmeans( data, K = 4, repeats=10 )
+  repeat_gmm( data, K = 4, repeats=500 )
   # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
   # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
   #
