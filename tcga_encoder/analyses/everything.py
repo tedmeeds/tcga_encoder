@@ -1646,7 +1646,9 @@ def repeat_gmm( data, K = 20, repeats=10 ):
   
   dim = X.shape[1]
   
+  f_all = pp.figure( figsize=(16,12) )
   
+  t_idx = 0
   for tissue_name in T.columns:
     print "working ", tissue_name
     ids = pp.find( T[tissue_name]==1 )
@@ -1732,10 +1734,11 @@ def repeat_gmm( data, K = 20, repeats=10 ):
     h.cax.set_visible(False)
     h.ax_heatmap.hlines(n_tissue-pp.find(np.diff(y[patient_order]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
     pp.savefig( save_dir + "/%s_repeat_kmeans.png"%(tissue_name), fmt="png" )#, dpi=300, bbox_inches='tight')
-    pp.close('all')
+    #pp.close('all')
     
     f = pp.figure()
     ax=f.add_subplot(111)
+    ax_all = f_all.add_subplot(4,8,t_idx+1)
     for k in range(K):
       Ik = pp.find( y == k )
       k_bcs = bcs[ ids[Ik] ]
@@ -1746,9 +1749,12 @@ def repeat_gmm( data, K = 20, repeats=10 ):
       if len(k_bcs) > 0:
         kmf.fit(k_times, event_observed=k_events, label="k%d"%(k)  )
         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
+        kmf.plot(ax=ax_all,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
     pp.title("%s"%(tissue_name))
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
-    pp.close('all') 
+    pp.close() 
+    t_idx+=1
+  f_all.savefig( save_dir + "/AA_survival.png", format="png", dpi=300)
 
 def repeat_kmeans_global( data, K = 20, repeats=10 ):
   Z           = data.Z
@@ -1757,7 +1763,7 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
   #X = quantize(X)
   #X = normalize(X)
   
-  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d_std_global_tissue_norm"%(K) )
+  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d_std_global"%(K) )
   check_and_mkdir(save_dir) 
   results = {}
   data.data_store.open()
@@ -1848,7 +1854,8 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
   
   #X_sorted = pd.DataFrame( new_X[patient_order,:][:,z_order], index = X.index.values[patient_order], columns=X.columns[z_order] )
   
-  
+  f_all = pp.figure( figsize=(24,12) )
+  t_idx=0
   for tissue_name in T.columns:
     print "working ", tissue_name
     ids = pp.find( T[tissue_name]==1 )
@@ -1876,6 +1883,7 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
     
     f = pp.figure()
     ax=f.add_subplot(111)
+    ax_all = f_all.add_subplot(4,8,t_idx+1)
     for k in range(K):
       Ik = pp.find( y_tissue == k )
       k_bcs = bcs[ ids[Ik] ]
@@ -1886,9 +1894,15 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
       if len(k_bcs) > 0:
         kmf.fit(k_times, event_observed=k_events, label="k%d"%(k)  )
         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
+        kmf.plot(ax=ax_all,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
+    ax_all.set_title("%s"%(tissue_name))
+    ax_all.set_ylim(0,1)
+    ax.set_ylim(0,1)
     pp.title("%s"%(tissue_name))
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
-    pp.close('all')  
+    pp.close() 
+    t_idx+=1
+  f_all.savefig( save_dir + "/AA_survival.png", format="png", dpi=300)
       
 if __name__ == "__main__":
   data_location = sys.argv[1]
@@ -1898,7 +1912,13 @@ if __name__ == "__main__":
   
   #cluster_latent_space_by_inputs( data )
   
+  repeat_kmeans_global( data, K = 2, repeats=50 )
+  repeat_kmeans_global( data, K = 3, repeats=50 )
+  repeat_kmeans_global( data, K = 4, repeats=50 )
+  repeat_kmeans_global( data, K = 5, repeats=50 )
   repeat_kmeans_global( data, K = 6, repeats=50 )
+  repeat_kmeans_global( data, K = 7, repeats=50 )
+  repeat_kmeans_global( data, K = 8, repeats=50 )
   #repeat_gmm( data, K = 4, repeats=500 )
   # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
   # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
