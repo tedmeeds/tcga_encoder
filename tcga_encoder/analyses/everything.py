@@ -1153,6 +1153,7 @@ def cosine_within_tissue_neighbour_differences(data, X, Ws, title, nbr = 10):
   try:
     T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
   except:
+    #pdb.set_trace()
     T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
   data.data_store.close()
   tissue_pallette = sns.hls_palette(len(T.columns))
@@ -1174,9 +1175,9 @@ def cosine_within_tissue_neighbour_differences(data, X, Ws, title, nbr = 10):
   data.data_store.close()
   #KDTree(data.H.values, leaf_size=30, metric='euclidean')
   print "making graphs"
-  data.data_store.open()
-  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
-  data.data_store.close()
+  # data.data_store.open()
+  # T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  # data.data_store.close()
   tissue_graphs = {}
   for tissue_name in T.columns:
     print "working ", tissue_name
