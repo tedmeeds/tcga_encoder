@@ -142,4 +142,23 @@ def normalize( Z  ):
   Z_normalized = pd.DataFrame(Z_values, index=Z.index, columns=Z.columns )
   
   return Z_normalized
+  
+def normalize_by_tissue(X,T):
+  XV = X.values
+  #X2 = 
+  for tissue_name in T.columns:
+    #print "working ", tissue_name
+    ids = pp.find( T[tissue_name]==1 )
+    n_ids = len(ids); n_tissue=n_ids
+    if n_ids==0:
+      continue
+      
+    XV[ids,:] -= XV[ids,:].mean(0)
+    XV[ids,:] /= XV[ids,:].std(0)
+    
+  return pd.DataFrame( XV, index = X.index, columns = X.columns )
+    
+    
+  
+  
     

@@ -1607,8 +1607,9 @@ def repeat_gmm( data, K = 20, repeats=10 ):
   Z           = data.Z
   X=Z
   STD = data.Z_std
-  #X = quantize(X)
-  #X = normalize(X)
+  
+  
+  
   
   save_dir = os.path.join( data.save_dir, "repeat_gmm_K%d_std"%(K) )
   check_and_mkdir(save_dir) 
@@ -1621,6 +1622,9 @@ def repeat_gmm( data, K = 20, repeats=10 ):
     #pdb.set_trace()
     T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
   data.data_store.close()
+  #X = quantize(X)
+  X = normalize_by_tissue(X,T)
+
   tissue_pallette = sns.hls_palette(len(T.columns))
   bcs = X.index.values
   times = data.survival.data.loc[ bcs ]["T"].values
@@ -1753,7 +1757,7 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
   #X = quantize(X)
   #X = normalize(X)
   
-  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d_std_global"%(K) )
+  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d_std_global_tissue_norm"%(K) )
   check_and_mkdir(save_dir) 
   results = {}
   data.data_store.open()
@@ -1894,7 +1898,7 @@ if __name__ == "__main__":
   
   #cluster_latent_space_by_inputs( data )
   
-  repeat_kmeans_global( data, K = 6, repeats=100 )
+  repeat_kmeans_global( data, K = 6, repeats=50 )
   #repeat_gmm( data, K = 4, repeats=500 )
   # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
   # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
