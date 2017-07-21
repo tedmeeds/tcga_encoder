@@ -35,7 +35,12 @@ def load_latent( fill_store ):
   
   Z = pd.concat( [Z_train, Z_val], axis = 0 )
   
-  return Z
+  Z_train = fill_store["/Z/TRAIN/Z/var"]
+  Z_val = fill_store["/Z/VAL/Z/var"]
+  
+  Z_var = pd.concat( [Z_train, Z_val], axis = 0 )
+  Z_std = np.sqrt(Z_var)
+  return Z, Z_std
 
 def load_hidden( fill_store, barcodes ):
   try:

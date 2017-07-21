@@ -37,7 +37,7 @@ def load_data_and_fill( data_location, results_location ):
   survival = PanCancerSurvival( data_store )
   
   #pdb.set_trace()
-  Z = load_latent( fill_store )
+  Z,Z_std = load_latent( fill_store )
   model_barcodes = Z.index.values 
   
   H = load_hidden( fill_store, model_barcodes )
@@ -67,6 +67,7 @@ def load_data_and_fill( data_location, results_location ):
   data.subtypes       = subtypes
   data.survival       = survival
   data.Z              = Z
+  data.Z_std           = Z_std
   data.H              = H
   data.W_input2h      = get_hidden_weights( model_store, input_sources, data_store )
   data.W_h2z          = get_hidden2z_weights( model_store )
@@ -1461,10 +1462,11 @@ def  cluster_latent_space_by_inputs( data ):
 def repeat_kmeans( data, K = 20, repeats=10 ):
   Z           = data.Z
   X=Z
+  STD = data.Z_std
   #X = quantize(X)
-  X = normalize(X)
+  #X = normalize(X)
   
-  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d"%(K) )
+  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d_std"%(K) )
   check_and_mkdir(save_dir) 
   results = {}
   data.data_store.open()
@@ -1485,6 +1487,7 @@ def repeat_kmeans( data, K = 20, repeats=10 ):
 
   bcs = bcs[good]
   X = X.loc[bcs]
+  STD = STD.loc[bcs]
   T = T.loc[bcs]
   times = data.survival.data.loc[ bcs ]["T"].values
   events = data.survival.data.loc[ bcs ]["E"].values
@@ -1493,6 +1496,7 @@ def repeat_kmeans( data, K = 20, repeats=10 ):
   dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
   data.data_store.close()
   
+  dim = X.shape[1]
   
   
   for tissue_name in T.columns:
@@ -1506,7 +1510,7 @@ def repeat_kmeans( data, K = 20, repeats=10 ):
     new_X = 0*X.values[ids,:]
     for r in range(repeats):
       print "repeat ",r+1
-      kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( X.values[ids,:])
+      kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( X.values[ids,:] + STD.values[ids,:]*np.random.randn(len(ids),dim))
       kmeans_labels = kmeans.labels_
       #return kmeans
       for k in range(K):
