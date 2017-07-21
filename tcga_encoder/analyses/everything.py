@@ -1510,16 +1510,48 @@ def repeat_kmeans( data, K = 20, repeats=10 ):
     new_X = 0*X.values[ids,:]
     for r in range(repeats):
       print "repeat ",r+1
-      kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( X.values[ids,:] + STD.values[ids,:]*np.random.randn(len(ids),dim))
-      kmeans_labels = kmeans.labels_
-      #return kmeans
+      
+      shuffle_ids = np.random.permutation(n_ids)
+      train_ids = shuffle_ids[: n_ids /2 ]
+      test_ids = shuffle_ids[n_ids /2: ]
+      train_X = X.values[ids[train_ids],:] + STD.values[ids[train_ids],:]*np.random.randn(len(train_ids),dim)
+      test_X  = X.values[ids[test_ids],:] + STD.values[ids[test_ids],:]*np.random.randn(len(test_ids),dim)
+      mn = train_X.mean(0)
+      std = train_X.std(0)
+      
+      train_X -= mn; train_X /= std
+      test_X -= mn; test_X /= std
+      
+      kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
+      kmeans_labels = kmeans.predict(test_X ) #labels_
+      
       for k in range(K):
-        Ik = pp.find( kmeans_labels == k )
-        #pdb.set_trace()
+        Ik = test_ids[ pp.find( kmeans_labels == k ) ]
         new_X[Ik,:] += kmeans.cluster_centers_[k]
-        for i in Ik:
-          for j in Ik:
-            affinity_matrix[i,j] +=1
+
+      print "switching ids"
+      train_ids = shuffle_ids[n_ids /2: ]
+      test_ids = shuffle_ids[:n_ids /2]
+      
+      train_X = X.values[ids[train_ids],:] + STD.values[ids[train_ids],:]*np.random.randn(len(train_ids),dim)
+      test_X  = X.values[ids[test_ids],:] + STD.values[ids[test_ids],:]*np.random.randn(len(test_ids),dim)
+      mn = train_X.mean(0)
+      std = train_X.std(0)
+      
+      train_X -= mn; train_X /= std
+      test_X -= mn; test_X /= std
+      
+      kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
+      kmeans_labels = kmeans.predict(test_X ) #labels_
+      
+      for k in range(K):
+        Ik = test_ids[ pp.find( kmeans_labels == k ) ]
+        new_X[Ik,:] += kmeans.cluster_centers_[k]
+        
+        # for i in Ik:
+        #   for j in Ik:
+        #     affinity_matrix[i,j] +=1
+            
     affinity_matrix /= repeats    
     new_X /= repeats    
     kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit(new_X)
@@ -1570,7 +1602,148 @@ def repeat_kmeans( data, K = 20, repeats=10 ):
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
     pp.close('all')  
       
+def repeat_gmm( data, K = 20, repeats=10 ):
+  Z           = data.Z
+  X=Z
+  STD = data.Z_std
+  #X = quantize(X)
+  #X = normalize(X)
+  
+  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d_std"%(K) )
+  check_and_mkdir(save_dir) 
+  results = {}
+  data.data_store.open()
+  #pdb.set_trace()
+  try:
+    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  except:
+    #pdb.set_trace()
+    T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_pallette = sns.hls_palette(len(T.columns))
+  bcs = X.index.values
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  good = pp.find( np.isnan(times) == False )
+  #pdb.set_trace()
 
+  bcs = bcs[good]
+  X = X.loc[bcs]
+  STD = STD.loc[bcs]
+  T = T.loc[bcs]
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  data.data_store.open()
+  dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
+  data.data_store.close()
+  
+  dim = X.shape[1]
+  
+  
+  for tissue_name in T.columns:
+    print "working ", tissue_name
+    ids = pp.find( T[tissue_name]==1 )
+    n_ids = len(ids); n_tissue=n_ids
+    if n_ids==0:
+      continue
+  
+    affinity_matrix = np.zeros( (n_ids,n_ids), dtype=int )
+    new_X = 0*X.values[ids,:]
+    for r in range(repeats):
+      print "repeat ",r+1
+      
+      shuffle_ids = np.random.permutation(n_ids)
+      train_ids = shuffle_ids[: n_ids /2 ]
+      test_ids = shuffle_ids[n_ids /2: ]
+      train_X = X.values[ids[train_ids],:] + STD.values[ids[train_ids],:]*np.random.randn(len(train_ids),dim)
+      test_X  = X.values[ids[test_ids],:] + STD.values[ids[test_ids],:]*np.random.randn(len(test_ids),dim)
+      mn = train_X.mean(0)
+      std = train_X.std(0)
+      
+      train_X -= mn; train_X /= std
+      test_X -= mn; test_X /= std
+      
+      kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
+      kmeans_labels = kmeans.predict(test_X ) #labels_
+      
+      for k in range(K):
+        Ik = test_ids[ pp.find( kmeans_labels == k ) ]
+        new_X[Ik,:] += kmeans.cluster_centers_[k]
+
+      print "switching ids"
+      train_ids = shuffle_ids[n_ids /2: ]
+      test_ids = shuffle_ids[:n_ids /2]
+      
+      train_X = X.values[ids[train_ids],:] + STD.values[ids[train_ids],:]*np.random.randn(len(train_ids),dim)
+      test_X  = X.values[ids[test_ids],:] + STD.values[ids[test_ids],:]*np.random.randn(len(test_ids),dim)
+      mn = train_X.mean(0)
+      std = train_X.std(0)
+      
+      train_X -= mn; train_X /= std
+      test_X -= mn; test_X /= std
+      
+      kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
+      kmeans_labels = kmeans.predict(test_X ) #labels_
+      
+      for k in range(K):
+        Ik = test_ids[ pp.find( kmeans_labels == k ) ]
+        new_X[Ik,:] += kmeans.cluster_centers_[k]
+        
+        # for i in Ik:
+        #   for j in Ik:
+        #     affinity_matrix[i,j] +=1
+            
+    affinity_matrix /= repeats    
+    new_X /= repeats    
+    kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit(new_X)
+    kmeans_labels = kmeans.labels_
+    
+    #M = SpectralClustering(n_clusters=K, affinity="precomputed", n_init=10)
+    y = kmeans_labels #M.fit_predict( affinity_matrix )
+    #pdb.set_trace()
+    spectral_graph = make_graph_from_labels( X.values[ids,:], y, X.index.values[ids], [] )
+    
+    k_pallette = sns.color_palette("rainbow", K)
+    patient_order = np.argsort(y)
+    k_colors = np.array([k_pallette[int(i)] for i in y[patient_order]] )
+
+    kmeans_T = MiniBatchKMeans(n_clusters=K, random_state=0 ).fit(new_X.T)
+    kmeans_labels_T = kmeans_T.labels_
+    
+    z_order = np.argsort(kmeans_labels_T)
+    
+    #X_sorted = pd.DataFrame( X.values[ ids[patient_order],:], index = X.index.values[ids[patient_order]], columns=X.columns )
+    X_sorted = pd.DataFrame( new_X[patient_order,:][:,z_order], index = X.index.values[ids[patient_order]], columns=X.columns[z_order] )
+    
+    h = sns.clustermap( X_sorted, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(10,10) )
+    pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+    pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+    h.ax_row_dendrogram.set_visible(False)
+    h.ax_col_dendrogram.set_visible(False)
+    h.cax.set_visible(False)
+    h.ax_heatmap.hlines(n_tissue-pp.find(np.diff(y[patient_order]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
+    pp.savefig( save_dir + "/%s_repeat_kmeans.png"%(tissue_name), fmt="png" )#, dpi=300, bbox_inches='tight')
+    pp.close('all')
+    
+    f = pp.figure()
+    ax=f.add_subplot(111)
+    for k in range(K):
+      Ik = pp.find( y == k )
+      k_bcs = bcs[ ids[Ik] ]
+      
+      k_times = times[ids[Ik]]
+      k_events = events[ids[Ik]]
+      kmf = KaplanMeierFitter()
+      if len(k_bcs) > 5:
+        kmf.fit(k_times, event_observed=k_events, label="k%d"%(k)  )
+        ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
+    pp.title("%s"%(tissue_name))
+    pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
+    pp.close('all') 
   
 if __name__ == "__main__":
   data_location = sys.argv[1]
@@ -1580,7 +1753,7 @@ if __name__ == "__main__":
   
   #cluster_latent_space_by_inputs( data )
   
-  repeat_kmeans( data, K = 5, repeats=100 )
+  repeat_kmeans( data, K = 4, repeats=1000 )
   # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
   # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
   #
