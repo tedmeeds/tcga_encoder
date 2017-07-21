@@ -1894,7 +1894,7 @@ if __name__ == "__main__":
   
   #cluster_latent_space_by_inputs( data )
   
-  repeat_kmeans_global( data, K = 8, repeats=50 )
+  repeat_kmeans_global( data, K = 6, repeats=100 )
   #repeat_gmm( data, K = 4, repeats=500 )
   # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
   # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
