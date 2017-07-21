@@ -1461,7 +1461,7 @@ def  cluster_latent_space_by_inputs( data ):
 def repeat_kmeans( data, K = 20, repeats=10 ):
   Z           = data.Z
   X=Z
-  X = quantize(X)
+  #X = quantize(X)
   
   save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d"%(K) )
   check_and_mkdir(save_dir) 
