@@ -1462,6 +1462,7 @@ def repeat_kmeans( data, K = 20, repeats=10 ):
   Z           = data.Z
   X=Z
   #X = quantize(X)
+  X = normalize(X)
   
   save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d"%(K) )
   check_and_mkdir(save_dir) 
@@ -1502,28 +1503,41 @@ def repeat_kmeans( data, K = 20, repeats=10 ):
       continue
   
     affinity_matrix = np.zeros( (n_ids,n_ids), dtype=int )
-    
+    new_X = 0*X.values[ids,:]
     for r in range(repeats):
       print "repeat ",r+1
       kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( X.values[ids,:])
       kmeans_labels = kmeans.labels_
-      
+      #return kmeans
       for k in range(K):
         Ik = pp.find( kmeans_labels == k )
-        
+        #pdb.set_trace()
+        new_X[Ik,:] += kmeans.cluster_centers_[k]
         for i in Ik:
           for j in Ik:
             affinity_matrix[i,j] +=1
-    affinity_matrix /= repeats        
-    M = SpectralClustering(n_clusters=K, affinity="precomputed", n_init=10)
-    y = M.fit_predict( affinity_matrix )
+    affinity_matrix /= repeats    
+    new_X /= repeats    
+    kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit(new_X)
+    kmeans_labels = kmeans.labels_
+    
+    #M = SpectralClustering(n_clusters=K, affinity="precomputed", n_init=10)
+    y = kmeans_labels #M.fit_predict( affinity_matrix )
     #pdb.set_trace()
     spectral_graph = make_graph_from_labels( X.values[ids,:], y, X.index.values[ids], [] )
     
     k_pallette = sns.color_palette("rainbow", K)
     patient_order = np.argsort(y)
     k_colors = np.array([k_pallette[int(i)] for i in y[patient_order]] )
-    X_sorted = pd.DataFrame( X.values[ ids[patient_order],:], index = X.index.values[ids[patient_order]], columns=X.columns )
+
+    kmeans_T = MiniBatchKMeans(n_clusters=K, random_state=0 ).fit(new_X.T)
+    kmeans_labels_T = kmeans_T.labels_
+    
+    z_order = np.argsort(kmeans_labels_T)
+    
+    #X_sorted = pd.DataFrame( X.values[ ids[patient_order],:], index = X.index.values[ids[patient_order]], columns=X.columns )
+    X_sorted = pd.DataFrame( new_X[patient_order,:][:,z_order], index = X.index.values[ids[patient_order]], columns=X.columns[z_order] )
+    
     h = sns.clustermap( X_sorted, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(10,10) )
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
@@ -1562,7 +1576,7 @@ if __name__ == "__main__":
   
   #cluster_latent_space_by_inputs( data )
   
-  repeat_kmeans( data, K = 8, repeats=200 )
+  repeat_kmeans( data, K = 5, repeats=100 )
   # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
   # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
   #

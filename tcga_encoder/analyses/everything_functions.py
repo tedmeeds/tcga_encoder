@@ -128,4 +128,13 @@ def quantize( Z, q_range =[0,0.2, 0.4,0.6,0.8,1.0] ):
   Z_quantized = pd.DataFrame(Z_quantized, index=Z.index, columns=Z.columns )
   
   return Z_quantized
+
+def normalize( Z  ):
   
+  Z_values = Z.values
+  Z_values -= Z_values.mean(0)
+  Z_values /= Z_values.std(0)
+  Z_normalized = pd.DataFrame(Z_values, index=Z.index, columns=Z.columns )
+  
+  return Z_normalized
+    
