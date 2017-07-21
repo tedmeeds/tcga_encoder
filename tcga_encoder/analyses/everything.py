@@ -1596,7 +1596,7 @@ def repeat_kmeans( data, K = 20, repeats=10 ):
       k_times = times[ids[Ik]]
       k_events = events[ids[Ik]]
       kmf = KaplanMeierFitter()
-      if len(k_bcs) > 5:
+      if len(k_bcs) > 0:
         kmf.fit(k_times, event_observed=k_events, label="k%d"%(k)  )
         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
     pp.title("%s"%(tissue_name))
@@ -1739,7 +1739,7 @@ def repeat_gmm( data, K = 20, repeats=10 ):
       k_times = times[ids[Ik]]
       k_events = events[ids[Ik]]
       kmf = KaplanMeierFitter()
-      if len(k_bcs) > 5:
+      if len(k_bcs) > 0:
         kmf.fit(k_times, event_observed=k_events, label="k%d"%(k)  )
         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
     pp.title("%s"%(tissue_name))
@@ -1879,7 +1879,7 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
       k_times = times[ids[Ik]]
       k_events = events[ids[Ik]]
       kmf = KaplanMeierFitter()
-      if len(k_bcs) > 5:
+      if len(k_bcs) > 0:
         kmf.fit(k_times, event_observed=k_events, label="k%d"%(k)  )
         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
     pp.title("%s"%(tissue_name))
