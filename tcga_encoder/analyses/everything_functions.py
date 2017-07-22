@@ -158,8 +158,8 @@ def normalize_by_tissue(X,T):
     
   return pd.DataFrame( XV, index = X.index, columns = X.columns )
 
-def describe_latent(data):
-  pass    
+
+      
     
   
   

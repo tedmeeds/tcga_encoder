@@ -1435,7 +1435,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   miRNA_scale = 2.0 / (1+np.exp(-data.miRNA_scale))-1 
   METH_scale  = 2.0 / (1+np.exp(-data.METH_scale ))-1  
   
-  n_dna = 100
+  n_dna = 200
   dna_names = data.dna.sum(0).sort_values(ascending=False)[:n_dna].index.values
   dna = data.dna[ dna_names ]
   
@@ -2007,14 +2007,111 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
     pp.close() 
     t_idx+=1
   f_all.savefig( save_dir + "/AA_survival.png", format="png", dpi=300)
-      
+
+def describe_latent(data):
+  
+  Z = data.Z
+  
+  spearman_dir = os.path.join( data.save_dir, "spearmans_latent" )
+  save_dir = os.path.join( data.save_dir, "latent_description" )
+  check_and_mkdir(save_dir)
+  
+  
+  #pdb.set_trace()
+  rna_names   = data.rna_names    
+  mirna_names = data.mirna_names 
+  meth_names  = data.meth_names   
+  
+  z_names = data.z_names
+  n_z     = len(z_names)
+  n_rna   = len(rna_names)
+  n_mirna = len(mirna_names)
+  n_meth  = len(meth_names)
+
+  n_dna = 200
+  dna_names = data.dna.sum(0).sort_values(ascending=False)[:n_dna].index.values
+  dna = data.dna[ dna_names ]
+  
+  try:
+    rna_z_rho = pd.read_csv( spearman_dir + "/rna_z_rho.csv", index_col="gene" )
+  
+  except: 
+    print "could not load, forcing..."  
+    spearmanr_latent_space_by_inputs( data, force = True ) 
+
+  rna_z_rho = pd.read_csv( spearman_dir + "/rna_z_rho.csv", index_col="gene" )
+  rna_z_p   = pd.read_csv( spearman_dir + "/rna_z_p.csv", index_col="gene" )
+
+  mirna_z_rho = pd.read_csv( spearman_dir + "/mirna_z_rho.csv", index_col="gene" )
+  mirna_z_p   = pd.read_csv( spearman_dir + "/mirna_z_p.csv", index_col="gene" )
+ 
+  meth_z_rho = pd.read_csv( spearman_dir + "/meth_z_rho.csv", index_col="gene" )
+  meth_z_p   = pd.read_csv( spearman_dir + "/meth_z_p.csv", index_col="gene" )
+
+  dna_z_rho = pd.read_csv( spearman_dir + "/dna_z_rho.csv", index_col="gene" )
+  dna_z_p   = pd.read_csv( spearman_dir + "/dna_z_p.csv", index_col="gene" )
+
+
+  
+  try:
+    z_z_rho = pd.read_csv( save_dir + "/z_z_rho.csv", index_col="z" )
+    z_z_p   = pd.read_csv( save_dir + "/z_z_p.csv", index_col="z" )
+  except:  
+    rho_z_z = stats.spearmanr( Z.values, Z.values )
+    z_z_rho = pd.DataFrame( rho_z_z[0][:n_z,:][:,n_z:], index = z_names, columns=z_names)
+    z_z_p   = pd.DataFrame( rho_z_z[1][:n_z,:][:,n_z:], index = z_names, columns=z_names)
+    z_z_rho.to_csv( save_dir + "/z_z_rho.csv", index_label="z" )
+    z_z_p.to_csv( save_dir + "/z_z_p.csv", index_label="z" )
+    
+  
+  # ordered_rna = np.argsort( rna_z_p, axis = 1 )
+  # ordered_mirna = np.argsort( mirna_z_p, axis = 1 )
+  # ordered_meth = np.argsort( meth_z_p, axis = 1 )
+  # ordered_dna = np.argsort( dna_z_p, axis = 1 )
+  
+  wW = data.weighted_W_h2z
+  
+  W = data.W_h2z
+  order_H = np.argsort( -np.abs(W), axis=0 )
+  
+  results = []
+  nbr_genes=20
+  nbr_hidden = 10
+  for z_idx, z_name in zip( xrange(n_z), z_names ):
+    #ordered_rna[z_name]
+    rna_p = list(rna_z_p[z_name].sort_values()[:nbr_genes].index.values)
+    mirna_p = list(mirna_z_p[z_name].sort_values()[:nbr_genes].index.values)
+    meth_p = list(meth_z_p[z_name].sort_values()[:nbr_genes].index.values)
+    dna_p = list(dna_z_p[z_name].sort_values()[:nbr_genes].index.values)
+    
+    h_values = list(data.h_names[ np.argsort( -np.abs(W[:,z_idx] ))[:nbr_hidden] ])
+    
+    rna_w = list((-np.abs(data.weighted_W_h2z["RNA"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
+    mirna_w = list((-np.abs(data.weighted_W_h2z["miRNA"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
+    meth_w = list((-np.abs(data.weighted_W_h2z["METH"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
+    
+    results.append( [z_name, {"rna_p":rna_p, "rna_w":rna_w, \
+                              "meth_p":meth_p, "meth_w":meth_w,\
+                              "mirna_p":mirna_p, "mirna_w":mirna_w,\
+                              "dna_p":dna_p, "h":h_values,}])
+  fptr = open( save_dir + "/z_description.yaml","w+" )
+  fptr.write( yaml.dump(results))
+  fptr.close()
+    
+    #pdb.set_trace()
+    #results
+  
+  #pdb.set_trace()
+        
 if __name__ == "__main__":
   data_location = sys.argv[1]
   results_location = sys.argv[2]
   
   data = load_data_and_fill( data_location, results_location )
   
-  spearmanr_latent_space_by_inputs(data, force=False)
+  spearmanr_latent_space_by_inputs(data, force=True)
+  
+  describe_latent(data)
   #cluster_latent_space_by_inputs( data )
   
   # repeat_kmeans_global( data, K = 2, repeats=50 )
