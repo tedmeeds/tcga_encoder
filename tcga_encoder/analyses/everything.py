@@ -2089,10 +2089,14 @@ def describe_latent(data):
     rna_w = list((-np.abs(data.weighted_W_h2z["RNA"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
     mirna_w = list((-np.abs(data.weighted_W_h2z["miRNA"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
     meth_w = list((-np.abs(data.weighted_W_h2z["METH"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
+    meth_w = [s.split("_")[1] for s in meth_w]
     
-    results.append( [z_name, {"rna_p":rna_p, "rna_w":rna_w, \
-                              "meth_p":meth_p, "meth_w":meth_w,\
-                              "mirna_p":mirna_p, "mirna_w":mirna_w,\
+    rna_overlap = list(np.intersect1d( rna_p, rna_w ))
+    mirna_overlap = list(np.intersect1d( mirna_p, mirna_w ))
+    meth_overlap = list(np.intersect1d( meth_p, meth_w ))
+    results.append( [z_name, {"rna_p":rna_p, "rna_w":rna_w, "rna_over":rna_overlap,\
+                              "meth_p":meth_p, "meth_w":meth_w, "meth_over":meth_overlap,\
+                              "mirna_p":mirna_p, "mirna_w":mirna_w, "mirna_over":mirna_overlap,\
                               "dna_p":dna_p, "h":h_values,}])
   fptr = open( save_dir + "/z_description.yaml","w+" )
   fptr.write( yaml.dump(results))
