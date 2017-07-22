@@ -1539,6 +1539,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   dna_s = dna_names[rr[0]]
   z_s = z_names[rr[1]]
   
+  f = pp.figure( figsize=(20,20) ) 
   #order = np.argsort(dna_s)
   #dna_s = dna_s[order]
   #z_s = z_s[order]
