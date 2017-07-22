@@ -2073,27 +2073,31 @@ def describe_latent(data):
   
   W = data.W_h2z
   order_H = np.argsort( -np.abs(W), axis=0 )
-  
+  print "getting z infos"
   results = []
-  nbr_genes=20
+  nbr_genes=40
+  nbr_dna = 10
   nbr_hidden = 10
   for z_idx, z_name in zip( xrange(n_z), z_names ):
     #ordered_rna[z_name]
     rna_p = list(rna_z_p[z_name].sort_values()[:nbr_genes].index.values)
     mirna_p = list(mirna_z_p[z_name].sort_values()[:nbr_genes].index.values)
     meth_p = list(meth_z_p[z_name].sort_values()[:nbr_genes].index.values)
-    dna_p = list(dna_z_p[z_name].sort_values()[:nbr_genes].index.values)
+    dna_p = list(dna_z_p[z_name].sort_values()[:nbr_dna].index.values)
     
     h_values = list(data.h_names[ np.argsort( -np.abs(W[:,z_idx] ))[:nbr_hidden] ])
     
     rna_w = list((-np.abs(data.weighted_W_h2z["RNA"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
     mirna_w = list((-np.abs(data.weighted_W_h2z["miRNA"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
     meth_w = list((-np.abs(data.weighted_W_h2z["METH"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
-    meth_w = [s.split("_")[1] for s in meth_w]
+    meth_w = list( [s.split("_")[1] for s in meth_w] )
     
-    rna_overlap = list(np.intersect1d( rna_p, rna_w ))
-    mirna_overlap = list(np.intersect1d( mirna_p, mirna_w ))
-    meth_overlap = list(np.intersect1d( meth_p, meth_w ))
+    rna_overlap = list(np.intersect1d( rna_p, rna_w ).astype(str))
+    mirna_overlap = list(np.intersect1d( mirna_p, mirna_w ).astype(str))
+    meth_overlap = list(np.intersect1d( meth_p, meth_w ).astype(str))
+    meth_overlap = [str(s) for s in meth_overlap]
+    mirna_overlap = [str(s) for s in mirna_overlap]
+    rna_overlap = [str(s) for s in rna_overlap]
     results.append( [z_name, {"rna_p":rna_p, "rna_w":rna_w, "rna_over":rna_overlap,\
                               "meth_p":meth_p, "meth_w":meth_w, "meth_over":meth_overlap,\
                               "mirna_p":mirna_p, "mirna_w":mirna_w, "mirna_over":mirna_overlap,\
@@ -2113,7 +2117,7 @@ if __name__ == "__main__":
   
   data = load_data_and_fill( data_location, results_location )
   
-  spearmanr_latent_space_by_inputs(data, force=True)
+  #spearmanr_latent_space_by_inputs(data, force=False)
   
   describe_latent(data)
   #cluster_latent_space_by_inputs( data )
