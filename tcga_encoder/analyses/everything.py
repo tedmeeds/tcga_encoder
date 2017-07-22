@@ -73,6 +73,7 @@ def load_data_and_fill( data_location, results_location ):
   data.W_input2h      = get_hidden_weights( model_store, input_sources, data_store )
   data.W_h2z          = get_hidden2z_weights( model_store )
   data.weighted_W_h2z = join_weights( data.W_h2z, data.W_input2h  )
+  data.dna            = data.data_store["/DNA/channel/0"].loc[data.Z.index].fillna(0)
   data.RNA_scale      = RNA_scale
   data.miRNA_scale    = miRNA_scale
   data.METH_scale     = METH_scale
@@ -1428,11 +1429,21 @@ def cosine_within_tissue_neighbour_differences(data, X, Ws, title, nbr = 10):
 #   results["full_G"] = G
 #   results["save_dir"] = save_dir
 #   data.nn_latent_dif = results
-def  cluster_latent_space_by_inputs( data ):
+def  spearmanr_latent_space_by_inputs( data ):
   Z           = data.Z
   RNA_scale   = 2.0 / (1+np.exp(-data.RNA_scale)) -1   
   miRNA_scale = 2.0 / (1+np.exp(-data.miRNA_scale))-1 
   METH_scale  = 2.0 / (1+np.exp(-data.METH_scale ))-1  
+  
+  n_dna = 100
+  dna_names = data.dna.sum(0).sort_values(ascending=False)[:n_dna].index.values
+  dna = data.dna[ dna_names ]
+  
+  save_dir = os.path.join( data.save_dir, "spearmans_latent" )
+  check_and_mkdir(save_dir)
+  
+  
+  #pdb.set_trace()
   rna_names   = data.rna_names    
   mirna_names = data.mirna_names 
   meth_names  = data.meth_names   
@@ -1448,6 +1459,8 @@ def  cluster_latent_space_by_inputs( data ):
   rho_mirna_z = stats.spearmanr( miRNA_scale.values, Z.values )
   print "computing METH-Z spearman rho's"
   rho_meth_z = stats.spearmanr( METH_scale.values, Z.values )
+  print "computing DNA-Z spearman rho's"
+  rho_dna_z = stats.spearmanr(2*dna.values-1, Z.values )
   
   rna_z_rho = pd.DataFrame( rho_rna_z[0][:n_rna,:][:,n_rna:], index = rna_names, columns=z_names)
   rna_z_p   = pd.DataFrame( rho_rna_z[1][:n_rna,:][:,n_rna:], index = rna_names, columns=z_names)
@@ -1458,7 +1471,50 @@ def  cluster_latent_space_by_inputs( data ):
   meth_z_rho = pd.DataFrame( rho_meth_z[0][:n_meth,:][:,n_meth:], index = meth_names, columns=z_names)
   meth_z_p   = pd.DataFrame( rho_meth_z[1][:n_meth,:][:,n_meth:], index = meth_names, columns=z_names)
 
-  pdb.set_trace()
+  dna_z_rho = pd.DataFrame( rho_dna_z[0][:n_dna,:][:,n_dna:], index = dna_names, columns=z_names)
+  dna_z_p   = pd.DataFrame( rho_dna_z[1][:n_dna,:][:,n_dna:], index = dna_names, columns=z_names)
+
+  
+  rna_z_rho.to_csv( save_dir + "/rna_z_rho.csv" )
+  rna_z_p.to_csv( save_dir + "/rna_z_p.csv" )
+  
+  mirna_z_rho.to_csv( save_dir + "/mirna_z_rho.csv" )
+  mirna_z_p.to_csv( save_dir + "/mirna_z_p.csv" )
+  
+  meth_z_rho.to_csv( save_dir + "/meth_z_rho.csv" )
+  meth_z_p.to_csv( save_dir + "/meth_z_p.csv" )
+  
+  dna_z_rho.to_csv( save_dir + "/dna_z_rho.csv" )
+  dna_z_p.to_csv( save_dir + "/dna_z_p.csv" )
+  
+  f = pp.figure( figsize=(20,20) )
+  
+  nbr_genes = 15
+  nbr_zs    = 15
+  genes = dna_names[:nbr_genes]
+  k_idx = 1
+  for gene in genes:
+    best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+    dna_values = dna[gene].values
+    mutations = pp.find( dna_values == 1)
+    wildtype = pp.find( dna_values==0)
+    
+    z_idx = 0
+    for z_name in best_z_names:
+      z_values = Z[z_name].values
+      ax = f.add_subplot(nbr_genes,nbr_zs,k_idx)
+      
+      ax.hist( z_values[wildtype], 20, normed=True,histtype="step", lw=2, color="blue" )
+      ax.hist( z_values[mutations], 20, normed=True,histtype="step", lw=2, color="red" )
+      
+      if z_idx == 0:
+        ax.set_ylabel(gene)
+      ax.set_xlabel(z_name)
+      z_idx+=1
+      k_idx+=1
+  pp.savefig( save_dir + "/dna_top_z.png", fmt="png", dpi=300)
+  
+
   
 def repeat_kmeans( data, K = 20, repeats=10 ):
   Z           = data.Z
@@ -1910,15 +1966,16 @@ if __name__ == "__main__":
   
   data = load_data_and_fill( data_location, results_location )
   
+  spearmanr_latent_space_by_inputs(data)
   #cluster_latent_space_by_inputs( data )
   
-  repeat_kmeans_global( data, K = 2, repeats=50 )
-  repeat_kmeans_global( data, K = 3, repeats=50 )
-  repeat_kmeans_global( data, K = 4, repeats=50 )
-  repeat_kmeans_global( data, K = 5, repeats=50 )
-  repeat_kmeans_global( data, K = 6, repeats=50 )
-  repeat_kmeans_global( data, K = 7, repeats=50 )
-  repeat_kmeans_global( data, K = 8, repeats=50 )
+  # repeat_kmeans_global( data, K = 2, repeats=50 )
+  # repeat_kmeans_global( data, K = 3, repeats=50 )
+  # repeat_kmeans_global( data, K = 4, repeats=50 )
+  # repeat_kmeans_global( data, K = 5, repeats=50 )
+  # repeat_kmeans_global( data, K = 6, repeats=50 )
+  # repeat_kmeans_global( data, K = 7, repeats=50 )
+  # repeat_kmeans_global( data, K = 8, repeats=50 )
   #repeat_gmm( data, K = 4, repeats=500 )
   # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
   # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])

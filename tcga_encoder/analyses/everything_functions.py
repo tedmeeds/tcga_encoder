@@ -157,7 +157,9 @@ def normalize_by_tissue(X,T):
     XV[ids,:] /= XV[ids,:].std(0)
     
   return pd.DataFrame( XV, index = X.index, columns = X.columns )
-    
+
+def describe_latent(data):
+  pass    
     
   
   
