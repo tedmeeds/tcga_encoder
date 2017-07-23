@@ -1439,9 +1439,12 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   dna_names = data.dna.sum(0).sort_values(ascending=False)[:n_dna].index.values
   dna = data.dna[ dna_names ]
   
-  save_dir = os.path.join( data.save_dir, "spearmans_latent" )
+  save_dir = os.path.join( data.save_dir, "spearmans_latent_tissue" )
   check_and_mkdir(save_dir)
   
+  data.data_store.open()
+  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ Z.index ]
+  data.data_store.close()
   
   #pdb.set_trace()
   rna_names   = data.rna_names    
@@ -1454,6 +1457,8 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   n_meth  = len(meth_names)
 
 
+  barcodes = T.index.values
+  
   try:
     rna_z_rho = pd.read_csv( save_dir + "/rna_z_rho.csv", index_col="gene" )
     rna_z_p   = pd.read_csv( save_dir + "/rna_z_p.csv", index_col="gene" )
@@ -1516,12 +1521,18 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   for gene in genes:
     best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
     dna_values = dna[gene].values
-    mutations = pp.find( dna_values == 1)
-    wildtype = pp.find( dna_values==0)
+    
+    ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+    
+    barcodes_with_n = barcodes[ids_with_n]
+    
+    mutations = pp.find( dna_values[ids_with_n] == 1)
+    wildtype = pp.find( dna_values[ids_with_n]==0)
 
     z_idx = 0
     for z_name in best_z_names:
-      z_values = Z[z_name].values
+      z_values = Z[z_name].loc[barcodes_with_n].values
+      
       ax = f.add_subplot(nbr_genes,nbr_zs,k_idx)
 
       ax.hist( z_values[wildtype], 20, normed=True,histtype="step", lw=2, color="blue" )
@@ -1547,11 +1558,23 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   k_idx=1
   for gene, z_name in zip(dna_s,z_s):
     best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
-    dna_values = dna[gene].values
-    mutations = pp.find( dna_values == 1)
-    wildtype = pp.find( dna_values==0)
+    # dna_values = dna[gene].values
+    # mutations = pp.find( dna_values == 1)
+    # wildtype = pp.find( dna_values==0)
+    #
+    # z_values = Z[z_name].values
 
-    z_values = Z[z_name].values
+    ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+    
+    barcodes_with_n = barcodes[ids_with_n]
+    
+    mutations = pp.find( dna_values[ids_with_n] == 1)
+    wildtype = pp.find( dna_values[ids_with_n]==0)
+
+    z_values = Z[z_name].loc[barcodes_with_n].values
+
+
+
     ax = f.add_subplot(nbr_genes,nbr_zs,k_idx)
 
     ax.hist( z_values[wildtype], 20, normed=True,histtype="step", lw=2, color="blue" )
@@ -1612,14 +1635,14 @@ def  correlation_latent_space_by_inputs( data, force = False ):
     force=True
     
   if force is True:
-    print "computing RNA-Z spearman rho's"
+    print "computing RNA-Z pearsonr rho's"
     rho_rna_z = pearsonr( RNA_scale.values, Z.values )
     #pdb.set_trace()
-    print "computing miRNA-Z spearman rho's"
+    print "computing miRNA-Z pearsonr rho's"
     rho_mirna_z = pearsonr( miRNA_scale.values, Z.values )
-    print "computing METH-Z spearman rho's"
+    print "computing METH-Z pearsonr rho's"
     rho_meth_z = pearsonr( METH_scale.values, Z.values )
-    print "computing DNA-Z spearman rho's"
+    print "computing DNA-Z pearsonr rho's"
     rho_dna_z = pearsonr(2*dna.values-1, Z.values )
     # print "computing RNA-Z spearman rho's"
     # rho_rna_z = stats.spearmanr( RNA_scale.values, Z.values )
@@ -2158,6 +2181,7 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
 def describe_latent(data):
   
   Z = data.Z
+  W_H = pd.concat( data.W_input2h)  
   
   spearman_dir = os.path.join( data.save_dir, "spearmans_latent" )
   pearson_dir = os.path.join( data.save_dir, "pearsons_latent" )
@@ -2244,7 +2268,7 @@ def describe_latent(data):
   results = []
   nbr_genes=40
   nbr_dna = 10
-  nbr_hidden = 10
+  nbr_hidden = 9
   for z_idx, z_name in zip( xrange(n_z), z_names ):
     #ordered_rna[z_name]
     rna_p = list(rna_z_p[z_name].sort_values()[:nbr_genes].index.values)
@@ -2282,10 +2306,17 @@ def describe_latent(data):
                               "rna_w":rna_w, "rna_over_spear":rna_overlap, "rna_over_pear":p_rna_overlap,\
                               "meth_spear":meth_p, "meth_pear":p_meth_p, \
                               "meth_w":meth_w, "meth_over_spear":meth_overlap, "meth_over_pear":p_meth_overlap,\
-                              "mirna_spear":mirna_p, "mirna_pear":p_mirna_p, \
-                              "mirna_w":mirna_w, "mirna_over_spear":mirna_overlap, "mirna_over_pear":p_mirna_overlap,\
+                              #"mirna_spear":mirna_p, "mirna_pear":p_mirna_p, \
+                              #"mirna_w":mirna_w, "mirna_over_spear":mirna_overlap, "mirna_over_pear":p_mirna_overlap,\
                               "dna_spear":dna_p, "dna_pear":p_dna_p, \
                               "h":h_values,}])
+
+    h_idx = 1
+    for h_name in h_values:
+      #pdb.set_trace()
+      h_w = list( (-np.abs( W_H["h_%d"%(int(h_name.split("h")[1]))] )).sort_values()[:10].index.values)
+      results[-1][1]["h%d"%h_idx] = [h[1] for h in h_w]
+      h_idx+=1
   fptr = open( save_dir + "/z_description.yaml","w+" )
   fptr.write( yaml.dump(results))
   fptr.close()
@@ -2301,10 +2332,10 @@ if __name__ == "__main__":
   
   data = load_data_and_fill( data_location, results_location )
   
-  spearmanr_latent_space_by_inputs(data, force=True)
-  correlation_latent_space_by_inputs(data, force=True)
+  spearmanr_latent_space_by_inputs(data, force=False)
+  #correlation_latent_space_by_inputs(data, force=True)
   
-  describe_latent(data)
+  #describe_latent(data)
   #cluster_latent_space_by_inputs( data )
   
   # repeat_kmeans_global( data, K = 2, repeats=50 )

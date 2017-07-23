@@ -58,7 +58,7 @@ def join_weights( W_hidden2z, W_hidden ):
   for input_source, source_w in W_hidden.iteritems():
     #pdb.set_trace()
     W[ input_source ] = pd.DataFrame( np.dot( source_w, W_hidden2z ), index = source_w.index, columns = columns )
-
+    #pdb.set_trace()
   return W
   
       
@@ -157,6 +157,22 @@ def normalize_by_tissue(X,T):
     XV[ids,:] /= XV[ids,:].std(0)
     
   return pd.DataFrame( XV, index = X.index, columns = X.columns )
+  
+def ids_with_at_least_n_mutations( dna, tissue, n = 1 ):
+  ok_ids = np.zeros( len(dna), dtype=bool )
+  for tissue_name in tissue.columns:
+    #print "working ", tissue_name
+    ids = pp.find( tissue[tissue_name]==1 )
+    n_ids = len(ids); n_tissue=n_ids
+    if n_ids==0:
+      continue
+    
+    n_mutations = dna[ids].sum()
+    
+    if n_mutations >= 1:
+      ok_ids[ ids ] = True
+  return ok_ids
+  
 
 
       
