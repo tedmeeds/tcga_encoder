@@ -1435,8 +1435,9 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   miRNA_scale = 2.0 / (1+np.exp(-data.miRNA_scale))-1 
   METH_scale  = 2.0 / (1+np.exp(-data.METH_scale ))-1  
   
-  n_dna = 200
-  dna_names = data.dna.sum(0).sort_values(ascending=False)[:n_dna].index.values
+  
+  dna_names = data.dna.sum(0).sort_values(ascending=False).index.values
+  n_dna = len(dna_names)
   dna = data.dna[ dna_names ]
   
   save_dir = os.path.join( data.save_dir, "spearmans_latent_tissue" )
@@ -1515,9 +1516,9 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   dna_z_rho.to_csv( save_dir + "/dna_z_rho.csv", index_label="gene" )
   dna_z_p.to_csv( save_dir + "/dna_z_p.csv", index_label="gene" )
   
-  f = pp.figure( figsize=(20,20) )
+  f=pp.figure( figsize=(24,12) )
   
-  nbr_genes = 40
+  nbr_genes = 20
   nbr_zs    = 10
   genes = dna_names[:nbr_genes]
   k_idx = 1
@@ -1539,7 +1540,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
       z_values = Z[z_name].loc[barcodes_with_n].values
       z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
       
-      ax = f.add_subplot(nbr_zs, nbr_genes ,k_idx)
+      ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
 
       ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
       ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
@@ -1552,14 +1553,52 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
       z_idx+=1
       k_idx+=1
   pp.savefig( save_dir + "/dna_top_z.png", fmt="png", dpi=300)
+
+  z_scores = -np.sum( np.log2(dna_z_p),1)
   
+  f=pp.figure( figsize=(24,12) )
+  genes = z_scores.sort_values()[-nbr_genes:].index.values #dna_names[:nbr_genes]
+  #pdb.set_trace()
+  k_idx = 1
+  for gene in genes:
+    best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+    dna_values = dna[gene].values
+    
+    #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.05 )
+    
+    barcodes_with_n = barcodes[ids_with_n]
+    
+    mutations = pp.find( dna_values[ids_with_n] == 1)
+    wildtype = pp.find( dna_values[ids_with_n]==0)
+    
+
+    z_idx = 0
+    for z_name in best_z_names:
+      z_values = Z[z_name].loc[barcodes_with_n].values
+      z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
+      
+      ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
+
+      ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
+      ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
+      ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
+
+      ax.set_title(gene+"-"+z_name)
+      # if z_idx == 0:
+      #   ax.set_ylabel(gene)
+      # ax.set_xlabel(z_name)
+      z_idx+=1
+      k_idx+=1
+  pp.savefig( save_dir + "/dna_top_genes.png", fmt="png", dpi=300)
+    
   global_order = np.argsort( dna_z_p.values.flatten() )
   #
   rr = np.unravel_index(global_order[:nbr_genes*nbr_zs], dims=dna_z_p.values.shape )
   dna_s = dna_names[rr[0]]
   z_s = z_names[rr[1]]
   
-  f = pp.figure( figsize=(20,20) ) 
+  f=pp.figure( figsize=(24,12) )
   #order = np.argsort(dna_s)
   #dna_s = dna_s[order]
   #z_s = z_s[order]
@@ -1586,7 +1625,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
 
     z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
 
-    ax = f.add_subplot(nbr_zs, nbr_genes ,k_idx)
+    ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
 
     #ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
     ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
@@ -2344,7 +2383,7 @@ if __name__ == "__main__":
   
   data = load_data_and_fill( data_location, results_location )
   
-  spearmanr_latent_space_by_inputs(data, force=False)
+  spearmanr_latent_space_by_inputs(data, force=True)
   #correlation_latent_space_by_inputs(data, force=True)
   
   #describe_latent(data)
