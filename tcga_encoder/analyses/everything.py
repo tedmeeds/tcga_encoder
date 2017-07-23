@@ -1443,7 +1443,10 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   check_and_mkdir(save_dir)
   
   data.data_store.open()
-  T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ Z.index ]
+  try:
+    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ Z.index ]
+  except:
+    T=data.data_store["/CLINICAL/TISSUE"].loc[ Z.index ]
   data.data_store.close()
   
   #pdb.set_trace()
