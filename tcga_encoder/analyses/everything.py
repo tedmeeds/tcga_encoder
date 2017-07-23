@@ -1474,6 +1474,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   if force is True:
     print "computing RNA-Z spearman rho's"
     rho_rna_z = stats.spearmanr( RNA_scale.values, Z.values )
+    pdb.set_trace()
     print "computing miRNA-Z spearman rho's"
     rho_mirna_z = stats.spearmanr( miRNA_scale.values, Z.values )
     print "computing METH-Z spearman rho's"
@@ -1560,7 +1561,153 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
     k_idx+=1
   pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)
 
+def pearsonr( X, Y ):
+  XN = X / np.sqrt(np.sum( X*X,0))
+  YN = Y / np.sqrt(np.sum( Y*Y,0))
+  pearson = np.dot( XN.T, YN )
+  p_values = 1.0 - np.abs(pearson)
   
+  return pearson,p_values
+  
+def  correlation_latent_space_by_inputs( data, force = False ):
+  Z           = data.Z
+  RNA_scale   = 2.0 / (1+np.exp(-data.RNA_scale)) -1   
+  miRNA_scale = 2.0 / (1+np.exp(-data.miRNA_scale))-1 
+  METH_scale  = 2.0 / (1+np.exp(-data.METH_scale ))-1  
+  
+  n_dna = 200
+  dna_names = data.dna.sum(0).sort_values(ascending=False)[:n_dna].index.values
+  dna = data.dna[ dna_names ]
+  
+  save_dir = os.path.join( data.save_dir, "pearsons_latent" )
+  check_and_mkdir(save_dir)
+  
+  
+  #pdb.set_trace()
+  rna_names   = data.rna_names    
+  mirna_names = data.mirna_names 
+  meth_names  = data.meth_names   
+  
+  z_names = data.z_names
+  n_rna   = len(rna_names)
+  n_mirna = len(mirna_names)
+  n_meth  = len(meth_names)
+
+
+  try:
+    rna_z_rho = pd.read_csv( save_dir + "/rna_z_rho.csv", index_col="gene" )
+    rna_z_p   = pd.read_csv( save_dir + "/rna_z_p.csv", index_col="gene" )
+  
+    mirna_z_rho = pd.read_csv( save_dir + "/mirna_z_rho.csv", index_col="gene" )
+    mirna_z_p   = pd.read_csv( save_dir + "/mirna_z_p.csv", index_col="gene" )
+   
+    meth_z_rho = pd.read_csv( save_dir + "/meth_z_rho.csv", index_col="gene" )
+    meth_z_p   = pd.read_csv( save_dir + "/meth_z_p.csv", index_col="gene" )
+
+    dna_z_rho = pd.read_csv( save_dir + "/dna_z_rho.csv", index_col="gene" )
+    dna_z_p   = pd.read_csv( save_dir + "/dna_z_p.csv", index_col="gene" )
+  
+  except: 
+    print "could not load, forcing..."  
+    force=True
+    
+  if force is True:
+    print "computing RNA-Z spearman rho's"
+    rho_rna_z = pearsonr( RNA_scale.values, Z.values )
+    #pdb.set_trace()
+    print "computing miRNA-Z spearman rho's"
+    rho_mirna_z = pearsonr( miRNA_scale.values, Z.values )
+    print "computing METH-Z spearman rho's"
+    rho_meth_z = pearsonr( METH_scale.values, Z.values )
+    print "computing DNA-Z spearman rho's"
+    rho_dna_z = pearsonr(2*dna.values-1, Z.values )
+    # print "computing RNA-Z spearman rho's"
+    # rho_rna_z = stats.spearmanr( RNA_scale.values, Z.values )
+    # print "computing miRNA-Z spearman rho's"
+    # rho_mirna_z = stats.spearmanr( miRNA_scale.values, Z.values )
+    # print "computing METH-Z spearman rho's"
+    # rho_meth_z = stats.spearmanr( METH_scale.values, Z.values )
+    # print "computing DNA-Z spearman rho's"
+    # rho_dna_z = stats.spearmanr(2*dna.values-1, Z.values )
+  
+    rna_z_rho = pd.DataFrame( rho_rna_z[0], index = rna_names, columns=z_names)
+    rna_z_p   = pd.DataFrame( rho_rna_z[1], index = rna_names, columns=z_names)
+  
+    mirna_z_rho = pd.DataFrame( rho_mirna_z[0], index = mirna_names, columns=z_names)
+    mirna_z_p   = pd.DataFrame( rho_mirna_z[1], index = mirna_names, columns=z_names)
+   
+    meth_z_rho = pd.DataFrame( rho_meth_z[0], index = meth_names, columns=z_names)
+    meth_z_p   = pd.DataFrame( rho_meth_z[1], index = meth_names, columns=z_names)
+
+    dna_z_rho = pd.DataFrame( rho_dna_z[0], index = dna_names, columns=z_names)
+    dna_z_p   = pd.DataFrame( rho_dna_z[1], index = dna_names, columns=z_names)
+
+  
+  rna_z_rho.to_csv( save_dir + "/rna_z_rho.csv", index_label="gene" )
+  rna_z_p.to_csv( save_dir + "/rna_z_p.csv", index_label="gene" )
+  
+  mirna_z_rho.to_csv( save_dir + "/mirna_z_rho.csv", index_label="gene" )
+  mirna_z_p.to_csv( save_dir + "/mirna_z_p.csv", index_label="gene" )
+  
+  meth_z_rho.to_csv( save_dir + "/meth_z_rho.csv", index_label="gene" )
+  meth_z_p.to_csv( save_dir + "/meth_z_p.csv", index_label="gene" )
+  
+  dna_z_rho.to_csv( save_dir + "/dna_z_rho.csv", index_label="gene" )
+  dna_z_p.to_csv( save_dir + "/dna_z_p.csv", index_label="gene" )
+  
+  f = pp.figure( figsize=(20,20) )
+  
+  nbr_genes = 15
+  nbr_zs    = 15
+  genes = dna_names[:nbr_genes]
+  k_idx = 1
+  for gene in genes:
+    best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+    dna_values = dna[gene].values
+    mutations = pp.find( dna_values == 1)
+    wildtype = pp.find( dna_values==0)
+
+    z_idx = 0
+    for z_name in best_z_names:
+      z_values = Z[z_name].values
+      ax = f.add_subplot(nbr_genes,nbr_zs,k_idx)
+
+      ax.hist( z_values[wildtype], 20, normed=True,histtype="step", lw=2, color="blue" )
+      ax.hist( z_values[mutations], 20, normed=True,histtype="step", lw=2, color="red" )
+
+      if z_idx == 0:
+        ax.set_ylabel(gene)
+      ax.set_xlabel(z_name)
+      z_idx+=1
+      k_idx+=1
+  pp.savefig( save_dir + "/dna_top_z.png", fmt="png", dpi=300)
+  
+  global_order = np.argsort( dna_z_p.values.flatten() )
+  #
+  rr = np.unravel_index(global_order[:nbr_genes*nbr_zs], dims=dna_z_p.values.shape )
+  dna_s = dna_names[rr[0]]
+  z_s = z_names[rr[1]]
+  
+  f = pp.figure( figsize=(20,20) ) 
+  #order = np.argsort(dna_s)
+  #dna_s = dna_s[order]
+  #z_s = z_s[order]
+  k_idx=1
+  for gene, z_name in zip(dna_s,z_s):
+    best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+    dna_values = dna[gene].values
+    mutations = pp.find( dna_values == 1)
+    wildtype = pp.find( dna_values==0)
+
+    z_values = Z[z_name].values
+    ax = f.add_subplot(nbr_genes,nbr_zs,k_idx)
+
+    ax.hist( z_values[wildtype], 20, normed=True,histtype="step", lw=2, color="blue" )
+    ax.hist( z_values[mutations], 20, normed=True,histtype="step", lw=2, color="red" )
+    ax.set_title(gene+"-"+z_name)
+    ax.set_xlabel("")
+    k_idx+=1
+  pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)  
   #pdb.set_trace()
 
   
@@ -2013,6 +2160,7 @@ def describe_latent(data):
   Z = data.Z
   
   spearman_dir = os.path.join( data.save_dir, "spearmans_latent" )
+  pearson_dir = os.path.join( data.save_dir, "pearsons_latent" )
   save_dir = os.path.join( data.save_dir, "latent_description" )
   check_and_mkdir(save_dir)
   
@@ -2051,17 +2199,36 @@ def describe_latent(data):
   dna_z_rho = pd.read_csv( spearman_dir + "/dna_z_rho.csv", index_col="gene" )
   dna_z_p   = pd.read_csv( spearman_dir + "/dna_z_p.csv", index_col="gene" )
 
+  p_rna_z_rho = pd.read_csv( pearson_dir + "/rna_z_rho.csv", index_col="gene" )
+  p_rna_z_p   = pd.read_csv( pearson_dir + "/rna_z_p.csv", index_col="gene" )
+
+  p_mirna_z_rho = pd.read_csv( pearson_dir + "/mirna_z_rho.csv", index_col="gene" )
+  p_mirna_z_p   = pd.read_csv( pearson_dir + "/mirna_z_p.csv", index_col="gene" )
+ 
+  p_meth_z_rho = pd.read_csv( pearson_dir + "/meth_z_rho.csv", index_col="gene" )
+  p_meth_z_p   = pd.read_csv( pearson_dir + "/meth_z_p.csv", index_col="gene" )
+
+  p_dna_z_rho = pd.read_csv( pearson_dir + "/dna_z_rho.csv", index_col="gene" )
+  p_dna_z_p   = pd.read_csv( pearson_dir + "/dna_z_p.csv", index_col="gene" )
 
   
   try:
     z_z_rho = pd.read_csv( save_dir + "/z_z_rho.csv", index_col="z" )
     z_z_p   = pd.read_csv( save_dir + "/z_z_p.csv", index_col="z" )
+    p_z_z_rho = pd.read_csv( save_dir + "/p_z_z_rho.csv", index_col="z" )
+    p_z_z_p   = pd.read_csv( save_dir + "/p_z_z_p.csv", index_col="z" )
   except:  
     rho_z_z = stats.spearmanr( Z.values, Z.values )
+    p_rho_z_z = pearsonr( Z.values, Z.values )
     z_z_rho = pd.DataFrame( rho_z_z[0][:n_z,:][:,n_z:], index = z_names, columns=z_names)
     z_z_p   = pd.DataFrame( rho_z_z[1][:n_z,:][:,n_z:], index = z_names, columns=z_names)
     z_z_rho.to_csv( save_dir + "/z_z_rho.csv", index_label="z" )
     z_z_p.to_csv( save_dir + "/z_z_p.csv", index_label="z" )
+    
+    p_z_z_rho = pd.DataFrame( p_rho_z_z[0], index = z_names, columns=z_names)
+    p_z_z_p   = pd.DataFrame( p_rho_z_z[1], index = z_names, columns=z_names)
+    p_z_z_rho.to_csv( save_dir + "/p_z_z_rho.csv", index_label="z" )
+    p_z_z_p.to_csv( save_dir + "/p_z_z_p.csv", index_label="z" )
     
   
   # ordered_rna = np.argsort( rna_z_p, axis = 1 )
@@ -2085,23 +2252,40 @@ def describe_latent(data):
     meth_p = list(meth_z_p[z_name].sort_values()[:nbr_genes].index.values)
     dna_p = list(dna_z_p[z_name].sort_values()[:nbr_dna].index.values)
     
+    p_rna_p = list(p_rna_z_p[z_name].sort_values()[:nbr_genes].index.values)
+    p_mirna_p = list(p_mirna_z_p[z_name].sort_values()[:nbr_genes].index.values)
+    p_meth_p = list(p_meth_z_p[z_name].sort_values()[:nbr_genes].index.values)
+    p_dna_p = list(p_dna_z_p[z_name].sort_values()[:nbr_dna].index.values)
+    
     h_values = list(data.h_names[ np.argsort( -np.abs(W[:,z_idx] ))[:nbr_hidden] ])
     
     rna_w = list((-np.abs(data.weighted_W_h2z["RNA"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
     mirna_w = list((-np.abs(data.weighted_W_h2z["miRNA"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
     meth_w = list((-np.abs(data.weighted_W_h2z["METH"]["z_%d"%(z_idx)] )).sort_values()[:nbr_genes].index.values)
     meth_w = list( [s.split("_")[1] for s in meth_w] )
-    
+    #pdb.set_trace()
     rna_overlap = list(np.intersect1d( rna_p, rna_w ).astype(str))
     mirna_overlap = list(np.intersect1d( mirna_p, mirna_w ).astype(str))
     meth_overlap = list(np.intersect1d( meth_p, meth_w ).astype(str))
     meth_overlap = [str(s) for s in meth_overlap]
     mirna_overlap = [str(s) for s in mirna_overlap]
     rna_overlap = [str(s) for s in rna_overlap]
-    results.append( [z_name, {"rna_p":rna_p, "rna_w":rna_w, "rna_over":rna_overlap,\
-                              "meth_p":meth_p, "meth_w":meth_w, "meth_over":meth_overlap,\
-                              "mirna_p":mirna_p, "mirna_w":mirna_w, "mirna_over":mirna_overlap,\
-                              "dna_p":dna_p, "h":h_values,}])
+    
+    p_rna_overlap = list(np.intersect1d( p_rna_p, rna_w ).astype(str))
+    p_mirna_overlap = list(np.intersect1d( p_mirna_p, mirna_w ).astype(str))
+    p_meth_overlap = list(np.intersect1d( p_meth_p, meth_w ).astype(str))
+    p_meth_overlap = [str(s) for s in p_meth_overlap]
+    p_mirna_overlap = [str(s) for s in p_mirna_overlap]
+    p_rna_overlap = [str(s) for s in p_rna_overlap]
+    
+    results.append( [z_name, {"rna_spear":rna_p, "rna_pear":p_rna_p, \
+                              "rna_w":rna_w, "rna_over_spear":rna_overlap, "rna_over_pear":p_rna_overlap,\
+                              "meth_spear":meth_p, "meth_pear":p_meth_p, \
+                              "meth_w":meth_w, "meth_over_spear":meth_overlap, "meth_over_pear":p_meth_overlap,\
+                              "mirna_spear":mirna_p, "mirna_pear":p_mirna_p, \
+                              "mirna_w":mirna_w, "mirna_over_spear":mirna_overlap, "mirna_over_pear":p_mirna_overlap,\
+                              "dna_spear":dna_p, "dna_pear":p_dna_p, \
+                              "h":h_values,}])
   fptr = open( save_dir + "/z_description.yaml","w+" )
   fptr.write( yaml.dump(results))
   fptr.close()
@@ -2117,7 +2301,8 @@ if __name__ == "__main__":
   
   data = load_data_and_fill( data_location, results_location )
   
-  #spearmanr_latent_space_by_inputs(data, force=False)
+  spearmanr_latent_space_by_inputs(data, force=True)
+  correlation_latent_space_by_inputs(data, force=True)
   
   describe_latent(data)
   #cluster_latent_space_by_inputs( data )
