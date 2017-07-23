@@ -1,6 +1,7 @@
 from tcga_encoder.definitions.locations import *
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
+from tcga_encoder.analyses.dna_functions import *
 
 class EverythingObject(object):
   def __init__(self):
@@ -187,8 +188,18 @@ def ids_with_at_least_p_mutations( dna, tissue, p = 1 ):
     if float(n_mutations)/float(n_ids) >= p:
       ok_ids[ ids ] = True
   return ok_ids
-  
-
+#
+# def auc_standard_error( theta, nA, nN ):
+#   # from: Hanley and McNeil (1982), The Meaning and Use of the Area under the ROC Curve
+#   # theta: estimated AUC, can be 0.5 for a random test
+#   # nA size of population A
+#   # nN size of population N
+#
+#   Q1=theta/(2.0-theta); Q2=2*theta*theta/(1+theta)
+#
+#   SE = np.sqrt( (theta*(1-theta)+(nA-1)*(Q1-theta*theta) + (nN-1)*(Q2-theta*theta) )/(nA*nN) )
+#
+#   return SE
 
       
     

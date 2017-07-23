@@ -1527,7 +1527,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
     dna_values = dna[gene].values
     
     #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
-    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.05 )
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
     
     barcodes_with_n = barcodes[ids_with_n]
     
@@ -1565,7 +1565,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
     dna_values = dna[gene].values
     
     #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
-    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.05 )
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
     
     barcodes_with_n = barcodes[ids_with_n]
     
@@ -1612,7 +1612,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
     # z_values = Z[z_name].values
     
     #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
-    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.05 )
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
     
     #if gene == "APC":
     #  pdb.set_trace()
@@ -1784,6 +1784,234 @@ def  correlation_latent_space_by_inputs( data, force = False ):
   pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)  
   #pdb.set_trace()
 
+def auc_and_pvalue( true_y, z_values ):
+  n_1 = true_y.sum()
+  n_0 = len(true_y) - n_1
+  
+  auc        = roc_auc_score( true_y, z_values )
+  
+  if auc < 0.5:
+    se_auc     = auc_standard_error( auc, n_0, n_1 )
+  else:
+    se_auc     = auc_standard_error( auc, n_1, n_0 )
+    
+  
+  se_random   = auc_standard_error( 0.5, n_1, n_0 )
+  p_value    = auc_p_value( auc, 0.5, se_auc, se_random )
+  
+  return auc, p_value
+  
+def auc_p_tissue_filter( dna, Z, T, p = 0.01 ):
+  
+  
+  dna_names = dna.columns
+  z_names   = Z.columns
+  barcodes = Z.index.values
+  
+  n_z = len(z_names)
+  n_dna = len(dna_names)
+  
+  dna_auc      = 0.5*np.ones( (n_dna,n_z) )
+  dna_p_values = np.ones( (n_dna,n_z) )
+  
+  d_idx = 0
+  z_idx = 0
+  for dna_gene in dna_names:
+    dna_values = dna[dna_gene].values
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p=p )
+    
+    if np.sum(ids_with_n)==0:
+      print "skipping ",dna_gene
+      continue
+      
+    barcodes_with_n = barcodes[ids_with_n]
+    
+    mutations = pp.find( dna_values[ids_with_n] == 1)
+    wildtype = pp.find( dna_values[ids_with_n]==0)
+    
+    dna_values2use = dna_values[ids_with_n]
+    
+    if len(mutations) == 0 or len(wildtype) == 0:
+      print "skipping ",dna_gene
+      continue
+    
+    print "working ",dna_gene, "  %d of %d"%(d_idx+1,n_dna)
+    Z_gene = Z[ ids_with_n ]
+    
+    z_idx = 0
+    for z_name in z_names:
+      
+      z_values = Z_gene[z_name].values
+      
+      auc, pvalue = auc_and_pvalue( dna_values2use, z_values )
+      dna_auc[ d_idx, z_idx ] = auc
+      dna_p_values[ d_idx, z_idx ] = pvalue
+      z_idx+=1
+
+    d_idx+=1
+      
+  return dna_auc, dna_p_values
+    
+      
+    
+  
+def  dna_auc_using_latent_space( data, force = False ):
+  Z           = data.Z
+
+  data.data_store.open()
+  try:
+    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ Z.index ]
+  except:
+    T=data.data_store["/CLINICAL/TISSUE"].loc[ Z.index ]
+  data.data_store.close()
+  
+  dna_names = data.dna.sum(0).sort_values(ascending=False).index.values
+  n_dna = len(dna_names)
+  dna = data.dna[ dna_names ]
+  
+  save_dir = os.path.join( data.save_dir, "dna_auc_latent" )
+  check_and_mkdir(save_dir)
+  z_names = data.z_names
+  barcodes = Z.index.values
+
+  try:
+    dna_z_auc     = pd.read_csv( save_dir + "/dna_z_auc.csv", index_col="gene" )
+    dna_z_auc_p   = pd.read_csv( save_dir + "/dna_z_auc_p.csv", index_col="gene" )
+  
+  except: 
+    print "could not load, forcing..."  
+    force=True
+    
+  if force is True:
+    print "computing DNA-Z AUCs"
+    dna_z = auc_p_tissue_filter( dna, Z, T, p = 0.01 )
+    
+    dna_z_auc   = pd.DataFrame( dna_z[0], index = dna_names, columns=z_names)
+    dna_z_auc_p   = pd.DataFrame( dna_z[1], index = dna_names, columns=z_names)
+
+  
+  dna_z_auc.to_csv( save_dir + "/dna_z_auc.csv", index_label="gene" )
+  dna_z_auc_p.to_csv( save_dir + "/dna_z_auc_p.csv", index_label="gene" )  
+  dna_z_p= dna_z_auc_p
+  
+  f=pp.figure( figsize=(24,12) )
+  
+  nbr_genes = 20
+  nbr_zs    = 10
+  genes = dna_names[:nbr_genes]
+  k_idx = 1
+  for gene in genes:
+    best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+    dna_values = dna[gene].values
+    
+    #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
+    
+    barcodes_with_n = barcodes[ids_with_n]
+    
+    mutations = pp.find( dna_values[ids_with_n] == 1)
+    wildtype = pp.find( dna_values[ids_with_n]==0)
+    
+
+    z_idx = 0
+    for z_name in best_z_names:
+      z_values = Z[z_name].loc[barcodes_with_n].values
+      z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
+      
+      ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
+
+      ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
+      ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
+      ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
+
+      ax.set_title(gene+"-"+z_name)
+      # if z_idx == 0:
+      #   ax.set_ylabel(gene)
+      # ax.set_xlabel(z_name)
+      z_idx+=1
+      k_idx+=1
+  pp.savefig( save_dir + "/dna_top_z.png", fmt="png", dpi=300)
+
+  z_scores = -np.sum( np.log2(dna_z_p),1)
+  
+  f=pp.figure( figsize=(24,12) )
+  genes = z_scores.sort_values()[-nbr_genes:].index.values #dna_names[:nbr_genes]
+  #pdb.set_trace()
+  k_idx = 1
+  for gene in genes:
+    best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+    dna_values = dna[gene].values
+    
+    #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
+    
+    barcodes_with_n = barcodes[ids_with_n]
+    
+    mutations = pp.find( dna_values[ids_with_n] == 1)
+    wildtype = pp.find( dna_values[ids_with_n]==0)
+    
+
+    z_idx = 0
+    for z_name in best_z_names:
+      z_values = Z[z_name].loc[barcodes_with_n].values
+      z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
+      
+      ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
+
+      ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
+      ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
+      ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
+
+      ax.set_title(gene+"-"+z_name)
+      # if z_idx == 0:
+      #   ax.set_ylabel(gene)
+      # ax.set_xlabel(z_name)
+      z_idx+=1
+      k_idx+=1
+  pp.savefig( save_dir + "/dna_top_genes.png", fmt="png", dpi=300)
+    
+  global_order = np.argsort( dna_z_p.values.flatten() )
+  #
+  rr = np.unravel_index(global_order[:nbr_genes*nbr_zs], dims=dna_z_p.values.shape )
+  dna_s = dna_names[rr[0]]
+  z_s = z_names[rr[1]]
+  
+  f=pp.figure( figsize=(24,12) )
+  #order = np.argsort(dna_s)
+  #dna_s = dna_s[order]
+  #z_s = z_s[order]
+  k_idx=1
+  for gene, z_name in zip(dna_s,z_s):
+    #best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+    dna_values = dna[gene].values
+    # mutations = pp.find( dna_values == 1)
+    # wildtype = pp.find( dna_values==0)
+    #
+    # z_values = Z[z_name].values
+    
+    #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
+    
+    #if gene == "APC":
+    #  pdb.set_trace()
+    barcodes_with_n = barcodes[ids_with_n]
+    
+    mutations = pp.find( dna_values[ids_with_n] == 1)
+    wildtype = pp.find( dna_values[ids_with_n]==0)
+
+    z_values = Z[z_name].loc[barcodes_with_n].values
+
+    z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
+
+    ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
+
+    #ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
+    ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
+    ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
+    ax.set_title(gene+"-"+z_name)
+    ax.set_xlabel("")
+    k_idx+=1
+  pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)
   
 def repeat_kmeans( data, K = 20, repeats=10 ):
   Z           = data.Z
@@ -2383,7 +2611,8 @@ if __name__ == "__main__":
   
   data = load_data_and_fill( data_location, results_location )
   
-  spearmanr_latent_space_by_inputs(data, force=True)
+  dna_auc_using_latent_space( data, force =True )
+  #spearmanr_latent_space_by_inputs(data, force=True)
   #correlation_latent_space_by_inputs(data, force=True)
   
   #describe_latent(data)
