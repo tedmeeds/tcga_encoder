@@ -1517,7 +1517,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   
   f = pp.figure( figsize=(20,20) )
   
-  nbr_genes = 20
+  nbr_genes = 40
   nbr_zs    = 10
   genes = dna_names[:nbr_genes]
   k_idx = 1
@@ -1539,7 +1539,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
       z_values = Z[z_name].loc[barcodes_with_n].values
       z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
       
-      ax = f.add_subplot(nbr_genes,nbr_zs,k_idx)
+      ax = f.add_subplot(nbr_zs, nbr_genes ,k_idx)
 
       ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
       ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
@@ -1586,7 +1586,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
 
     z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
 
-    ax = f.add_subplot(nbr_genes,nbr_zs,k_idx)
+    ax = f.add_subplot(nbr_zs, nbr_genes ,k_idx)
 
     #ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
     ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
