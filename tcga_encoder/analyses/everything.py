@@ -1474,7 +1474,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   if force is True:
     print "computing RNA-Z spearman rho's"
     rho_rna_z = stats.spearmanr( RNA_scale.values, Z.values )
-    pdb.set_trace()
+    #pdb.set_trace()
     print "computing miRNA-Z spearman rho's"
     rho_mirna_z = stats.spearmanr( miRNA_scale.values, Z.values )
     print "computing METH-Z spearman rho's"
