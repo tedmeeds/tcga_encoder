@@ -1517,33 +1517,38 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   
   f = pp.figure( figsize=(20,20) )
   
-  nbr_genes = 15
-  nbr_zs    = 15
+  nbr_genes = 20
+  nbr_zs    = 10
   genes = dna_names[:nbr_genes]
   k_idx = 1
   for gene in genes:
     best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
     dna_values = dna[gene].values
     
-    ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+    #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.05 )
     
     barcodes_with_n = barcodes[ids_with_n]
     
     mutations = pp.find( dna_values[ids_with_n] == 1)
     wildtype = pp.find( dna_values[ids_with_n]==0)
+    
 
     z_idx = 0
     for z_name in best_z_names:
       z_values = Z[z_name].loc[barcodes_with_n].values
+      z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
       
       ax = f.add_subplot(nbr_genes,nbr_zs,k_idx)
 
-      ax.hist( z_values[wildtype], 20, normed=True,histtype="step", lw=2, color="blue" )
-      ax.hist( z_values[mutations], 20, normed=True,histtype="step", lw=2, color="red" )
+      ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
+      ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
+      ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
 
-      if z_idx == 0:
-        ax.set_ylabel(gene)
-      ax.set_xlabel(z_name)
+      ax.set_title(gene+"-"+z_name)
+      # if z_idx == 0:
+      #   ax.set_ylabel(gene)
+      # ax.set_xlabel(z_name)
       z_idx+=1
       k_idx+=1
   pp.savefig( save_dir + "/dna_top_z.png", fmt="png", dpi=300)
@@ -1560,15 +1565,18 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   #z_s = z_s[order]
   k_idx=1
   for gene, z_name in zip(dna_s,z_s):
-    best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
-    # dna_values = dna[gene].values
+    #best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+    dna_values = dna[gene].values
     # mutations = pp.find( dna_values == 1)
     # wildtype = pp.find( dna_values==0)
     #
     # z_values = Z[z_name].values
-
-    ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
     
+    #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.05 )
+    
+    #if gene == "APC":
+    #  pdb.set_trace()
     barcodes_with_n = barcodes[ids_with_n]
     
     mutations = pp.find( dna_values[ids_with_n] == 1)
@@ -1576,12 +1584,13 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
 
     z_values = Z[z_name].loc[barcodes_with_n].values
 
-
+    z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
 
     ax = f.add_subplot(nbr_genes,nbr_zs,k_idx)
 
-    ax.hist( z_values[wildtype], 20, normed=True,histtype="step", lw=2, color="blue" )
-    ax.hist( z_values[mutations], 20, normed=True,histtype="step", lw=2, color="red" )
+    #ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
+    ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
+    ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
     ax.set_title(gene+"-"+z_name)
     ax.set_xlabel("")
     k_idx+=1

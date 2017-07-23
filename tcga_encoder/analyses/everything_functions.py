@@ -173,6 +173,21 @@ def ids_with_at_least_n_mutations( dna, tissue, n = 1 ):
       ok_ids[ ids ] = True
   return ok_ids
   
+def ids_with_at_least_p_mutations( dna, tissue, p = 1 ):
+  ok_ids = np.zeros( len(dna), dtype=bool )
+  for tissue_name in tissue.columns:
+    #print "working ", tissue_name
+    ids = pp.find( tissue[tissue_name]==1 )
+    n_ids = len(ids); n_tissue=n_ids
+    if n_ids==0:
+      continue
+    
+    n_mutations = dna[ids].sum()
+    
+    if float(n_mutations)/float(n_ids) >= p:
+      ok_ids[ ids ] = True
+  return ok_ids
+  
 
 
       
