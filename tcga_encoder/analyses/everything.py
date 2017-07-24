@@ -2715,8 +2715,8 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     y_est_cv = best_y_est
     auc_y_est_cv, p_value_y_est_cv =   best_auc, best_auc_p
        
-    M = GenerativeBinaryClassifier(ridge=best_ridge)
-    M.fit( y_true, X )
+    M = GenerativeBinaryClassifier()
+    M.fit( y_true, X, ridge=best_ridge )
     y_est = M.prob(X)
     auc_y_est, p_value_y_est = auc_and_pvalue( y_true, y_est )
     
