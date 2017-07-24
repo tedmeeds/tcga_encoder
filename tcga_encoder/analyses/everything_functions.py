@@ -2,7 +2,98 @@ from tcga_encoder.definitions.locations import *
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
 from tcga_encoder.analyses.dna_functions import *
+from sklearn.model_selection import StratifiedKFold
 
+class GenerativeBinaryClassifierKFold(object):
+  def __init__(self, K=5, random_state = None ):
+    self.random_state = random_state
+    self.K = K
+    self.M = []
+    for k in range(K):
+      self.M.append( GenerativeBinaryClassifier() )
+    
+  def fit_and_prob( self, y, X, cov_type = "full", ridge = 0.0 ):
+    
+    self.folds = StratifiedKFold(n_splits=self.K, shuffle = True, random_state=self.random_state)
+    
+    y_prob = np.zeros( y.shape )
+    k = 0
+    for train_split, test_split in self.folds.split( X, y ):
+      #print "\t\t\tINFO (%s): running fold %d of %d"%(dna_gene,fold_idx, n_folds)
+      self.M[k].fit( y[train_split], X[train_split,:], cov_type, ridge )
+      
+      y_prob[test_split] = self.M[k].prob( X[test_split,:] )
+    
+    return y_prob
+
+class GenerativeBinaryClassifier(object):
+  def __init__(self):
+    pass
+    
+  def fit( self, y, X, cov_type = "full", ridge = 0.0 ):
+    self.dim = X.shape[1]
+    self.n = len(y)
+    self.n_1 = y.sum()
+    self.n_0 = self.n-self.n_1
+    
+    self.pi_1 = float(self.n_1)/float(self.n)
+    self.pi_0 = float(self.n_0)/float(self.n)
+    
+    self.log_pi_1 = np.log(self.pi_1)
+    self.log_pi_0 = np.log(self.pi_0)
+    
+    self.class_1 = y==1
+    self.class_0 = y==0
+    
+    self.class_1_ids = pp.find(self.class_1)
+    self.class_0_ids = pp.find(self.class_0)
+    
+    self.mean_1 = X[self.class_1].mean(0)
+    self.mean_0 = X[self.class_0].mean(0)
+    
+    if cov_type == "full":
+      self.cov_1 = np.cov( X[self.class_1].T ) + ridge*np.eye(self.dim)
+      self.cov_0 = np.cov( X[self.class_0].T ) + ridge*np.eye(self.dim)
+    else:
+      self.cov_1 = np.diag( X[self.class_1].var(0) ) + ridge*np.eye(self.dim)
+      self.cov_0 = np.diag( X[self.class_0].var(0) )+ ridge*np.eye(self.dim)
+      
+    self.inv_cov_1 = np.linalg.inv(self.cov_1)
+    self.inv_cov_0 = np.linalg.inv(self.cov_0)
+    
+  
+  def predict( self, X ):
+    return self.prob(X).astype(int)
+  
+  def prob( self, X ):
+    return np.exp(self.log_prob(X))
+    
+  def log_prob( self, X ):
+    log_prob_1 = self.log_prob_class( X, self.log_pi_1, self.cov_1, self.inv_cov_1, self.mean_1 )
+    log_prob_0 = self.log_prob_class( X, self.log_pi_0, self.cov_0, self.inv_cov_0, self.mean_0 )
+    
+    #log_denom = np.log( np.exp(log_prob_1)+np.exp(log_prob_0))
+    
+    max_ = np.maximum( log_prob_1, log_prob_0 )
+    log_denom = max_ + np.log( np.exp( log_prob_1-max_ )+np.exp( log_prob_0-max_ ))
+    # if log_prob_1 > log_prob_0:
+    #   log_denom = log_prob_1 + np.log( 1.0 + np.exp(log_prob_0-log_prob_1) )
+    # else:
+    #   log_denom = log_prob_0 + np.log( 1.0 + np.exp(log_prob_1-log_prob_0) )
+    #pdb.set_trace()
+    return log_prob_1 - log_denom
+    
+   
+  def log_prob_class(self, X, log_pi, cov, invcov, mean ):
+    dif = X-mean[np.newaxis,:]
+    
+    a = log_pi
+    b = -0.5*np.log( np.linalg.det( 2*np.pi*cov))
+    c = -0.5*np.sum( np.dot( dif, invcov )*dif, 1 )
+    
+    return a+b+c
+    
+    
 class EverythingObject(object):
   def __init__(self):
     self.results = {}
@@ -176,6 +267,7 @@ def ids_with_at_least_n_mutations( dna, tissue, n = 1 ):
   
 def ids_with_at_least_p_mutations( dna, tissue, p = 1 ):
   ok_ids = np.zeros( len(dna), dtype=bool )
+  relevant_tissues=[]
   for tissue_name in tissue.columns:
     #print "working ", tissue_name
     ids = pp.find( tissue[tissue_name]==1 )
@@ -187,7 +279,8 @@ def ids_with_at_least_p_mutations( dna, tissue, p = 1 ):
     
     if float(n_mutations)/float(n_ids) >= p:
       ok_ids[ ids ] = True
-  return ok_ids
+      relevant_tissues.append(tissue_name)
+  return ok_ids,relevant_tissues
 #
 # def auc_standard_error( theta, nA, nN ):
 #   # from: Hanley and McNeil (1982), The Meaning and Use of the Area under the ROC Curve

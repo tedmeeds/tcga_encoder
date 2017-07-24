@@ -2604,15 +2604,205 @@ def describe_latent(data):
     #results
   
   #pdb.set_trace()
-        
+
+def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
+  save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_%0.2f"%(threshold) )
+  check_and_mkdir(save_dir) 
+  
+  dna_auc_dir   = os.path.join( data.save_dir, "dna_auc_latent" )
+  spearmanr_dir = os.path.join( data.save_dir, "spearmans_latent_tissue" )
+  
+  spear_dna_z_rho = pd.read_csv( spearmanr_dir + "/dna_z_rho.csv", index_col="gene" )
+  spear_dna_z_p   = pd.read_csv( spearmanr_dir + "/dna_z_p.csv", index_col="gene" )
+  dna_z_auc     = pd.read_csv( dna_auc_dir + "/dna_z_auc.csv", index_col="gene" )
+  dna_z_auc_p   = pd.read_csv( dna_auc_dir + "/dna_z_auc_p.csv", index_col="gene" )
+  dna_z_p = dna_z_auc_p
+  
+  rna_z_rho = pd.read_csv( spearmanr_dir + "/rna_z_rho.csv", index_col="gene" )
+  rna_z_p   = pd.read_csv( spearmanr_dir + "/rna_z_p.csv", index_col="gene" )
+
+  mirna_z_rho = pd.read_csv( spearmanr_dir + "/mirna_z_rho.csv", index_col="gene" )
+  mirna_z_p   = pd.read_csv( spearmanr_dir + "/mirna_z_p.csv", index_col="gene" )
+ 
+  meth_z_rho = pd.read_csv( spearmanr_dir + "/meth_z_rho.csv", index_col="gene" )
+  meth_z_p   = pd.read_csv( spearmanr_dir + "/meth_z_p.csv", index_col="gene" )
+  
+  # first compare AUCs and Rho's
+  
+  # f = pp.figure()
+  # ax1 = f.add_subplot(221)
+  # ax2 = f.add_subplot(222)
+  # ax3 = f.add_subplot(223)
+  # ax4 = f.add_subplot(224)
+  # ax1.plot( spear_dna_z_rho.values.flatten(), dna_z_auc.values.flatten(), '.', alpha=0.25); ax1.set_xlabel("Spearman Rho"); ax1.set_ylabel("AUC"); ax1.set_title( "rho v auc")
+  # ax2.loglog( spear_dna_z_p.values.flatten(), dna_z_auc_p.values.flatten(), '.', alpha=0.25); ax2.set_xlabel("Spearman Rho"); ax2.set_ylabel("AUC"); ax2.set_title( "spearman v auc p-values")
+  #
+  # ax3.semilogy( spear_dna_z_rho.values.flatten(), spear_dna_z_p.values.flatten(), '.', alpha=0.25); ax3.set_xlabel("Spearman Rho"); ax3.set_ylabel("Spearman p-value"); ax3.set_title( "rho v p-value")
+  # ax4.semilogy( dna_z_auc.values.flatten(), dna_z_auc_p.values.flatten(), '.', alpha=0.25); ax4.set_xlabel("AUC"); ax4.set_ylabel("AUC p-value"); ax4.set_title( "auc v p-value")
+  #
+  # f.savefig( save_dir + "/spearman_v_auc.png", format="png", dpi=300)
+  
+  Z           = data.Z
+
+  data.data_store.open()
+  try:
+    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ Z.index ]
+  except:
+    T=data.data_store["/CLINICAL/TISSUE"].loc[ Z.index ]
+  data.data_store.close()
+  
+  dna_names = data.dna.sum(0).sort_values(ascending=False).index.values
+  n_dna = len(dna_names)
+  dna = data.dna[ dna_names ]
+  
+  z_scores = -np.sum( np.log2(dna_z_p),1)
+  
+  f=pp.figure( figsize=(24,12) )
+  genes = z_scores.sort_values().index.values #dna_names[:nbr_genes]
+  #pdb.set_trace()
+  min_p_value = 1e-3
+  k_idx = 1
+  results = []
+  for gene in genes:
+    p_values = dna_z_p.loc[gene][ dna_z_p.loc[gene] < min_p_value ]
+    if len(p_values)==0:
+      continue
+    
+    dna_values = dna[gene].values
+    ids_with_n, relevant_tissues = ids_with_at_least_p_mutations( dna_values, T, p = threshold )
+    
+    nbr_cancer_types = len(relevant_tissues)
+    mutations = pp.find( dna_values[ids_with_n] == 1)
+    wildtype = pp.find( dna_values[ids_with_n]==0)  
+    
+    best_z_names = p_values.sort_values().index.values
+    best_z_rna_z_p = rna_z_p[ best_z_names ]
+    best_z_rna_z_rho = rna_z_rho[ best_z_names ]
+    print "================"
+    best_z_score_rna = -np.sum(np.log2(best_z_rna_z_p+1e-200),1)
+    print best_z_score_rna.sort_values(ascending=False)[:20].index.values
+    # for z_name in best_z_names:
+    #   print best_z_rna_z_p[ z_name ].sort_values()[:10]
+    #   print (-np.abs(best_z_rna_z_rho[ z_name ])).sort_values()[:10]
+      #pdb.set_trace()
+    print gene, p_values.sort_values().index.values
+    
+    y_true = dna_values[ids_with_n]
+    X = Z[ids_with_n][best_z_names].values
+    
+    MCV = GenerativeBinaryClassifierKFold( K = 10 )
+    ridges = [0.0, 0.001,0.01,0.1,1.0,10.0,100.0]
+    best_auc = -np.inf
+    best_ridge = 0.0
+    best_y_est = None
+    best_auc_p = -np.inf
+    for ridge in ridges:
+      y_est_cv = MCV.fit_and_prob( y_true, X, ridge=ridge )
+      auc_y_est_cv, p_value_y_est_cv = auc_and_pvalue( y_true, y_est_cv )
+      
+      if auc_y_est_cv > best_auc:
+        best_auc = auc_y_est_cv
+        best_auc_p = p_value_y_est_cv
+        best_ridge = ridge
+        best_y_est = y_est_cv
+    
+    y_est_cv = best_y_est
+    auc_y_est_cv, p_value_y_est_cv =   best_auc, best_auc_p
+       
+    M = GenerativeBinaryClassifier()
+    M.fit( y_true, X )
+    y_est = M.prob(X)
+    auc_y_est, p_value_y_est = auc_and_pvalue( y_true, y_est )
+    
+    
+    print "learned auc (tr) = %0.3f  p-value: %0.f"%(auc_y_est, p_value_y_est)
+    print "learned auc (cv) = %0.3f  p-value: %0.f"%(auc_y_est_cv, p_value_y_est_cv)
+    print "compare to:"
+    other_aucs = []
+    signs = []
+    for z_name in best_z_names:
+      print z_name, dna_z_auc[z_name].loc[gene], dna_z_auc_p[z_name].loc[gene]
+      other_aucs.append( max( float(dna_z_auc[z_name].loc[gene]), float(1-dna_z_auc[z_name].loc[gene])) )
+      if dna_z_auc[z_name].loc[gene]<0.5:
+        signs.append(-1)
+      else:
+        signs.append(1)
+    signs = np.array(signs)[np.newaxis,:]
+    #pdb.set_trace()
+    print "================"
+    results.append( [gene, {"tissues":relevant_tissues, "nbr_tissues":nbr_cancer_types,"wildtype":len(wildtype),\
+                    "mutations":len(mutations)},list(p_values.sort_values().index.values),\
+                    list(best_z_score_rna.sort_values(ascending=False)[:20].index.values),\
+                     ["train", float(auc_y_est), float(p_value_y_est)], \
+                     ["cv", float(auc_y_est_cv), float(p_value_y_est_cv)],\
+                     other_aucs ] )
+     
+
+    if len(best_z_names)>5:
+      gene_dir =  os.path.join( save_dir, "%s"%(gene) )
+      check_and_mkdir(gene_dir)
+      y_order = np.argsort(y_est_cv)
+      
+      #signs = []
+      X_order = X[y_order,:]
+      X_order -= X_order.mean(0)
+      X_order /= X_order.std(0)
+      X_order *=signs
+      Z_order = pd.DataFrame( X_order, index = Z[ids_with_n].index.values[y_order], columns = best_z_names )
+
+      #k_colors = np.array([k_pallette[kmeans_patients_labels[i]] for i in order_labels] )
+
+      print "MAKNING ", gene
+      size1=12
+      size2=4
+      r = size1/size2
+      f = pp.figure( figsize=(size1,size2))
+      ax = f.add_subplot(111)
+      ax.imshow(Z_order.T, cmap='rainbow', interpolation='nearest', aspect=float(len(y_true))/(len(best_z_names)*r))
+      #ax.imshow(differ)
+      ax.autoscale(False)
+      
+      #h = sns.heatmap( Z_order, row_colors=None, row_cluster=False, col_cluster=False, figsize=(12,12) )
+      #pdb.set_trace()
+      #pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+      #pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+      #pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+      #pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+      #h.ax_row_dendrogram.set_visible(False)
+      #h.ax_col_dendrogram.set_visible(False)
+      #h.cax.set_visible(False)
+    #h.ax_heatmap.hlines(len(kmeans_patients_labels)-pp.find(np.diff(np.array(kmeans_patients_labels)[order_labels]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
+    #h.ax_heatmap.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *h.ax_heatmap.get_ylim(), color="black", lw=5)
+
+      f.savefig( gene_dir + "/sorted_by_%s.png"%(gene), fmt="png", bbox_inches='tight')
+      pp.close('all')
+    
+    
+    
+  check_and_mkdir(save_dir) 
+  
+  fptr = open( save_dir + "/pan_cancer_dna.yaml","w+" )
+  fptr.write( yaml.dump(results))
+  fptr.close()
+  
+  #pdb.set_trace()
+  
 if __name__ == "__main__":
   data_location = sys.argv[1]
   results_location = sys.argv[2]
   
   data = load_data_and_fill( data_location, results_location )
   
-  dna_auc_using_latent_space( data, force =True )
+  #dna_auc_using_latent_space( data, force =True )
   #spearmanr_latent_space_by_inputs(data, force=True)
+  
+  deeper_meaning_dna_and_z( data, threshold=0 )
+  deeper_meaning_dna_and_z( data, threshold=0.01 )
+  deeper_meaning_dna_and_z( data, threshold=0.05 )
+  deeper_meaning_dna_and_z( data, threshold=0.1 )
+  deeper_meaning_dna_and_z( data, threshold=0.5 )
+  
+  
   #correlation_latent_space_by_inputs(data, force=True)
   
   #describe_latent(data)
