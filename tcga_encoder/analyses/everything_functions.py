@@ -21,8 +21,11 @@ class GenerativeBinaryClassifierKFold(object):
     for train_split, test_split in self.folds.split( X, y ):
       #print "\t\t\tINFO (%s): running fold %d of %d"%(dna_gene,fold_idx, n_folds)
       self.M[k].fit( y[train_split], X[train_split,:], cov_type, ridge )
+      y_est = self.M[k].prob( X[test_split,:] )
       
-      y_prob[test_split] = self.M[k].prob( X[test_split,:] )
+      if np.any(np.isnan(y_est)):
+        pdb.set_trace()
+      y_prob[test_split] = y_est
     
     return y_prob
 
