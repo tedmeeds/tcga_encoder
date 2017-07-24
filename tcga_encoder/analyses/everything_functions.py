@@ -75,6 +75,12 @@ class GenerativeBinaryClassifier(object):
     log_prob_1 = self.log_prob_class( X, self.log_pi_1, self.cov_1, self.inv_cov_1, self.mean_1 )
     log_prob_0 = self.log_prob_class( X, self.log_pi_0, self.cov_0, self.inv_cov_0, self.mean_0 )
     
+    if np.any(np.isnan(log_prob_1)) or np.any(np.isnan(log_prob_0)):
+      print self.mean_0
+      print self.mean_1
+      print self.cov_1
+      print self.cov_0
+      pdb.set_trace()
     #log_denom = np.log( np.exp(log_prob_1)+np.exp(log_prob_0))
     
     max_ = np.maximum( log_prob_1, log_prob_0 )
