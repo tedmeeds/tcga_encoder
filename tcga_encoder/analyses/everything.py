@@ -2606,7 +2606,7 @@ def describe_latent(data):
   #pdb.set_trace()
 
 def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
-  save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_%0.2f"%(threshold) )
+  save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_%0.2f_full"%(threshold) )
   check_and_mkdir(save_dir) 
   
   dna_auc_dir   = os.path.join( data.save_dir, "dna_auc_latent" )
@@ -2701,7 +2701,7 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     best_auc_p = -np.inf
     for ridge in ridges:
       print "for ridge in ridges ",ridge
-      y_est_cv = MCV.fit_and_prob( y_true, X, ridge=ridge, cov_type="diag" )
+      y_est_cv = MCV.fit_and_prob( y_true, X, ridge=ridge, cov_type="full" )
       #if gene == "BRAF":
       #  pdb.set_trace()
       auc_y_est_cv, p_value_y_est_cv = auc_and_pvalue( y_true, y_est_cv )
