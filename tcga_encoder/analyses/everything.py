@@ -2801,8 +2801,8 @@ if __name__ == "__main__":
   #dna_auc_using_latent_space( data, force =True )
   #spearmanr_latent_space_by_inputs(data, force=True)
   
-  deeper_meaning_dna_and_z( data, threshold=0 )
-  deeper_meaning_dna_and_z( data, threshold=0.01 )
+  #deeper_meaning_dna_and_z( data, threshold=0 )
+  #deeper_meaning_dna_and_z( data, threshold=0.01 )
   deeper_meaning_dna_and_z( data, threshold=0.05 )
   deeper_meaning_dna_and_z( data, threshold=0.1 )
   deeper_meaning_dna_and_z( data, threshold=0.5 )
