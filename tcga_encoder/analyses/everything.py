@@ -2694,7 +2694,7 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     X = Z[ids_with_n][best_z_names].values
     
     MCV = GenerativeBinaryClassifierKFold( K = 10 )
-    ridges = [0.0001, 0.001,0.01,0.1,1.0,10.0]
+    ridges = [0.0001, 0.001,0.01,0.1,1.0,10.0,100.0]
     best_auc = -np.inf
     best_ridge = 0.0
     best_y_est = None
@@ -2715,7 +2715,7 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     y_est_cv = best_y_est
     auc_y_est_cv, p_value_y_est_cv =   best_auc, best_auc_p
        
-    M = GenerativeBinaryClassifier()
+    M = GenerativeBinaryClassifier(ridge=best_ridge)
     M.fit( y_true, X )
     y_est = M.prob(X)
     auc_y_est, p_value_y_est = auc_and_pvalue( y_true, y_est )
@@ -2802,8 +2802,8 @@ if __name__ == "__main__":
   #dna_auc_using_latent_space( data, force =True )
   #spearmanr_latent_space_by_inputs(data, force=True)
   
-  #deeper_meaning_dna_and_z( data, threshold=0 )
-  #deeper_meaning_dna_and_z( data, threshold=0.01 )
+  deeper_meaning_dna_and_z( data, threshold=0 )
+  deeper_meaning_dna_and_z( data, threshold=0.01 )
   deeper_meaning_dna_and_z( data, threshold=0.05 )
   deeper_meaning_dna_and_z( data, threshold=0.1 )
   deeper_meaning_dna_and_z( data, threshold=0.5 )
