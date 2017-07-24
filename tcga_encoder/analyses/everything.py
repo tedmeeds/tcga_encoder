@@ -2694,7 +2694,7 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     X = Z[ids_with_n][best_z_names].values
     
     MCV = GenerativeBinaryClassifierKFold( K = 10 )
-    ridges = [0.0001, 0.001,0.01,0.1,1.0,10.0,100.0]
+    ridges = [0.0001, 0.001,0.01,0.1,1.0,10.0]
     best_auc = -np.inf
     best_ridge = 0.0
     best_y_est = None
