@@ -2700,6 +2700,7 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     best_y_est = None
     best_auc_p = -np.inf
     for ridge in ridges:
+      print "for ridge in ridges ",ridge
       y_est_cv = MCV.fit_and_prob( y_true, X, ridge=ridge, cov_type="diag" )
       #if gene == "BRAF":
       #  pdb.set_trace()

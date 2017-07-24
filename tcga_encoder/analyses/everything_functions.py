@@ -13,7 +13,7 @@ class GenerativeBinaryClassifierKFold(object):
       self.M.append( GenerativeBinaryClassifier() )
     
   def fit_and_prob( self, y, X, cov_type = "full", ridge = 0.0 ):
-    
+    print "GenerativeBinaryClassifierKFold ridge = ", ridge
     self.folds = StratifiedKFold(n_splits=self.K, shuffle = True, random_state=self.random_state)
     
     y_prob = np.zeros( y.shape )
