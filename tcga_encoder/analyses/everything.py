@@ -2660,7 +2660,7 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
   f=pp.figure( figsize=(24,12) )
   genes = z_scores.sort_values().index.values #dna_names[:nbr_genes]
   #pdb.set_trace()
-  min_p_value = 1e-3
+  min_p_value = 1e-4
   k_idx = 1
   results = []
   for gene in genes:
@@ -2674,6 +2674,9 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     nbr_cancer_types = len(relevant_tissues)
     mutations = pp.find( dna_values[ids_with_n] == 1)
     wildtype = pp.find( dna_values[ids_with_n]==0)  
+    
+    if len(mutations)==0:
+      continue
     
     best_z_names = p_values.sort_values().index.values
     best_z_rna_z_p = rna_z_p[ best_z_names ]
@@ -2691,7 +2694,7 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     X = Z[ids_with_n][best_z_names].values
     
     MCV = GenerativeBinaryClassifierKFold( K = 10 )
-    ridges = [0.0, 0.001,0.01,0.1,1.0,10.0,100.0]
+    ridges = [0.0001, 0.001,0.01,0.1,1.0,10.0,100.0]
     best_auc = -np.inf
     best_ridge = 0.0
     best_y_est = None
