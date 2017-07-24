@@ -35,6 +35,7 @@ class GenerativeBinaryClassifier(object):
     self.n = len(y)
     self.n_1 = y.sum()
     self.n_0 = self.n-self.n_1
+    self.ridge = ridge
     
     self.pi_1 = float(self.n_1)/float(self.n)
     self.pi_0 = float(self.n_0)/float(self.n)
@@ -52,17 +53,18 @@ class GenerativeBinaryClassifier(object):
     self.mean_0 = X[self.class_0].mean(0)
     
     if cov_type == "full":
-      self.cov_1 = np.cov( X[self.class_1].T ) + ridge*np.eye(self.dim)
+      self.cov_1 = np.cov( X[self.class_1].T ) + self.ridge*np.eye(self.dim)
       self.cov_0 = np.cov( X[self.class_0].T ) + ridge*np.eye(self.dim)
     elif cov_type == "diag":
-      self.cov_1 = np.diag( X[self.class_1].var(0) ) + ridge*np.eye(self.dim)
-      self.cov_0 = np.diag( X[self.class_0].var(0) )+ ridge*np.eye(self.dim)
+      self.cov_1 = np.diag( X[self.class_1].var(0) ) + self.ridge*np.eye(self.dim)
+      self.cov_0 = np.diag( X[self.class_0].var(0) )+ self.ridge*np.eye(self.dim)
     elif cov_type == "shared":
-      self.cov_1 = np.cov( X.T ) + ridge*np.eye(self.dim)
+      self.cov_1 = np.cov( X.T ) + self.ridge*np.eye(self.dim)
       self.cov_0 = self.cov_1
       
     self.inv_cov_1 = np.linalg.inv(self.cov_1)
     self.inv_cov_0 = np.linalg.inv(self.cov_0)
+    #pdb.set_trace()
     
   
   def predict( self, X ):
@@ -80,6 +82,9 @@ class GenerativeBinaryClassifier(object):
       print self.mean_1
       print self.cov_1
       print self.cov_0
+      print self.ridge
+      print np.cov( X[self.class_1].T )
+      print np.cov( X[self.class_0].T )
       pdb.set_trace()
     #log_denom = np.log( np.exp(log_prob_1)+np.exp(log_prob_0))
     
