@@ -57,7 +57,7 @@ class GenerativeBinaryClassifier(object):
     elif cov_type == "diag":
       self.cov_1 = np.diag( X[self.class_1].var(0) ) + ridge*np.eye(self.dim)
       self.cov_0 = np.diag( X[self.class_0].var(0) )+ ridge*np.eye(self.dim)
-    elif cov_type == "shared"
+    elif cov_type == "shared":
       self.cov_1 = np.cov( X.T ) + ridge*np.eye(self.dim)
       self.cov_0 = self.cov_1
       
