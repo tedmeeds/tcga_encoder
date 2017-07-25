@@ -106,10 +106,15 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
       y_test = y_true[test_split];   
       
       # find top z by spearmanr p-values
-      rho_dna_z = stats.spearmanr(y_train, X_train )
-      dna_z_rho = np.squeeze(rho_dna_z[0][:1,:][:,1:])
-      dna_z_p   = np.squeeze(rho_dna_z[1][:1,:][:,1:])
-      ok_dna_z_p = pp.find( dna_z_p<min_p_value )
+      rho_dna_z = pearsonr( y_train, X_train ) 
+      #rho_dna_z = stats.spearmanr(y_train, X_train )
+      dna_z_rho = np.squeeze(rho_dna_z[0])
+      dna_z_p   = np.squeeze(rho_dna_z[1])
+      #dna_z_rho = np.squeeze(rho_dna_z[0][:1,:][:,1:])
+      #dna_z_p   = np.squeeze(rho_dna_z[1][:1,:][:,1:])
+      
+      #ok_dna_z_p = pp.find( dna_z_p<min_p_value )
+      ok_dna_z_p = pp.find( dna_z_p > min_p_value )
       
       
       I=np.argsort( ok_dna_z_p )
@@ -186,20 +191,34 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
     w_meth.to_csv( gene_dir +"/w_meth.csv" )
     
     print "  computing spearmans"
-    rho_rna_z = stats.spearmanr( RNA_scale.values[ids_with_n,:], y_est_best )
-    rho_mirna_z = stats.spearmanr( miRNA_scale.values[ids_with_n,:],y_est_best)
-    rho_meth_z = stats.spearmanr( METH_scale.values[ids_with_n,:], y_est_best)
+    #rho_rna_z = stats.spearmanr( RNA_scale.values[ids_with_n,:], y_est_best )
+    #rho_mirna_z = stats.spearmanr( miRNA_scale.values[ids_with_n,:],y_est_best)
+    #rho_meth_z = stats.spearmanr( METH_scale.values[ids_with_n,:], y_est_best)
+    
+    rho_rna_z = pearsonr( RNA_scale.values[ids_with_n,:], y_est_best )
+    rho_mirna_z = pearsonr( miRNA_scale.values[ids_with_n,:],y_est_best)
+    rho_meth_z = pearsonr( METH_scale.values[ids_with_n,:], y_est_best)
       
     print "  organizing"
     #pdb.set_trace()
-    rna_z_rho_gene = pd.Series( np.squeeze( rho_rna_z[0][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
-    rna_z_p_gene   = pd.Series( np.squeeze( rho_rna_z[1][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
+    # rna_z_rho_gene = pd.Series( np.squeeze( rho_rna_z[0][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
+    # rna_z_p_gene   = pd.Series( np.squeeze( rho_rna_z[1][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
+    #
+    # mirna_z_rho_gene = pd.Series( np.squeeze( rho_mirna_z[0][:n_mirna,:][:,n_mirna:] ), index = data.mirna_names, name = gene)
+    # mirna_z_p_gene   = pd.Series( np.squeeze( rho_mirna_z[1][:n_mirna,:][:,n_mirna:] ), index = data.mirna_names, name = gene)
+    #
+    # meth_z_rho_gene = pd.Series( np.squeeze( rho_meth_z[0][:n_meth,:][:,n_meth:] ), index = data.meth_names, name = gene)
+    # meth_z_p_gene   = pd.Series( np.squeeze( rho_meth_z[1][:n_meth,:][:,n_meth:] ), index = data.meth_names, name = gene)
+
+    rna_z_rho_gene = pd.Series( np.squeeze( rho_rna_z[0] ), index = data.rna_names, name = gene)
+    rna_z_p_gene   = pd.Series( np.squeeze( rho_rna_z[1] ), index = data.rna_names, name = gene)
   
-    mirna_z_rho_gene = pd.Series( np.squeeze( rho_mirna_z[0][:n_mirna,:][:,n_mirna:] ), index = data.mirna_names, name = gene)
-    mirna_z_p_gene   = pd.Series( np.squeeze( rho_mirna_z[1][:n_mirna,:][:,n_mirna:] ), index = data.mirna_names, name = gene)
+    mirna_z_rho_gene = pd.Series( np.squeeze( rho_mirna_z[0] ), index = data.mirna_names, name = gene)
+    mirna_z_p_gene   = pd.Series( np.squeeze( rho_mirna_z[1] ), index = data.mirna_names, name = gene)
    
-    meth_z_rho_gene = pd.Series( np.squeeze( rho_meth_z[0][:n_meth,:][:,n_meth:] ), index = data.meth_names, name = gene)
-    meth_z_p_gene   = pd.Series( np.squeeze( rho_meth_z[1][:n_meth,:][:,n_meth:] ), index = data.meth_names, name = gene)
+    meth_z_rho_gene = pd.Series( np.squeeze( rho_meth_z[0] ), index = data.meth_names, name = gene)
+    meth_z_p_gene   = pd.Series( np.squeeze( rho_meth_z[1] ), index = data.meth_names, name = gene)
+
     
     rna_z_p_gene = rna_z_p_gene.sort_values()
     mirna_z_p_gene = mirna_z_p_gene.sort_values()

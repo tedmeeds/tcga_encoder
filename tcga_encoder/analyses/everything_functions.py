@@ -5,6 +5,14 @@ from tcga_encoder.analyses.dna_functions import *
 from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import LogisticRegression
 
+def pearsonr( X, Y ):
+  XN = X / np.sqrt(np.sum( X*X,0))
+  YN = Y / np.sqrt(np.sum( Y*Y,0))
+  pearson = np.dot( XN.T, YN )
+  p_values = 1.0 - np.abs(pearson)
+  
+  return pearson,p_values
+  
 def auc_and_pvalue( true_y, z_values ):
   n_1 = true_y.sum()
   n_0 = len(true_y) - n_1

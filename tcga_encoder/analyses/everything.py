@@ -1642,13 +1642,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
     k_idx+=1
   pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)
 
-def pearsonr( X, Y ):
-  XN = X / np.sqrt(np.sum( X*X,0))
-  YN = Y / np.sqrt(np.sum( Y*Y,0))
-  pearson = np.dot( XN.T, YN )
-  p_values = 1.0 - np.abs(pearson)
-  
-  return pearson,p_values
+
   
 def  correlation_latent_space_by_inputs( data, force = False ):
   Z           = data.Z
@@ -2804,7 +2798,7 @@ if __name__ == "__main__":
   #spearmanr_latent_space_by_inputs(data, force=True)
   ridges = [0.00001, 0.001,1.0]
   
-  deeper_meaning_dna_and_z_correct( data, K=5, min_p_value=1e-4, threshold=0, Cs = [0.00001, 0.001,0.1,10.0,1000.0] )
+  deeper_meaning_dna_and_z_correct( data, K=5, min_p_value=0.25, threshold=0, Cs = [0.00001, 0.001,0.1,10.0,1000.0] )
   #deeper_meaning_dna_and_z( data, min_p_value=1e-2, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
   #deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
   #deeper_meaning_dna_and_z( data, min_p_value=1e-4, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
