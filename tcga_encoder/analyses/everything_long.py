@@ -124,6 +124,7 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
         continue
       if len(I)>40:
         I=I[:40]
+      print "  using %d zs"%(len(I))
       #pdb.set_trace()
       c.update(z_names[np.sort(ok_dna_z_p[I])])
       #print gene, k, z_names[np.sort(ok_dna_z_p[I])]
