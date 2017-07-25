@@ -1,6 +1,7 @@
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
 from tcga_encoder.analyses.everything_functions import *
+from tcga_encoder.analyses.everything_long import *
 from tcga_encoder.analyses.survival_functions import *
 import networkx as nx
 #try:
@@ -68,6 +69,12 @@ def load_data_and_fill( data_location, results_location ):
   data.subtypes       = subtypes
   data.survival       = survival
   data.Z              = Z
+  
+  try:
+    data.T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ Z.index ]
+  except:
+    data.T=data.data_store["/CLINICAL/TISSUE"].loc[ Z.index ]
+  
   data.Z_std           = Z_std
   data.H              = H
   data.W_input2h      = get_hidden_weights( model_store, input_sources, data_store )
@@ -1784,22 +1791,7 @@ def  correlation_latent_space_by_inputs( data, force = False ):
   pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)  
   #pdb.set_trace()
 
-def auc_and_pvalue( true_y, z_values ):
-  n_1 = true_y.sum()
-  n_0 = len(true_y) - n_1
-  
-  auc        = roc_auc_score( true_y, z_values )
-  
-  if auc < 0.5:
-    se_auc     = auc_standard_error( auc, n_0, n_1 )
-  else:
-    se_auc     = auc_standard_error( auc, n_1, n_0 )
-    
-  
-  se_random   = auc_standard_error( 0.5, n_1, n_0 )
-  p_value    = auc_p_value( auc, 0.5, se_auc, se_random )
-  
-  return auc, p_value
+
   
 def auc_p_tissue_filter( dna, Z, T, p = 0.01 ):
   
@@ -2812,9 +2804,10 @@ if __name__ == "__main__":
   #spearmanr_latent_space_by_inputs(data, force=True)
   ridges = [0.00001, 0.001,0.1,10.0,1000.0]
   
-  deeper_meaning_dna_and_z( data, min_p_value=1e-2, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
-  deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
-  deeper_meaning_dna_and_z( data, min_p_value=1e-4, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-4, threshold=0, Cs = [0.00001, 0.001,0.1,10.0,1000.0] )
+  #deeper_meaning_dna_and_z( data, min_p_value=1e-2, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  #deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  #deeper_meaning_dna_and_z( data, min_p_value=1e-4, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
   #deeper_meaning_dna_and_z( data, min_p_value=1e-4, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
   #deeper_meaning_dna_and_z( data, min_p_value=1e-5, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
   #deeper_meaning_dna_and_z( data, threshold=0.01, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )

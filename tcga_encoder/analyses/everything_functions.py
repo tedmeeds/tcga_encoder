@@ -5,7 +5,22 @@ from tcga_encoder.analyses.dna_functions import *
 from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import LogisticRegression
 
-
+def auc_and_pvalue( true_y, z_values ):
+  n_1 = true_y.sum()
+  n_0 = len(true_y) - n_1
+  
+  auc        = roc_auc_score( true_y, z_values )
+  
+  if auc < 0.5:
+    se_auc     = auc_standard_error( auc, n_0, n_1 )
+  else:
+    se_auc     = auc_standard_error( auc, n_1, n_0 )
+    
+  
+  se_random   = auc_standard_error( 0.5, n_1, n_0 )
+  p_value    = auc_p_value( auc, 0.5, se_auc, se_random )
+  
+  return auc, p_value
 
 
 class LogisticBinaryClassifierKFold(object):
@@ -52,6 +67,7 @@ class LogisticBinaryClassifier(object):
     self.mean = X.mean(0)
     self.std = X.std(0)
     self.M.fit( self.normalize(X), y )
+    self.coef_ = self.M.coef_
 
   def normalize(self,X):
     return X
