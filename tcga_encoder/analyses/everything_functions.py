@@ -3,6 +3,62 @@ from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
 from tcga_encoder.analyses.dna_functions import *
 from sklearn.model_selection import StratifiedKFold
+from sklearn.linear_model import LogisticRegression
+
+
+
+
+class LogisticBinaryClassifierKFold(object):
+  def __init__(self, K=5, random_state = None ):
+    self.random_state = random_state
+    self.K = K
+    self.M = []
+    for k in range(K):
+      self.M.append( LogisticBinaryClassifier() )
+    
+  def fit_and_prob( self, y, X, penalty = 'l2', C = 0.0 ):
+    print "LogisticBinaryClassifierKFold penalty/C = ", penalty, C
+    self.folds = StratifiedKFold(n_splits=self.K, shuffle = True, random_state=self.random_state)
+    
+    y_prob = np.zeros( y.shape )
+    k = 0
+    for train_split, test_split in self.folds.split( X, y ):
+      self.M[k].fit( y[train_split], X[train_split,:], penalty = penalty, C=C )
+      y_est = self.M[k].prob( X[test_split,:] )
+      #pdb.set_trace()
+      # if np.any(np.isnan(y_est)):
+      #   pdb.set_trace()
+      y_prob[test_split] = y_est
+    
+    return y_prob
+
+class LogisticBinaryClassifier(object):
+  def __init__(self):
+    pass
+    
+  def fit( self, y, X, penalty = 'l2', C = 0.0, fit_intercept=True, class_weight="balanced"  ):
+    self.dim = X.shape[1]
+    self.n = len(y)
+    self.n_1 = y.sum()
+    self.n_0 = self.n-self.n_1
+    self.penalty = penalty
+    self.C = C
+    
+    self.M = LogisticRegression(penalty=self.penalty,\
+                                                     C=self.C, \
+                                                     intercept_scaling=1.0, \
+                                                     fit_intercept=fit_intercept, \
+                                                     class_weight = class_weight)
+    self.M.fit( X, y )
+
+  def predict( self, X ):
+    return self.M.predict(X).astype(int)
+  
+  def prob( self, X ):
+    return self.M.predict_proba(X)[:,1]
+    
+  def log_prob( self, X ):
+    return self.M.predict_log_proba(X)
 
 class GenerativeBinaryClassifierKFold(object):
   def __init__(self, K=5, random_state = None ):

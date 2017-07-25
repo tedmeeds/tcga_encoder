@@ -2605,8 +2605,8 @@ def describe_latent(data):
   
   #pdb.set_trace()
 
-def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
-  save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_%0.2f_full"%(threshold) )
+def deeper_meaning_dna_and_z( data, threshold = 0.01, ridges = [0.00001, 0.001,0.1,10.0,1000.0] ):
+  save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_%0.2f_logreg"%(threshold) )
   check_and_mkdir(save_dir) 
   
   dna_auc_dir   = os.path.join( data.save_dir, "dna_auc_latent" )
@@ -2660,12 +2660,13 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
   f=pp.figure( figsize=(24,12) )
   genes = z_scores.sort_values().index.values #dna_names[:nbr_genes]
   #pdb.set_trace()
-  min_p_value = 1e-4
+  min_p_value = 1e-3
   k_idx = 1
   results = []
   for gene in genes:
     p_values = dna_z_p.loc[gene][ dna_z_p.loc[gene] < min_p_value ]
     if len(p_values)==0:
+      print "skipping ",gene
       continue
     
     dna_values = dna[gene].values
@@ -2693,19 +2694,21 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     y_true = dna_values[ids_with_n]
     X = Z[ids_with_n][best_z_names].values
     
-    MCV = GenerativeBinaryClassifierKFold( K = 10 )
-    ridges = [0.0001, 0.001,0.01,0.1,1.0,10.0]
+    #MCV = GenerativeBinaryClassifierKFold( K = 10 )
+    MCV = LogisticBinaryClassifierKFold( K = 10 )
+    
     best_auc = -np.inf
     best_ridge = 0.0
     best_y_est = None
     best_auc_p = -np.inf
     for ridge in ridges:
-      print "for ridge in ridges ",ridge
-      y_est_cv = MCV.fit_and_prob( y_true, X, ridge=ridge, cov_type="shared" )
+     
+      #y_est_cv = MCV.fit_and_prob( y_true, X, ridge=ridge, cov_type="shared" )
+      y_est_cv = MCV.fit_and_prob( y_true, X, C=ridge )
       #if gene == "BRAF":
       #  pdb.set_trace()
       auc_y_est_cv, p_value_y_est_cv = auc_and_pvalue( y_true, y_est_cv )
-      
+      print "for ridge in ridges ",ridge, auc_y_est_cv
       if auc_y_est_cv > best_auc:
         best_auc = auc_y_est_cv
         best_auc_p = p_value_y_est_cv
@@ -2715,8 +2718,10 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01 ):
     y_est_cv = best_y_est
     auc_y_est_cv, p_value_y_est_cv =   best_auc, best_auc_p
        
-    M = GenerativeBinaryClassifier()
-    M.fit( y_true, X, ridge=best_ridge )
+    M=LogisticBinaryClassifier()
+    #M = GenerativeBinaryClassifier()
+    M.fit( y_true, X, C=best_ridge )
+    #M.fit( y_true, X, ridge=best_ridge )
     y_est = M.prob(X)
     auc_y_est, p_value_y_est = auc_and_pvalue( y_true, y_est )
     
@@ -2801,12 +2806,13 @@ if __name__ == "__main__":
   
   #dna_auc_using_latent_space( data, force =True )
   #spearmanr_latent_space_by_inputs(data, force=True)
+  ridges = [0.00001, 0.001,0.1,10.0,1000.0]
   
-  deeper_meaning_dna_and_z( data, threshold=0 )
-  deeper_meaning_dna_and_z( data, threshold=0.01 )
-  deeper_meaning_dna_and_z( data, threshold=0.05 )
-  deeper_meaning_dna_and_z( data, threshold=0.1 )
-  deeper_meaning_dna_and_z( data, threshold=0.5 )
+  deeper_meaning_dna_and_z( data, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  deeper_meaning_dna_and_z( data, threshold=0.01, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  deeper_meaning_dna_and_z( data, threshold=0.05, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  deeper_meaning_dna_and_z( data, threshold=0.1, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  deeper_meaning_dna_and_z( data, threshold=0.5, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
   
   
   #correlation_latent_space_by_inputs(data, force=True)
