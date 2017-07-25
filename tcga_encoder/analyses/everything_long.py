@@ -185,10 +185,12 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
     w_mirna.to_csv( gene_dir +"/w_mirna.csv" )
     w_meth.to_csv( gene_dir +"/w_meth.csv" )
     
+    print "  computing spearmans"
     rho_rna_z = stats.spearmanr( RNA_scale.values[ids_with_n,:], y_est_best )
     rho_mirna_z = stats.spearmanr( miRNA_scale.values[ids_with_n,:],y_est_best)
     rho_meth_z = stats.spearmanr( METH_scale.values[ids_with_n,:], y_est_best)
       
+    print "  organizing"
     #pdb.set_trace()
     rna_z_rho_gene = pd.Series( np.squeeze( rho_rna_z[0][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
     rna_z_p_gene   = pd.Series( np.squeeze( rho_rna_z[1][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
