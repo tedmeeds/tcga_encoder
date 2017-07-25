@@ -2605,8 +2605,8 @@ def describe_latent(data):
   
   #pdb.set_trace()
 
-def deeper_meaning_dna_and_z( data, threshold = 0.01, ridges = [0.00001, 0.001,0.1,10.0,1000.0] ):
-  save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_%0.2f_logreg"%(threshold) )
+def deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold = 0.01, ridges = [0.00001, 0.001,0.1,10.0,1000.0] ):
+  save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_p_tissue_%0.2f_p_spear_%g_logreg"%(threshold,min_p_value) )
   check_and_mkdir(save_dir) 
   
   dna_auc_dir   = os.path.join( data.save_dir, "dna_auc_latent" )
@@ -2660,7 +2660,7 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01, ridges = [0.00001, 0.001,0
   f=pp.figure( figsize=(24,12) )
   genes = z_scores.sort_values().index.values #dna_names[:nbr_genes]
   #pdb.set_trace()
-  min_p_value = 1e-3
+  #min_p_value = 1e-3
   k_idx = 1
   results = []
   for gene in genes:
@@ -2680,6 +2680,10 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01, ridges = [0.00001, 0.001,0
       continue
     
     best_z_names = p_values.sort_values().index.values
+    if len(best_z_names) < 5:
+      best_z_names = dna_z_p.loc[gene].sort_values()[:5].index.values
+    elif len(best_z_names) > 20:
+      best_z_names = best_z_names[:20]
     best_z_rna_z_p = rna_z_p[ best_z_names ]
     best_z_rna_z_rho = rna_z_rho[ best_z_names ]
     print "================"
@@ -2718,15 +2722,15 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01, ridges = [0.00001, 0.001,0
     y_est_cv = best_y_est
     auc_y_est_cv, p_value_y_est_cv =   best_auc, best_auc_p
        
-    M=LogisticBinaryClassifier()
-    #M = GenerativeBinaryClassifier()
-    M.fit( y_true, X, C=best_ridge )
-    #M.fit( y_true, X, ridge=best_ridge )
-    y_est = M.prob(X)
-    auc_y_est, p_value_y_est = auc_and_pvalue( y_true, y_est )
+    # M=LogisticBinaryClassifier()
+    # #M = GenerativeBinaryClassifier()
+    # M.fit( y_true, X, C=best_ridge )
+    # #M.fit( y_true, X, ridge=best_ridge )
+    # y_est = M.prob(X)
+    # auc_y_est, p_value_y_est = auc_and_pvalue( y_true, y_est )
     
     
-    print "learned auc (tr) = %0.3f  p-value: %0.f"%(auc_y_est, p_value_y_est)
+    #print "learned auc (tr) = %0.3f  p-value: %0.f"%(auc_y_est, p_value_y_est)
     print "learned auc (cv) = %0.3f  p-value: %0.f"%(auc_y_est_cv, p_value_y_est_cv)
     print "compare to:"
     other_aucs = []
@@ -2744,7 +2748,7 @@ def deeper_meaning_dna_and_z( data, threshold = 0.01, ridges = [0.00001, 0.001,0
     results.append( [gene, {"tissues":relevant_tissues, "nbr_tissues":nbr_cancer_types,"wildtype":len(wildtype),\
                     "mutations":len(mutations)},list(p_values.sort_values().index.values),\
                     list(best_z_score_rna.sort_values(ascending=False)[:20].index.values),\
-                     ["train", float(auc_y_est), float(p_value_y_est)], \
+                     #["train", float(auc_y_est), float(p_value_y_est)], \
                      ["cv", float(auc_y_est_cv), float(p_value_y_est_cv)],\
                      other_aucs ] )
      
@@ -2808,11 +2812,15 @@ if __name__ == "__main__":
   #spearmanr_latent_space_by_inputs(data, force=True)
   ridges = [0.00001, 0.001,0.1,10.0,1000.0]
   
-  deeper_meaning_dna_and_z( data, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
-  deeper_meaning_dna_and_z( data, threshold=0.01, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
-  deeper_meaning_dna_and_z( data, threshold=0.05, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
-  deeper_meaning_dna_and_z( data, threshold=0.1, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
-  deeper_meaning_dna_and_z( data, threshold=0.5, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  deeper_meaning_dna_and_z( data, min_p_value=1e-2, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  deeper_meaning_dna_and_z( data, min_p_value=1e-4, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  #deeper_meaning_dna_and_z( data, min_p_value=1e-4, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  #deeper_meaning_dna_and_z( data, min_p_value=1e-5, threshold=0, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  #deeper_meaning_dna_and_z( data, threshold=0.01, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  #deeper_meaning_dna_and_z( data, threshold=0.05, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  #deeper_meaning_dna_and_z( data, threshold=0.1, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
+  #deeper_meaning_dna_and_z( data, threshold=0.5, ridges = [0.00001, 0.001,0.1,10.0,1000.0] )
   
   
   #correlation_latent_space_by_inputs(data, force=True)

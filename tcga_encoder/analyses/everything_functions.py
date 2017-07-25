@@ -49,16 +49,22 @@ class LogisticBinaryClassifier(object):
                                                      intercept_scaling=1.0, \
                                                      fit_intercept=fit_intercept, \
                                                      class_weight = class_weight)
-    self.M.fit( X, y )
+    self.mean = X.mean(0)
+    self.std = X.std(0)
+    self.M.fit( self.normalize(X), y )
 
+  def normalize(self,X):
+    return X
+    return (X-self.mean)/self.std
+    
   def predict( self, X ):
-    return self.M.predict(X).astype(int)
+    return self.M.predict(self.normalize(X)).astype(int)
   
   def prob( self, X ):
-    return self.M.predict_proba(X)[:,1]
+    return self.M.predict_proba(self.normalize(X))[:,1]
     
   def log_prob( self, X ):
-    return self.M.predict_log_proba(X)
+    return self.M.predict_log_proba(self.normalize(X))
 
 class GenerativeBinaryClassifierKFold(object):
   def __init__(self, K=5, random_state = None ):
