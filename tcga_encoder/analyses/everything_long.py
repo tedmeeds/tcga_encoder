@@ -106,12 +106,12 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
       y_test = y_true[test_split];   
       
       # find top z by spearmanr p-values
-      rho_dna_z = pearsonr( 2*y_train-1, X_train ) 
-      #rho_dna_z = stats.spearmanr(y_train, X_train )
-      dna_z_rho = np.squeeze(rho_dna_z[0])
-      dna_z_p   = np.squeeze(rho_dna_z[1])
-      #dna_z_rho = np.squeeze(rho_dna_z[0][:1,:][:,1:])
-      #dna_z_p   = np.squeeze(rho_dna_z[1][:1,:][:,1:])
+      #rho_dna_z = pearsonr( 2*y_train-1, X_train ) 
+      rho_dna_z = stats.spearmanr(y_train, X_train )
+      #dna_z_rho = np.squeeze(rho_dna_z[0])
+      #dna_z_p   = np.squeeze(rho_dna_z[1])
+      dna_z_rho = np.squeeze(rho_dna_z[0][:1,:][:,1:])
+      dna_z_p   = np.squeeze(rho_dna_z[1][:1,:][:,1:])
       
       #ok_dna_z_p = pp.find( dna_z_p<min_p_value )
       ok_dna_z_p = pp.find( dna_z_p < min_p_value )
