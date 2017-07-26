@@ -99,9 +99,12 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
     Z_weights = np.zeros( (n_C,K,n_z) )
     Z_counts  = np.zeros( (K,n_z) )
     
-    K_use = min( y_true.sum(),K)
+    K_use = min( int(y_true.sum()),K)
     folds = StratifiedKFold(n_splits=K_use, shuffle = True, random_state=random_state)
     for train_split, test_split in folds.split( X, y_true ):
+      
+      if bad_gene is True:
+        continue 
       y_train = y_true[train_split]; X_train = X[train_split,:]
       y_test = y_true[test_split];   
       
