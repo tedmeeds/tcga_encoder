@@ -100,6 +100,11 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
     Z_counts  = np.zeros( (K,n_z) )
     
     K_use = min( int(y_true.sum()),K)
+    
+    if K_use <K:
+      bad_gene=True
+      print "skiping ",gene
+      continue
     folds = StratifiedKFold(n_splits=K_use, shuffle = True, random_state=random_state)
     for train_split, test_split in folds.split( X, y_true ):
       
@@ -125,8 +130,8 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
         bad_gene = True
         print "SKIPPING ", gene
         continue
-      if len(I)>40:
-        I=I[:40]
+      if len(I)>20:
+        I=I[:20]
       print "  using %d zs"%(len(I))
       #pdb.set_trace()
       c.update(z_names[np.sort(ok_dna_z_p[I])])
