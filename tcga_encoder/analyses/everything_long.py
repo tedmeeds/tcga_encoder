@@ -5,7 +5,7 @@ from tcga_encoder.analyses.survival_functions import *
 import networkx as nx
 #try:
 from networkx.drawing.nx_agraph import graphviz_layout as g_layout
-
+from sklearn.metrics import average_precision_score, precision_recall_curve 
 from scipy.sparse import csr_matrix, coo_matrix
 from scipy.sparse.csgraph import minimum_spanning_tree
 from sklearn.cluster import SpectralClustering
@@ -22,6 +22,8 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.mixture import GaussianMixture
 #except:
 
+def tanh(x):
+  return (1.0-np.exp(-2*x))/(1.0+np.exp(-2*x))
 
 def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 0.01, Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
   save_dir   = os.path.join( data.save_dir, "correct_deeper_meaning_dna_and_z_p_tissue_%0.2f_p_spear_%g_logreg"%(threshold,min_p_value) )
@@ -36,9 +38,12 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
   # dna_z_auc_p   = pd.read_csv( dna_auc_dir + "/dna_z_auc_p.csv", index_col="gene" )
   # dna_z_p = dna_z_auc_p
   #
-  RNA_scale   = 2.0 / (1+np.exp(-data.RNA_scale)) -1   
-  miRNA_scale = 2.0 / (1+np.exp(-data.miRNA_scale))-1 
-  METH_scale  = 2.0 / (1+np.exp(-data.METH_scale ))-1  
+  #RNA_scale   = 2.0 / (1+np.exp(-data.RNA_scale)) -1   
+  #miRNA_scale = 2.0 / (1+np.exp(-data.miRNA_scale))-1 
+  #METH_scale  = 2.0 / (1+np.exp(-data.METH_scale ))-1  
+  RNA_scale   =  tanh(data.RNA_scale)  
+  miRNA_scale = tanh(data.miRNA_scale)
+  METH_scale  = tanh(data.METH_scale )  
   
   n_rna   = data.n_rna
   n_mirna = data.n_mirna
@@ -54,7 +59,16 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
   # meth_z_p   = pd.read_csv( spearmanr_dir + "/meth_z_p.csv", index_col="gene" )
   
   Z           = data.Z
+  X_ALL       = Z.values
+  n = len(X_ALL)
   T           = data.T
+  
+  tissue_names = T.columns
+  n_tissues    = len(tissue_names)
+  tissue2idx = OrderedDict()
+  for tissue,t_idx in zip( tissue_names, range(n_tissues)):
+    tissue2idx[ tissue ] = t_idx
+  
   barcodes    = Z.index.values
   z_names     = data.z_names.values
   n_z         = len(z_names)
@@ -73,21 +87,29 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
   results = []
   random_state=0
   Z_W = []
+  Y_full_best=[]
   performances = []
   results = []
-  for gene in dna_names:
+  tissues_used_all = []
+  bcs_used_all=[]
+  for gene in dna_names[:500]:
     bad_gene = False
     dna_values = dna[gene].values
     ids_with_n, relevant_tissues = ids_with_at_least_p_mutations( dna_values, T, p = threshold )
-    
+    tissues_used = np.zeros( n_tissues, dtype=int)
+    for tissue in relevant_tissues:
+      tissues_used[ tissue2idx[tissue] ] = 1
+      
+    tissue_series = pd.Series( tissues_used, index = tissue_names, name=gene)
     if len(ids_with_n)==0:
       print "skipping ",gene
       continue    
     
     gene_bcs = barcodes[ ids_with_n ]
     
-    
-    
+    bcs_used = np.zeros( n, dtype = bool )
+    bcs_used[ids_with_n] = True
+    bcs_used = pd.Series( bcs_used, index = barcodes, name = gene )
     k = 0
     
     y_true = dna_values[ids_with_n]
@@ -105,13 +127,15 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
       bad_gene=True
       print "skiping ",gene
       continue
+    y_full = np.zeros( (len(X_ALL),n_C) )
     folds = StratifiedKFold(n_splits=K_use, shuffle = True, random_state=random_state)
     for train_split, test_split in folds.split( X, y_true ):
       
       if bad_gene is True:
         continue 
       y_train = y_true[train_split]; X_train = X[train_split,:]
-      y_test = y_true[test_split];   
+      y_test = y_true[test_split]; 
+       
       
       # find top z by spearmanr p-values
       #rho_dna_z = pearsonr( 2*y_train-1, X_train ) 
@@ -138,6 +162,8 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
       #print gene, k, z_names[np.sort(ok_dna_z_p[I])]
       
       z_ids_k = ok_dna_z_p[I]
+      #X_all  = Z_values
+      X_ALL_gene = X_ALL[:,z_ids_k]
       X_train = X[train_split,:][:,z_ids_k]
       X_test = X[test_split,:][:,z_ids_k]
       Z_counts[k,z_ids_k] = 1.0
@@ -146,7 +172,7 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
       for C_idx, C in zip(range(n_C),Cs):
         M.fit( y_train, X_train, C=C )
         y_est[test_split,C_idx] = M.prob(X_test)
-        
+        y_full[:,C_idx] +=  M.prob(X_ALL_gene)
         weights = np.zeros(n_z)
         #pdb.set_trace()
          
@@ -154,33 +180,40 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
       k+=1
     if bad_gene is True:
       continue
+    y_full /= K
     aucs = np.zeros(n_C)
     aucs_p = np.zeros(n_C)
+    mean_precisions = np.zeros(n_C)
     for C_idx, C in zip(range(n_C),Cs):
       auc_y_est, p_value_y_est = auc_and_pvalue( y_true, y_est[:,C_idx] )
+      mean_precisions[C_idx] = average_precision_score(y_true, y_est[:,C_idx])
       aucs[C_idx] = auc_y_est; aucs_p[C_idx] = p_value_y_est
     best_c_idx = np.argmax(aucs)
+    best_mean_precision=mean_precisions[best_c_idx]
     best_c = Cs[best_c_idx]
     y_est_best = y_est[:,best_c_idx]
+    
     best_auc = aucs[best_c_idx]
     best_auc_p = aucs_p[best_c_idx]
     best_Z_weights = Z_weights[best_c_idx]
     
     z_w = pd.Series( best_Z_weights.sum(0) / Z_counts.sum(0), index = z_names, name = gene )
-    
+    y_full_best = pd.Series( y_full[:,best_c_idx], index = barcodes, name = gene )
     
     bad = np.isnan(z_w); z_w[bad]=0
     #pdb.set_trace()
     order_y_est = np.argsort(y_est_best)
     y_est_best_pd = pd.DataFrame( np.vstack((y_true[order_y_est],y_est_best[order_y_est])).T, index = gene_bcs[order_y_est], columns=["true","est"] )
-    performance = pd.Series( [best_auc,best_auc_p], index = ["AUC","p-value"], name = gene )
+    performance = pd.Series( [best_mean_precision,best_auc,best_auc_p, len(y_true), int(np.sum(y_true))], index = ["AUPRC","AUROC","p-value","wildtype","mutations"], name = gene )
     z_w = pd.Series( z_w, index = z_names, name = gene )
     
     performances.append(performance)
     Z_W.append(z_w)
+    Y_full_best.append( y_full_best )
+    tissues_used_all.append(tissue_series)
+    bcs_used_all.append(bcs_used)
     
-    
-    print gene, "AUC/p", best_auc,  best_auc_p, best_c
+    print gene, "AUC/p/pr/c", best_auc,  best_auc_p, best_mean_precision, best_c
     #print gene, "Z", [cj[0] for cj in c.most_common()]
     #print gene, "C", [cj[1] for cj in c.most_common()]
     
@@ -190,82 +223,289 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
     y_est_best_pd.to_csv( gene_dir +"/y_est_best.csv",index_label="barcode" )
     performance.to_csv( gene_dir +"/performance.csv" )
     z_w.to_csv( gene_dir +"/z_w.csv" )
-    
-    w_rna   = pd.Series( np.dot( rna_z_rho, z_w ), index = rna_z_rho.index, name = gene ).sort_values(ascending=False)
-    w_mirna = pd.Series( np.dot( mirna_z_rho, z_w ), index = mirna_z_rho.index, name = gene ).sort_values(ascending=False)
-    w_meth  = pd.Series( np.dot( meth_z_rho, z_w ), index = meth_z_rho.index, name = gene ).sort_values(ascending=False)
-    
-    w_rna.to_csv( gene_dir +"/w_rna.csv" )
-    w_mirna.to_csv( gene_dir +"/w_mirna.csv" )
-    w_meth.to_csv( gene_dir +"/w_meth.csv" )
-    
-    print "  computing spearmans"
-    #rho_rna_z = stats.spearmanr( RNA_scale.values[ids_with_n,:], y_est_best )
-    #rho_mirna_z = stats.spearmanr( miRNA_scale.values[ids_with_n,:],y_est_best)
-    #rho_meth_z = stats.spearmanr( METH_scale.values[ids_with_n,:], y_est_best)
-    
-    rho_rna_z = pearsonr( RNA_scale.values[ids_with_n,:], y_est_best )
-    rho_mirna_z = pearsonr( miRNA_scale.values[ids_with_n,:],y_est_best)
-    rho_meth_z = pearsonr( METH_scale.values[ids_with_n,:], y_est_best)
-      
-    print "  organizing"
-    #pdb.set_trace()
-    # rna_z_rho_gene = pd.Series( np.squeeze( rho_rna_z[0][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
-    # rna_z_p_gene   = pd.Series( np.squeeze( rho_rna_z[1][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
+    tissue_series.to_csv( gene_dir + "/tissue_series.csv")
+    bcs_used.to_csv( gene_dir +"/bcs_used.csv")
+    # w_rna   = pd.Series( np.dot( rna_z_rho, z_w ), index = rna_z_rho.index, name = gene ).sort_values(ascending=False)
+    # w_mirna = pd.Series( np.dot( mirna_z_rho, z_w ), index = mirna_z_rho.index, name = gene ).sort_values(ascending=False)
+    # w_meth  = pd.Series( np.dot( meth_z_rho, z_w ), index = meth_z_rho.index, name = gene ).sort_values(ascending=False)
     #
-    # mirna_z_rho_gene = pd.Series( np.squeeze( rho_mirna_z[0][:n_mirna,:][:,n_mirna:] ), index = data.mirna_names, name = gene)
-    # mirna_z_p_gene   = pd.Series( np.squeeze( rho_mirna_z[1][:n_mirna,:][:,n_mirna:] ), index = data.mirna_names, name = gene)
+    # w_rna.to_csv( gene_dir +"/w_rna.csv" )
+    # w_mirna.to_csv( gene_dir +"/w_mirna.csv" )
+    # w_meth.to_csv( gene_dir +"/w_meth.csv" )
     #
-    # meth_z_rho_gene = pd.Series( np.squeeze( rho_meth_z[0][:n_meth,:][:,n_meth:] ), index = data.meth_names, name = gene)
-    # meth_z_p_gene   = pd.Series( np.squeeze( rho_meth_z[1][:n_meth,:][:,n_meth:] ), index = data.meth_names, name = gene)
-
-    rna_z_rho_gene = pd.Series( np.squeeze( rho_rna_z[0] ), index = data.rna_names, name = gene)
-    rna_z_p_gene   = pd.Series( np.squeeze( rho_rna_z[1] ), index = data.rna_names, name = gene)
+    # print "  computing spearmans"
+    # #rho_rna_z = stats.spearmanr( RNA_scale.values[ids_with_n,:], y_est_best )
+    # #rho_mirna_z = stats.spearmanr( miRNA_scale.values[ids_with_n,:],y_est_best)
+    # #rho_meth_z = stats.spearmanr( METH_scale.values[ids_with_n,:], y_est_best)
+    #
+    # #rho_rna_z = pearsonr( RNA_scale.values[ids_with_n,:], y_est_best )
+    # #rho_mirna_z = pearsonr( miRNA_scale.values[ids_with_n,:],y_est_best)
+    # #rho_meth_z = pearsonr( METH_scale.values[ids_with_n,:], y_est_best)
+    #
+    # print "  organizing"
+    # #pdb.set_trace()
+    # # rna_z_rho_gene = pd.Series( np.squeeze( rho_rna_z[0][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
+    # # rna_z_p_gene   = pd.Series( np.squeeze( rho_rna_z[1][:n_rna,:][:,n_rna:] ), index = data.rna_names, name = gene)
+    # #
+    # # mirna_z_rho_gene = pd.Series( np.squeeze( rho_mirna_z[0][:n_mirna,:][:,n_mirna:] ), index = data.mirna_names, name = gene)
+    # # mirna_z_p_gene   = pd.Series( np.squeeze( rho_mirna_z[1][:n_mirna,:][:,n_mirna:] ), index = data.mirna_names, name = gene)
+    # #
+    # # meth_z_rho_gene = pd.Series( np.squeeze( rho_meth_z[0][:n_meth,:][:,n_meth:] ), index = data.meth_names, name = gene)
+    # # meth_z_p_gene   = pd.Series( np.squeeze( rho_meth_z[1][:n_meth,:][:,n_meth:] ), index = data.meth_names, name = gene)
+    #
+    # rna_z_rho_gene = pd.Series( np.squeeze( rho_rna_z[0] ), index = data.rna_names, name = gene)
+    # rna_z_p_gene   = pd.Series( np.squeeze( rho_rna_z[1] ), index = data.rna_names, name = gene)
+    #
+    # mirna_z_rho_gene = pd.Series( np.squeeze( rho_mirna_z[0] ), index = data.mirna_names, name = gene)
+    # mirna_z_p_gene   = pd.Series( np.squeeze( rho_mirna_z[1] ), index = data.mirna_names, name = gene)
+    #
+    # meth_z_rho_gene = pd.Series( np.squeeze( rho_meth_z[0] ), index = data.meth_names, name = gene)
+    # meth_z_p_gene   = pd.Series( np.squeeze( rho_meth_z[1] ), index = data.meth_names, name = gene)
+    #
+    #
+    # rna_z_p_gene = rna_z_p_gene.sort_values()
+    # mirna_z_p_gene = mirna_z_p_gene.sort_values()
+    # meth_z_p_gene = meth_z_p_gene.sort_values()
+    #
+    # rna_z_rho_gene   = rna_z_rho_gene.loc[ rna_z_p_gene.index ]
+    # mirna_z_rho_gene = mirna_z_rho_gene.loc[ mirna_z_p_gene.index ]
+    # meth_z_rho_gene  = meth_z_rho_gene.loc[ meth_z_p_gene.index ]
+    #
+    # rna_z_rho_gene.to_csv( gene_dir +"/y_rna_rho.csv" )
+    # mirna_z_rho_gene.to_csv( gene_dir +"/y_mirna_rho.csv" )
+    # meth_z_rho_gene.to_csv( gene_dir +"/y_meth_rho.csv" )
+    # rna_z_p_gene.to_csv( gene_dir +"/y_rna_p.csv" )
+    # mirna_z_p_gene.to_csv( gene_dir +"/y_mirna_p.csv" )
+    # meth_z_p_gene.to_csv( gene_dir +"/y_meth_p.csv" )
+    #
+    # results.append( {"a_dna":gene,"cv": [float(best_auc),  float(best_auc_p), float(best_mean_precision)],\
+    #                 "c_wildtype":len(y_true),  "c_mutations":int(np.sum(y_true)),\
+    #                 "tissues":relevant_tissues,\
+    #                 "rna_y":list(rna_z_p_gene[:20].index.values) ,\
+    #                 "rna_z":list( np.abs(w_rna).sort_values(ascending=False).index.values[:20]),\
+    #                 "mirna_y":list(mirna_z_p_gene[:20].index.values) ,\
+    #                 "mirna_z":list( np.abs(w_mirna).sort_values(ascending=False).index.values[:20]),\
+    #                 "meth_y":list(meth_z_p_gene[:20].index.values) ,\
+    #                 "meth_z":list( np.abs(w_meth).sort_values(ascending=False).index.values[:20]),\
+    #                 "top_z":list(np.abs(z_w).sort_values(ascending=False).index.values[:20]) } )
+    # #pdb.set_trace()
   
-    mirna_z_rho_gene = pd.Series( np.squeeze( rho_mirna_z[0] ), index = data.mirna_names, name = gene)
-    mirna_z_p_gene   = pd.Series( np.squeeze( rho_mirna_z[1] ), index = data.mirna_names, name = gene)
-   
-    meth_z_rho_gene = pd.Series( np.squeeze( rho_meth_z[0] ), index = data.meth_names, name = gene)
-    meth_z_p_gene   = pd.Series( np.squeeze( rho_meth_z[1] ), index = data.meth_names, name = gene)
+  print "FINALIZING"
+  
+  Y_full_best_concat  = pd.concat( Y_full_best, axis = 1 ) 
+  Z_W_concat          = pd.concat( Z_W, axis=1 )
+  performances_concat = pd.concat( performances, axis=1 )
+  tissues_used_all    = pd.concat( tissues_used_all, axis = 1 )
+  bcs_used_all        = pd.concat(bcs_used_all, axis=1)
+  
+  order_ = performances_concat.loc["AUROC"].sort_values(ascending=False).index.values
+  
+  bcs_used_all = bcs_used_all[order_]
+  tissues_used_all=tissues_used_all[order_]
+  Y_full_best_concat = Y_full_best_concat[order_]
+  Z_W_concat = Z_W_concat[order_]
+  performances_concat = performances_concat[order_]
+  
+  bcs_used_all.to_csv( save_dir +"/barcodes.csv", index_label="barcode" )
+  tissues_used_all.to_csv( save_dir +"/tissues.csv", index_label="tissue")
+  Y_full_best_concat.to_csv( save_dir +"/Y_full_best.csv", index_label="barcode")
+  Z_W_concat.to_csv( save_dir +"/z_w.csv",index_label="z" )
+  performances_concat.to_csv( save_dir +"/performances.csv",index_label="measure" )
+  
+  print "spearman with inputs"
+  print "computing RNA-Z spearman rho's"
+  rho_rna_y = stats.spearmanr( RNA_scale.values, Y_full_best_concat.values )
+  #pdb.set_trace()
+  print "computing miRNA-Z spearman rho's"
+  rho_mirna_y = stats.spearmanr( miRNA_scale.values, Y_full_best_concat.values )
+  print "computing METH-Z spearman rho's"
+  rho_meth_y  = stats.spearmanr( METH_scale.values, Y_full_best_concat.values )
+  print "computing DNA-Z spearman rho's"
+  rho_dna_y   = stats.spearmanr(2*dna.values-1, Y_full_best_concat.values )
 
+  rna_y_rho = pd.DataFrame( rho_rna_y[0][:n_rna,:][:,n_rna:], index = data.rna_names, columns= Y_full_best_concat.columns )
+  rna_y_p   = pd.DataFrame( rho_rna_y[1][:n_rna,:][:,n_rna:], index = data.rna_names, columns=Y_full_best_concat.columns)
+
+  mirna_y_rho = pd.DataFrame( rho_mirna_y[0][:n_mirna,:][:,n_mirna:], index = data.mirna_names, columns=Y_full_best_concat.columns)
+  mirna_y_p   = pd.DataFrame( rho_mirna_y[1][:n_mirna,:][:,n_mirna:], index = data.mirna_names, columns=Y_full_best_concat.columns)
+ 
+  meth_y_rho = pd.DataFrame( rho_meth_y[0][:n_meth,:][:,n_meth:], index = data.meth_names, columns=Y_full_best_concat.columns)
+  meth_y_p   = pd.DataFrame( rho_meth_y[1][:n_meth,:][:,n_meth:], index = data.meth_names, columns=Y_full_best_concat.columns)
+
+  #dna_y_rho = pd.DataFrame( rho_dna_y[0][:n_dna,:][:,n_dna:], index = data.dna_names, columns=Y_full_best_concat.columns)
+  #dna_y_p   = pd.DataFrame( rho_dna_y[1][:n_dna,:][:,n_dna:], index = data.dna_names, columns=Y_full_best_concat.columns)
+
+  
+  rna_y_rho.to_csv( save_dir + "/rna_y_rho.csv", index_label="gene" )
+  rna_y_p.to_csv( save_dir + "/rna_y_p.csv", index_label="gene" )
+  
+  mirna_y_rho.to_csv( save_dir + "/mirna_y_rho.csv", index_label="gene" )
+  mirna_y_p.to_csv( save_dir + "/mirna_y_p.csv", index_label="gene" )
+  
+  meth_y_rho.to_csv( save_dir + "/meth_y_rho.csv", index_label="gene" )
+  meth_y_p.to_csv( save_dir + "/meth_y_p.csv", index_label="gene" )
+  
+  nbr_genes_to_keep=20
+  nbr_z_to_keep = 20
+  results = []
+  for gene in order_:
+    gene_dir =  os.path.join( save_dir, "%s"%(gene) )
+    print "finalizing ",gene
+    dna_gene     = dna[gene]
+    performance    = performances_concat[ gene ]
+    tissues_used   = tissues_used_all[gene][tissues_used_all[gene]==1].index.values
+    y_est_full     = Y_full_best_concat[gene] #.sort_values()
+    z_w            = np.abs(Z_W_concat[gene]).sort_values(ascending=False)[:nbr_z_to_keep]
+    bcs            = bcs_used_all[gene][bcs_used_all[gene]].index.values
     
-    rna_z_p_gene = rna_z_p_gene.sort_values()
-    mirna_z_p_gene = mirna_z_p_gene.sort_values()
-    meth_z_p_gene = meth_z_p_gene.sort_values()
+    rna_y_p_gene   = rna_y_p[gene].sort_values()[:nbr_genes_to_keep]
+    mirna_y_p_gene = mirna_y_p[gene].sort_values()[:nbr_genes_to_keep]
+    meth_y_p_gene  = meth_y_p[gene].sort_values()[:nbr_genes_to_keep]
     
-    rna_z_rho_gene   = rna_z_rho_gene.loc[ rna_z_p_gene.index ]
-    mirna_z_rho_gene = mirna_z_rho_gene.loc[ mirna_z_p_gene.index ]
-    meth_z_rho_gene  = meth_z_rho_gene.loc[ meth_z_p_gene.index ]
     
-    rna_z_rho_gene.to_csv( gene_dir +"/y_rna_rho.csv" )
-    mirna_z_rho_gene.to_csv( gene_dir +"/y_mirna_rho.csv" )
-    meth_z_rho_gene.to_csv( gene_dir +"/y_meth_rho.csv" )
-    rna_z_p_gene.to_csv( gene_dir +"/y_rna_p.csv" )
-    mirna_z_p_gene.to_csv( gene_dir +"/y_mirna_p.csv" )
-    meth_z_p_gene.to_csv( gene_dir +"/y_meth_p.csv" )
+    rna_y_rho_gene   = rna_y_rho[gene].loc[rna_y_p_gene.index]
+    mirna_y_rho_gene = mirna_y_rho[gene].loc[mirna_y_p_gene.index]
+    meth_y_rho_gene  = meth_y_rho[gene].loc[meth_y_p_gene.index]
     
-    results.append( {"a_dna":gene,"cv": [float(best_auc),  float(best_auc_p)],\
-                    "c_wildtype":len(y_true),  "c_mutations":int(np.sum(y_true)),\
-                    "tissues":relevant_tissues,\
-                    "rna_y":list(rna_z_p_gene[:20].index.values) ,\
-                    "rna_z":list( np.abs(w_rna).sort_values(ascending=False).index.values[:20]),\
-                    "mirna_y":list(mirna_z_p_gene[:20].index.values) ,\
-                    "mirna_z":list( np.abs(w_mirna).sort_values(ascending=False).index.values[:20]),\
-                    "meth_y":list(meth_z_p_gene[:20].index.values) ,\
-                    "meth_z":list( np.abs(w_meth).sort_values(ascending=False).index.values[:20]),\
-                    "top_z":list(np.abs(z_w).sort_values(ascending=False).index.values[:20]) } )
+    plot_roc( gene_dir, gene, y_est_full.loc[bcs], dna_gene.loc[bcs], T.loc[bcs], performance.loc["AUROC"] )
+    plot_pr( gene_dir, gene, y_est_full.loc[bcs], dna_gene.loc[bcs], T.loc[bcs], performance.loc["AUPRC"] )
+    plot_predictions( gene_dir, gene, y_est_full.loc[bcs], dna_gene.loc[bcs], T.loc[bcs], performance.loc["AUROC"], performance.loc["AUPRC"] )
+    
+    plot_heatmap( gene_dir, gene, Z[z_w.index.values].loc[bcs], y_est_full.loc[bcs], z_w, "Z", normalize=True )
+    plot_heatmap( gene_dir, gene, RNA_scale[rna_y_p_gene.index.values].loc[bcs], y_est_full.loc[bcs], rna_y_rho_gene, "RNA", normalize=True )
+    plot_heatmap( gene_dir, gene, miRNA_scale[mirna_y_p_gene.index.values].loc[bcs], y_est_full.loc[bcs], mirna_y_rho_gene, "miRNA", normalize=True )
+    plot_heatmap( gene_dir, gene, METH_scale[meth_y_p_gene.index.values].loc[bcs], y_est_full.loc[bcs], meth_y_rho_gene, "METH", normalize=True )
+    plot_heatmap( gene_dir, gene, T.loc[bcs], y_est_full.loc[bcs], None, "TISSUE" )
     #pdb.set_trace()
-   
-  Z_W_concat = pd.concat( Z_W, axis=1 ).T
-  performances_concat = pd.concat( performances, axis=1 ).T 
+
+def plot_heatmap( gene_dir, gene, X, y_est, X_score, name, size1=12, size2=4, ax=None, save=True, normalize=False ):
+  if ax is None:
+    f=pp.figure( figsize=(size1,size2))
+    ax=f.add_subplot(111)
+    
+  d1,d2 = X.values.shape
+  sorted_y_est = y_est.sort_values()
   
-  order_ = performances_concat["AUC"].sort_values(ascending=False).index.values
+  if X_score is not None:
+    s = np.sign( X_score.values )
   
-  Z_W_concat.loc[order_].to_csv( save_dir +"/z_w.csv",index_label="gene" )
-  performances_concat.loc[order_].to_csv( save_dir +"/performances.csv",index_label="gene" )
-  fptr = open( save_dir + "/pan_cancer_dna.yaml","w+" )
-  fptr.write( yaml.dump(results))
-  fptr.close()
+  
+    X_sorted = X.loc[ sorted_y_est.index ] * s
+  else:
+    X_sorted = X.loc[ sorted_y_est.index ]
+  
+  V = X_sorted.values.T
+  if normalize is True:
+    V -= V.mean(1)[:,np.newaxis]
+    V /= V.std(1)[:,np.newaxis]
+    
+    
+  r = size1/size2
+
+  ax.imshow( V, cmap='rainbow', interpolation='nearest', aspect=float(d1)/(d2*r) )
+  ax.set_yticks( np.arange(V.shape[0]))
+  ax.set_yticklabels( X.columns )
+  pp.grid('off')
+  if save is True:
+    pp.savefig( gene_dir + "/heatmap_%s.png"%(name), fmt='png')
+    
+  return ax
+
+
+  
+  
+def plot_predictions( gene_dir, gene, y_est, y_true, tissues, auc, mean_precision, size1=12, size2=4, ax=None, save=True ):
+  if ax is None:
+    f=pp.figure( figsize=(size1,size2))
+    ax=f.add_subplot(111)
+    
+  
+  sorted_y_est = y_est.sort_values()
+  sorted_y_true = y_true.loc[ sorted_y_est.index ]
+  
+  #ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+  ax.vlines( pp.find(sorted_y_true.values), 0, 1, color='blue', lw=0.25, alpha=0.25, label="mutations" )
+  ax.plot( sorted_y_est.values, 'r-', lw=2, label='Pr(mutation) (AUC = %0.2f, mean Precision = %0.2f)' % (auc,mean_precision) )
+  #ax.plot( sorted_y_true.values, 'b|', ms=5, mew=0.5, alpha=0.5,  label='Mutations' )
+  #ax.set_xlim([0.0, 1.0])
+  ax.set_ylim([0.0, 1.0])
+  ax.set_xlim([0,len(sorted_y_true)])
+  ax.set_ylabel('Pr(mutation)')
+  ax.set_xlabel('')
+  ax.set_title('%s'%(gene))
+  ax.legend(loc="lower right")
+  pp.grid('off')
+  if save is True:
+    pp.savefig( gene_dir + "/predictions.png", fmt='png', dpi=300, bbox_inches='tight')
+    
+  return ax
+     
+    
+def plot_roc( gene_dir, gene, y_est, y_true, tissues, auc, ax=None, save=True ):
+  fpr, tpr, _ = roc_curve(y_true, y_est )
+  
+  if ax is None:
+    f=pp.figure()
+    ax=f.add_subplot(111)
+    
+  
+  ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+  ax.plot( fpr, tpr, 'r-', lw=2, label='ROC curve (area = %0.2f)' % auc )
+  ax.set_xlim([0.0, 1.0])
+  ax.set_ylim([0.0, 1.05])
+  ax.set_xlabel('False Positive Rate')
+  ax.set_ylabel('True Positive Rate')
+  ax.set_title('%s'%(gene))
+  ax.legend(loc="lower right")
+  pp.grid('off')
+  if save is True:
+    pp.savefig( gene_dir + "/roc.png", fmt='png', dpi=300)
+    
+  return ax
+
+def plot_pr( gene_dir, gene, y_est, y_true, tissues, mean_precision, ax=None, save=True ):
+  precision, recall, _ = precision_recall_curve(y_true, y_est )
+  
+  if ax is None:
+    f=pp.figure()
+    ax=f.add_subplot(111)
+    
+  
+  ax.plot([0, 1], [mean_precision, mean_precision], color='navy', lw=1, linestyle='--')
+  ax.plot( recall, precision, 'r-', lw=2, label='PR curve (mean = %0.2f)' % mean_precision )
+  ax.set_xlim([0.0, 1.0])
+  ax.set_ylim([0.0, 1.05])
+  ax.set_xlabel('Recall')
+  ax.set_ylabel('Precision')
+  ax.set_title('%s'%(gene))
+  ax.legend(loc="lower right")
+  
+  if save is True:
+    pp.savefig( gene_dir + "/precision_recall.png", fmt='png', dpi=300, bbox_inches='tight')
+    
+  return ax
+    
+    # check_and_mkdir(gene_dir)
+    #
+    # print performances_concat[ gene ]
+    #
+    # results.append( {"a_dna":gene,"cv": [float(best_auc),  float(best_auc_p), float(best_mean_precision)],\
+    #                 "c_wildtype":len(y_true),  "c_mutations":int(np.sum(y_true)),\
+    #                 "tissues":relevant_tissues,\
+    #                 "rna_y":list(rna_z_p_gene[:20].index.values) ,\
+    #                 "rna_z":list( np.abs(w_rna).sort_values(ascending=False).index.values[:20]),\
+    #                 "mirna_y":list(mirna_z_p_gene[:20].index.values) ,\
+    #                 "mirna_z":list( np.abs(w_mirna).sort_values(ascending=False).index.values[:20]),\
+    #                 "meth_y":list(meth_z_p_gene[:20].index.values) ,\
+    #                 "meth_z":list( np.abs(w_meth).sort_values(ascending=False).index.values[:20]),\
+    #                 "top_z":list(np.abs(z_w).sort_values(ascending=False).index.values[:20]) } )
+    
+  #dna_y_rho.to_csv( save_dir + "/dna_y_rho.csv", index_label="gene" )
+  #dna_y_p.to_csv( save_dir + "/dna_y_p.csv", index_label="gene" )
+  
+  # fptr = open( save_dir + "/pan_cancer_dna.yaml","w+" )
+  # fptr.write( yaml.dump(results))
+  # fptr.close()
   #pdb.set_trace()
   #
   #
