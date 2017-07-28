@@ -406,6 +406,9 @@ def tissue_level_performance( ids, y_true, y_est, relevant_tissues, tissues ):
     
     mutations = int(np.sum(y_true_tissue))
     wildtype  = len(tissue_ids)-mutations
+    if mutations==0 or wildtype==0:
+      print "skipping ",tissue
+      continue
     #pdb.set_trace()
     auc_y_est, p_value_y_est = auc_and_pvalue(y_true_tissue, y_est_tissue )
     mean_precision = average_precision_score(y_true_tissue, y_est_tissue )
