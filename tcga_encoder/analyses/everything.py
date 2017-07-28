@@ -2799,7 +2799,10 @@ if __name__ == "__main__":
   ridges = [0.00001, 0.001,1.0]
   
   #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )  
-  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.00, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
 
   #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0.00, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )

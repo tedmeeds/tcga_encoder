@@ -4,6 +4,7 @@ from tcga_encoder.data.data import *
 from tcga_encoder.analyses.dna_functions import *
 from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import average_precision_score, precision_recall_curve 
 
 def pearsonr( X, Y ):
   XN = X / np.sqrt(np.sum( X*X,0))
@@ -384,6 +385,118 @@ def ids_with_at_least_p_mutations( dna, tissue, p = 1 ):
       ok_ids[ ids ] = True
       relevant_tissues.append(tissue_name)
   return ok_ids,relevant_tissues
+  
+def tissue_level_performance( ids, y_true, y_est, relevant_tissues, tissues ):
+  performances = [] 
+  
+  mutations = int(np.sum(y_true[ids]))
+  wildtype  = len(y_est[ids])-mutations
+  #pdb.set_trace()
+  auc_y_est, p_value_y_est = auc_and_pvalue(y_true[ids], y_est[ids] )
+  mean_precision = average_precision_score(y_true[ids], y_est[ids] )
+  performances.append( pd.Series( [mean_precision,auc_y_est,p_value_y_est,wildtype,mutations],index = ["AUPRC","AUROC","p-value","wildtype","mutations"], name = "PAN" ) )
+  
+  for tissue in relevant_tissues:
+    tissue_query = tissues[tissue]==1
+    tissue_ids   = pp.find(tissue_query) #ids_with_n[ tissue_query ]
+    #tissue_bcs   = gene_bcs[ tissue_query ]
+    
+    y_true_tissue = y_true[tissue_ids]
+    y_est_tissue  = y_est[tissue_ids]
+    
+    mutations = int(np.sum(y_true_tissue))
+    wildtype  = len(tissue_ids)-mutations
+    #pdb.set_trace()
+    auc_y_est, p_value_y_est = auc_and_pvalue(y_true_tissue, y_est_tissue )
+    mean_precision = average_precision_score(y_true_tissue, y_est_tissue )
+    
+    performances.append( pd.Series( [mean_precision,auc_y_est,p_value_y_est,wildtype,mutations],index = ["AUPRC","AUROC","p-value","wildtype","mutations"], name = tissue ) )
+  
+  performances = pd.concat(performances, axis=1).T
+  #pdb.set_trace()
+  print performances
+  return performances  
+    
+def plot_pr_tissues( gene_dir, gene, bcs, y_est_full, y_true_full, relevant_tissues, tissues, performance, ax=None, save=True ):   
+  if ax is None:
+    f=pp.figure()
+    ax=f.add_subplot(111)
+  
+  best_tissues = performance["AUPRC"].sort_values().index.values
+  for tissue in best_tissues:
+    if tissue == "PAN":
+      continue
+    tissue_bcs = tissues[ tissues[tissue]==1 ].index.values
+    
+    y_est  = y_est_full.loc[tissue_bcs]
+    y_true = y_true_full.loc[tissue_bcs]
+    
+    precision, recall, _ = precision_recall_curve(y_true.values, y_est.values )
+    
+    ax.plot( recall, precision, '-', lw=1, label='%s %0.2f' % (tissue,performance.loc[tissue]["AUPRC"]) )
+
+  y_est  = y_est_full.loc[bcs]
+  y_true = y_true_full.loc[bcs]
+    
+  precision, recall, _ = precision_recall_curve(y_true.values, y_est.values )
+    
+  ax.plot( recall, precision, 'k-', lw=4, label = 'PAN %0.2f'%(performance.loc["PAN"]["AUPRC"]) )
+  
+  #ax.plot([0, 1], [mean_precision, mean_precision], color='navy', lw=1, linestyle='--')
+  #ax.plot( recall, precision, 'r-', lw=2, label='PR curve (mean = %0.2f)' % mean_precision )
+  ax.set_xlim([0.0, 1.0])
+  ax.set_ylim([0.0, 1.05])
+  ax.set_xlabel('Recall')
+  ax.set_ylabel('Precision')
+  ax.set_title('%s'%(gene))
+  ax.legend(loc="lower right")
+  
+  if save is True:
+    pp.savefig( gene_dir + "/precision_recall_tissues.png", fmt='png', dpi=300, bbox_inches='tight')
+    
+  return ax
+
+def plot_roc_tissues( gene_dir, gene, bcs, y_est_full, y_true_full, relevant_tissues, tissues, performance, ax=None, save=True ):   
+  if ax is None:
+    f=pp.figure()
+    ax=f.add_subplot(111)
+  
+  
+  best_tissues = performance["AUROC"].sort_values().index.values
+  for tissue in best_tissues:
+    if tissue == "PAN":
+      continue
+    tissue_bcs = tissues[ tissues[tissue]==1 ].index.values
+    
+    y_est  = y_est_full.loc[tissue_bcs]
+    y_true = y_true_full.loc[tissue_bcs]
+    
+    #precision, recall, _ = precision_recall_curve(y_true.values, y_est.values )
+    fpr, tpr, _ = roc_curve(y_true.values, y_est.values )
+    ax.plot( fpr, tpr, '-', lw=1, label='%s %0.2f' % (tissue,performance.loc[tissue]["AUROC"]) )
+
+  y_est  = y_est_full.loc[bcs]
+  y_true = y_true_full.loc[bcs]
+  fpr, tpr, _ = roc_curve(y_true.values, y_est.values )
+  #precision, recall, _ = precision_recall_curve(y_true.values, y_est.values )
+    
+  ax.plot( fpr, tpr, 'k-', lw=4, label='PAN %0.2f'%(performance.loc["PAN"]["AUROC"]) )
+  
+  #ax.plot([0, 1], [mean_precision, mean_precision], color='navy', lw=1, linestyle='--')
+  #ax.plot( recall, precision, 'r-', lw=2, label='PR curve (mean = %0.2f)' % mean_precision )
+  ax.set_xlim([0.0, 1.0])
+  ax.set_ylim([0.0, 1.05])
+  ax.set_xlabel('FPR')
+  ax.set_ylabel('TPR')
+  ax.set_title('%s'%(gene))
+  ax.legend(loc="lower right")
+  
+  if save is True:
+    pp.savefig( gene_dir + "/roc_tissues.png", fmt='png', dpi=300, bbox_inches='tight')
+    
+  return ax
+  
+ 
 #
 # def auc_standard_error( theta, nA, nN ):
 #   # from: Hanley and McNeil (1982), The Meaning and Use of the Area under the ROC Curve
