@@ -2800,7 +2800,7 @@ if __name__ == "__main__":
   
   data = load_data_and_fill( data_location, results_location )
   
-  dna_auc_using_latent_space( data, force =True )
+  #dna_auc_using_latent_space( data, force =True )
   spearmanr_latent_space_by_inputs(data, force=True)
   ridges = [0.00001, 0.001,1.0]
   
