@@ -44,6 +44,7 @@ def load_data_and_fill( data_location, results_location ):
   
   H = load_hidden( fill_store, model_barcodes )
   
+  RNA_fair, miRNA_fair, METH_fair    = load_fair_data( data_store, model_barcodes )
   RNA_scale, miRNA_scale, METH_scale = load_scaled_data( fill_store, model_barcodes )
   
   rna_names = RNA_scale.columns
@@ -83,7 +84,12 @@ def load_data_and_fill( data_location, results_location ):
   data.dna            = data.data_store["/DNA/channel/0"].loc[data.Z.index].fillna(0)
   data.RNA_scale      = RNA_scale
   data.miRNA_scale    = miRNA_scale
-  data.METH_scale     = METH_scale
+  data.METH_scale     = METH_scale  
+  
+  data.RNA_fair      = RNA_fair
+  data.miRNA_fair    = miRNA_fair
+  data.METH_fair     = METH_fair
+
   data.rna_names      = rna_names
   data.mirna_names    = mirna_names
   data.meth_names     = meth_names
@@ -2799,10 +2805,11 @@ if __name__ == "__main__":
   ridges = [0.00001, 0.001,1.0]
   
   #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )  
-  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.00, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  deeper_meaning_dna_and_rna_fair_correct( data, K=10, min_p_value=1.0, threshold=0.00, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.00, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
 
   #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0.00, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )

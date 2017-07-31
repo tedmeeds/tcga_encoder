@@ -217,6 +217,14 @@ def load_scaled_data( fill_store, barcodes ):
   
   return RNA_scale, miRNA_scale, METH_scale
 
+def load_fair_data( data_store, barcodes ):
+
+  RNA_fair = data_store["/RNA/FAIR"].loc[barcodes]
+  miRNA_fair = data_store["/miRNA/FAIR"].loc[barcodes]
+  METH_fair = data_store["/METH/FAIR"].loc[barcodes]
+  
+  return RNA_fair, miRNA_fair, METH_fair
+
 
 def load_subtypes( data_store ):
   sub_bcs = np.array([ x+"_"+y for x,y in np.array(data_store["/CLINICAL/data"]["patient.stage_event.pathologic_stage"].index.tolist(),dtype=str)] )
