@@ -50,7 +50,7 @@ if __name__ == "__main__":
   print   performance_2
   print common_genes
   
-  for gene in ["TP53"]: #common_genes:
+  for gene in common_genes:
     gene_dir1 = os.path.join( dir_1, gene )
     gene_dir2 = os.path.join( dir_2, gene )
     
@@ -106,4 +106,5 @@ if __name__ == "__main__":
     f.savefig( gene_dir2 + "/comparison.png", fmt='png', dpi=300)
     print perf1, perf2
     
-  pp.show()
+    #pp.show()
+    pp.close('all')
