@@ -93,7 +93,7 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
   tissues_used_all = []
   bcs_used_all=[]
   tissue_performances = {}
-  for gene in dna_names[:5]:
+  for gene in dna_names[:10]:
     bad_gene = False
     dna_values = dna[gene].values
     ids_with_n, relevant_tissues = ids_with_at_least_p_mutations( dna_values, T, p = threshold )
@@ -390,7 +390,7 @@ def deeper_meaning_dna_and_rna_fair_correct( data, K=10, min_p_value=1e-3, thres
   tissues_used_all = []
   bcs_used_all=[]
   tissue_performances = {}
-  for gene in dna_names[:5]:
+  for gene in dna_names[:10]:
     bad_gene = False
     dna_values = dna[gene].values
     ids_with_n, relevant_tissues = ids_with_at_least_p_mutations( dna_values, T, p = threshold )
