@@ -35,9 +35,9 @@ if __name__ == "__main__":
   name2 = "Z"
   dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.00_p_spear_1_logreg"
   dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.00_p_spear_1_logreg"
-  
-  #dir_1_short = "results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.00_p_spear_1_logreg"
-  #dir_2_short = "results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.00_p_spear_1_logreg"
+  #
+  #dir_1_short = "results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.05_p_spear_1_logreg"
+  #dir_2_short = "results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.05_p_spear_1_logreg"
   
   dir_1 = os.path.join( HOME_DIR, dir_1_short )
   dir_2 = os.path.join( HOME_DIR, dir_2_short )
@@ -49,6 +49,10 @@ if __name__ == "__main__":
   print   performance_1
   print   performance_2
   print common_genes
+  
+  weights = []
+  weighted_aucs = []
+  weighted_prcs   = []
   
   for gene in common_genes:
     gene_dir1 = os.path.join( dir_1, gene )
@@ -80,15 +84,34 @@ if __name__ == "__main__":
     ax_auc.plot( [0,1],[0,1], 'k--' )
     ax_prc.plot( [0,1],[0,1], 'k--' )
     
+    w_auc_1 = 0.0; w_auc_2 = 0.0
+    w_prc_1 = 0.0; w_prc_2 = 0.0
+    w_s = 0.0
     for tissue in auc1.index.values[1:]:
-      weight = max(5, 200*float(mutations.loc[tissue]) / float( pan_muts ) )
+      auc1_ = auc1.loc[tissue]; auc2_ = auc2.loc[tissue]
+      prc1_ = pr1.loc[tissue];  prc2_ = pr2.loc[tissue]
+      
+      real_weight = float(mutations.loc[tissue]) / float( pan_muts )
+      weight = max(5, 200*real_weight )
+      
+      w_auc_1+=real_weight*auc1_; w_auc_2+=real_weight*auc2_
+      w_prc_1+=real_weight*prc1_; w_prc_2+=real_weight*prc2_
+      w_s+=real_weight
+      
       #print tissue, weight
-      ax_auc.plot( auc1.loc[tissue], auc2.loc[tissue], 'o', mec='k', mew=1, ms = weight, alpha=0.75, label = tissue )
-      ax_prc.plot( pr1.loc[tissue], pr2.loc[tissue], 'o', mec='k', mew=1, ms = weight, alpha=0.75, label = tissue  )
+      ax_auc.plot( auc1_, auc2_, 'o', mec='k', mew=1, ms = weight, alpha=0.75, label = tissue )
+      ax_prc.plot( prc1_, prc2_, 'o', mec='k', mew=1, ms = weight, alpha=0.75, label = tissue  )
       
       if float(mutations.loc[tissue])  > float(0.05*pan_muts):
-        ax_auc.text( auc1.loc[tissue], auc2.loc[tissue], tissue.upper(), fontsize=6 )
-        ax_prc.text( pr1.loc[tissue], pr2.loc[tissue], tissue.upper(), fontsize=6 )
+        ax_auc.text(  auc1_, auc2_, tissue.upper(), fontsize=6 )
+        ax_prc.text( prc1_, prc2_, tissue.upper(), fontsize=6 )
+    
+    w_auc_1 /= w_s   ; w_auc_2 /= w_s; w_prc_1 /= w_s   ; w_prc_2 /= w_s   
+    
+    weighted_aucs.append( pd.Series( [w_auc_1, w_auc_2], index = [name1, name2], name=gene ) )
+    weighted_prcs.append( pd.Series( [w_prc_1, w_prc_2], index = [name1, name2], name=gene ) ) 
+    weights.append( pan_muts )
+    
     ax_auc.set_xlabel(  name1 ); ax_auc.set_ylabel(  name2 )
     ax_auc.set_title("AUROC")
     #ax_prc.legend(loc='right')
@@ -108,3 +131,54 @@ if __name__ == "__main__":
     
     #pp.show()
     pp.close('all')
+  
+  weighted_aucs = pd.concat( weighted_aucs, axis=1 ).T
+  weighted_prcs = pd.concat( weighted_prcs, axis=1 ).T
+  
+  min_auc = max( min( weighted_aucs[name1].min(), weighted_aucs[name2].min() ) - 0.1*min( weighted_aucs[name1].min(), weighted_aucs[name2].min() ), 0 )
+  min_prc = max( min( weighted_prcs[name1].min(), weighted_prcs[name2].min() ) - 0.1*min( weighted_prcs[name1].min(), weighted_prcs[name2].min() ), 0 )
+  max_auc = min( max( weighted_aucs[name1].max(), weighted_aucs[name2].max() ) + 0.1*max( weighted_aucs[name1].max(), weighted_aucs[name2].max() ), 1 )
+  max_prc = min( max( weighted_prcs[name1].max(), weighted_prcs[name2].max() ) + 0.1*max( weighted_prcs[name1].max(), weighted_prcs[name2].max() ), 1 )
+  
+  
+  f = pp.figure(figsize=(12,6))
+  ax_auc = f.add_subplot( 121 )
+  ax_prc = f.add_subplot( 122 )
+  
+  ax_auc.plot( [0,1],[0,1], 'k--' )
+  ax_prc.plot( [0,1],[0,1], 'k--' )
+  
+  
+  for gene,real_weight in zip(common_genes,weights):
+    gene_dir1 = os.path.join( dir_1, gene )
+    gene_dir2 = os.path.join( dir_2, gene )
+    
+    auc1_ = weighted_aucs.loc[gene][name1]; auc2_ = weighted_aucs.loc[gene][name2]
+    prc1_ = weighted_prcs.loc[gene][name1]; prc2_ = weighted_prcs.loc[gene][name2]
+    
+    #real_weight = float(mutations.loc[tissue]) / float( pan_muts )
+    weight = max(5, 0.025*real_weight )
+
+    ax_auc.plot( auc1_, auc2_, 'o', mec='k', mew=1, ms = weight, alpha=0.75, label = gene )
+    ax_prc.plot( prc1_, prc2_, 'o', mec='k', mew=1, ms = weight, alpha=0.75, label = gene  )
+    
+    if float(mutations.loc[tissue])  > float(0.05*pan_muts):
+      ax_auc.text(  auc1_, auc2_, gene.upper(), fontsize=6 )
+      ax_prc.text( prc1_, prc2_, gene.upper(), fontsize=6 )
+
+    
+  ax_auc.set_xlim( min_auc, max_auc )
+  ax_prc.set_xlim( min_prc, max_prc )
+  ax_auc.set_ylim( min_auc, max_auc )
+  ax_prc.set_ylim( min_prc, max_prc )
+  ax_prc.set_xlabel(  name1 ); ax_auc.set_ylabel(  name2 )
+  ax_prc.set_title("AUPRC")
+  ax_auc.set_title("AUROC")
+  pp.suptitle("Weighted Pan-cancer")
+  
+  f.savefig( dir_1 + "/comparison.png", fmt='png', dpi=300)
+  f.savefig( dir_2 + "/comparison.png", fmt='png', dpi=300)
+    
+  #weighted_aucs.append( pd.Series( [w_auc_1, w_auc_2], index = [name1, name2], name=gene ) )
+  #weighted_prcs.append( pd.Series( [w_prc_1, w_prc_2], index = [name1, name2], name=gene ) ) 
+  #weights.append( pan_muts )

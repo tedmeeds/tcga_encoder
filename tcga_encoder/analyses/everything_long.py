@@ -25,7 +25,7 @@ from sklearn.mixture import GaussianMixture
 def tanh(x):
   return (1.0-np.exp(-2*x))/(1.0+np.exp(-2*x))
 
-def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 0.01, Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
+def deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process = 100,K=10, min_p_value=1e-3, threshold = 0.01, Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
   save_dir   = os.path.join( data.save_dir, "correct_deeper_meaning_dna_and_z_p_tissue_%0.2f_p_spear_%g_logreg"%(threshold,min_p_value) )
   check_and_mkdir(save_dir) 
   n_C = len(Cs)
@@ -93,7 +93,7 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
   tissues_used_all = []
   bcs_used_all=[]
   tissue_performances = {}
-  for gene in dna_names[:100]:
+  for gene in dna_names[:nbr_dna_genes2process]:
     bad_gene = False
     dna_values = dna[gene].values
     ids_with_n, relevant_tissues = ids_with_at_least_p_mutations( dna_values, T, p = threshold )
@@ -324,7 +324,7 @@ def deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold = 
     
     pp.close('all')
 
-def deeper_meaning_dna_and_rna_fair_correct( data, K=10, min_p_value=1e-3, threshold = 0.01, Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
+def deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process = 100, K=10, min_p_value=1e-3, threshold = 0.01, Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
   save_dir   = os.path.join( data.save_dir, "correct_deeper_meaning_dna_and_rna_fair_tissue_%0.2f_p_spear_%g_logreg"%(threshold,min_p_value) )
   check_and_mkdir(save_dir) 
   n_C = len(Cs)
@@ -390,7 +390,7 @@ def deeper_meaning_dna_and_rna_fair_correct( data, K=10, min_p_value=1e-3, thres
   tissues_used_all = []
   bcs_used_all=[]
   tissue_performances = {}
-  for gene in dna_names[:100]:
+  for gene in dna_names[:nbr_dna_genes2process]:
     bad_gene = False
     dna_values = dna[gene].values
     ids_with_n, relevant_tissues = ids_with_at_least_p_mutations( dna_values, T, p = threshold )
