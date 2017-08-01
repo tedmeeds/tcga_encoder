@@ -33,10 +33,10 @@ if __name__ == "__main__":
   
   name1 = "RNA"
   name2 = "Z"
-  dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.01_p_spear_1_logreg"
-  dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.01_p_spear_1_logreg"
-  #dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.05_p_spear_1_logreg"
-  #dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.05_p_spear_1_logreg"
+  #dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.01_p_spear_1_logreg"
+  #dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.01_p_spear_1_logreg"
+  dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.05_p_spear_1_logreg"
+  dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.05_p_spear_1_logreg"
   #dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.10_p_spear_1_logreg"
   #dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.10_p_spear_1_logreg"
   #
