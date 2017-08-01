@@ -33,15 +33,15 @@ if __name__ == "__main__":
   
   name1 = "RNA"
   name2 = "Z"
-  #dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.01_p_spear_1_logreg"
-  #dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.01_p_spear_1_logreg"
+  dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.01_p_spear_1_logreg"
+  dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.01_p_spear_1_logreg"
   #dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.05_p_spear_1_logreg"
   #dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.05_p_spear_1_logreg"
   #dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.10_p_spear_1_logreg"
   #dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.10_p_spear_1_logreg"
   #
-  dir_1_short = "results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.05_p_spear_0.0001_logreg"
-  dir_2_short = "results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.05_p_spear_0.0001_logreg"
+  # dir_1_short = "results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.05_p_spear_0.0001_logreg"
+  # dir_2_short = "results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.05_p_spear_0.0001_logreg"
   
   dir_1 = os.path.join( HOME_DIR, dir_1_short )
   dir_2 = os.path.join( HOME_DIR, dir_2_short )
@@ -91,7 +91,9 @@ if __name__ == "__main__":
     w_auc_1 = 0.0; w_auc_2 = 0.0
     w_prc_1 = 0.0; w_prc_2 = 0.0
     w_s = 0.0
-    for tissue in auc1.index.values[1:]:
+    for tissue in auc1.index.values:
+      if tissue == "PAN":
+        continue
       auc1_ = auc1.loc[tissue]; auc2_ = auc2.loc[tissue]
       prc1_ = pr1.loc[tissue];  prc2_ = pr2.loc[tissue]
       

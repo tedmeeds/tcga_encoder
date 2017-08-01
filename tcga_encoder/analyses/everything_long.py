@@ -210,7 +210,7 @@ def deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process = 100,K=10, mi
     #pdb.set_trace()
     order_y_est = np.argsort(y_est_best)
     y_est_best_pd = pd.DataFrame( np.vstack((y_true[order_y_est],y_est_best[order_y_est])).T, index = gene_bcs[order_y_est], columns=["true","est"] )
-    performance = pd.Series( [best_mean_precision,best_auc,best_auc_p, len(y_true), int(np.sum(y_true))], index = ["AUPRC","AUROC","p-value","wildtype","mutations"], name = gene )
+    performance = pd.Series( [best_mean_precision,best_auc,best_auc_p, len(y_true)-int(np.sum(y_true)), int(np.sum(y_true))], index = ["AUPRC","AUROC","p-value","wildtype","mutations"], name = gene )
     z_w = pd.Series( z_w, index = z_names, name = gene )
     
     performances.append(performance)
@@ -628,8 +628,8 @@ def deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process = 100, 
     
     pp.close('all')
 
-def deeper_meaning_dna_and_rna_fair_correct_by_tissue( data, nbr_dna_genes2process = 100, K=10, min_p_value=1e-3, threshold = 0.01, Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
-  save_dir   = os.path.join( data.save_dir, "correct_by_tissue_deeper_meaning_dna_and_rna_fair_tissue_%0.2f_p_spear_%g_logreg"%(threshold,min_p_value) )
+def deeper_meaning_dna_and_data_correct_by_tissue( data, DATA, data_name, nbr_dna_genes2process = 100, K=10, min_p_value=1e-3, threshold = 0.01, Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
+  save_dir   = os.path.join( data.save_dir, "correct_by_tissue_dna_and_%s_tissue_%0.2f_p_spear_%g_logreg"%(data_name,threshold,min_p_value) )
   check_and_mkdir(save_dir) 
   n_C = len(Cs)
   dna_auc_dir   = os.path.join( data.save_dir, "dna_auc_latent" )
@@ -648,11 +648,10 @@ def deeper_meaning_dna_and_rna_fair_correct_by_tissue( data, nbr_dna_genes2proce
   mirna_z_rho = pd.read_csv( spearmanr_dir + "/mirna_z_rho.csv", index_col="gene" )
   meth_z_rho = pd.read_csv( spearmanr_dir + "/meth_z_rho.csv", index_col="gene" )
   
-  data_name   = "Z"
   Z           = data.Z
   barcodes    = Z.index.values
   
-  DATA        = Z #RNA_fair.loc[barcodes]
+  DATA        = DATA.loc[barcodes]
   X_ALL       = DATA.values
   n           = len(X_ALL)
 
@@ -677,11 +676,13 @@ def deeper_meaning_dna_and_rna_fair_correct_by_tissue( data, nbr_dna_genes2proce
   results = []
   random_state=0
   nbr_z_to_keep=10
-  tissue_performances = {}
+  
 
-  for tissue in tissue_names[:2]:
+  for tissue in tissue_names:
     tissue_dir =  os.path.join( save_dir, "%s"%(tissue) )
     check_and_mkdir(tissue_dir)
+    
+    tissue_performances = {}
     
     print "working ", tissue
     tissue_bcs = T[ T[ tissue ] == 1 ].index.values
@@ -779,7 +780,7 @@ def deeper_meaning_dna_and_rna_fair_correct_by_tissue( data, nbr_dna_genes2proce
       
       order_y_est = np.argsort(y_est_best)
       y_est_best_pd = pd.DataFrame( np.vstack((y_true[order_y_est],y_est_best[order_y_est])).T, index = gene_bcs[order_y_est], columns=["true","est"] )
-      performance = pd.Series( [best_mean_precision,best_auc,best_auc_p, len(y_true), int(np.sum(y_true))], index = ["AUPRC","AUROC","p-value","wildtype","mutations"], name = gene )
+      performance = pd.Series( [best_mean_precision,best_auc,best_auc_p,  len(y_true), len(y_true)-int(np.sum(y_true)), int(np.sum(y_true))], index = ["AUPRC","AUROC","p-value","n","wildtype","mutations"], name = gene )
       z_w = pd.Series( z_w, index = z_names, name = gene )
     
       performances.append(performance)
@@ -793,6 +794,7 @@ def deeper_meaning_dna_and_rna_fair_correct_by_tissue( data, nbr_dna_genes2proce
     
       y_est_best_pd.to_csv( gene_dir +"/y_est_best.csv",index_label="barcode" )
       performance.to_csv( gene_dir +"/performance.csv" )
+      #pdb.set_trace()
       z_w.to_csv( gene_dir +"/rna_fair_w.csv" )
       tissue_performances[gene] = performance #pd.DataFrame( performance.values, index=performance.index, columns=performance.columns)
       pp.close('all')
@@ -812,7 +814,10 @@ def deeper_meaning_dna_and_rna_fair_correct_by_tissue( data, nbr_dna_genes2proce
       #plot_heatmap( gene_dir, gene, METH_scale[meth_y_p_gene.index.values].loc[bcs], y_est_full.loc[bcs], meth_y_rho_gene, "METH", normalize=True )
       #plot_heatmap( gene_dir, gene, T.loc[bcs], y_est_full.loc[bcs], None, "TISSUE" )
       #pdb.set_trace()
+    pd.concat( tissue_performances.values(), axis=1).to_csv( tissue_dir + "/performance.csv", index_label = "measure" )
+    #pdb.set_trace()
     
+    #pdb.set_trace()
     pp.close('all')
         
 def plot_heatmap( gene_dir, gene, X, y_est, X_score, name, size1=12, size2=4, ax=None, save=True, normalize=False ):
