@@ -2813,6 +2813,8 @@ if __name__ == "__main__":
   deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   # deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   # deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   # deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
