@@ -2307,7 +2307,7 @@ def repeat_gmm( data, K = 20, repeats=10 ):
     t_idx+=1
   f_all.savefig( save_dir + "/AA_survival.png", format="png" , dpi=300)
 
-def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
+def repeat_kmeans_global( data, DATA, data_name, K = 5, K2=10, repeats=10 ):
   Z           = data.Z
   X=DATA
   #STD = data.Z_std
@@ -2415,12 +2415,12 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
   #affinity_matrix /= repeats    
   new_X /= repeats    
   
-  kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit(new_X)
+  kmeans = MiniBatchKMeans(n_clusters=K2, random_state=r ).fit(new_X)
   kmeans_labels = kmeans.labels_
   
-  mean_event_ranks = np.zeros( K, dtype=float )
-  std_event_ranks = np.zeros( K, dtype=float )
-  for k in range(K):
+  mean_event_ranks = np.zeros( K2, dtype=float )
+  std_event_ranks = np.zeros( K2, dtype=float )
+  for k in range(K2):
     k_ids = kmeans_labels==k
     
     k_times = times[k_ids]
@@ -2433,12 +2433,12 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
   #pdb.set_trace()
   
   y = kmeans_labels #M.fit_predict( affinity_matrix )
-  k_pallette = sns.color_palette("rainbow", K)
+  k_pallette = sns.color_palette("rainbow", K2)
   k_order = np.argsort(mean_event_ranks/std_event_ranks)
   
   #k_pallette = [k_pallette[i] for i in np.argsort(mean_event_ranks/std_event_ranks)]
   #pdb.set_trace()
-  kmeans_T = MiniBatchKMeans(n_clusters=K, random_state=0 ).fit(new_X.T)
+  kmeans_T = MiniBatchKMeans(n_clusters=K2, random_state=0 ).fit(new_X.T)
   kmeans_labels_T = kmeans_T.labels_
   
   z_order = np.argsort(kmeans_labels_T)
@@ -2475,7 +2475,7 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     f = pp.figure()
     ax=f.add_subplot(111)
     ax_all = f_all.add_subplot(4,8,t_idx+1)
-    for k in range(K):
+    for k in range(K2):
       Ik = pp.find( y_tissue == k )
       k_bcs = bcs[ ids[Ik] ]
       
@@ -2863,7 +2863,7 @@ if __name__ == "__main__":
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
-  repeat_kmeans_global( data, data.Z, "Z", K = 15, repeats=20 )
+  repeat_kmeans_global( data, data.Z, "Z", K = 20, K2=10, repeats=50 )
   # repeat_kmeans_global( data, K = 2, repeats=50 )
   # repeat_kmeans_global( data, K = 3, repeats=50 )
   # repeat_kmeans_global( data, K = 4, repeats=50 )
