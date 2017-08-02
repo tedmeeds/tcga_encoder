@@ -2350,11 +2350,12 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     t_times = times[ids]
     t_events = events[ids]
     
-    event_times = t_times[ t_events==1 ]
+    event_times = t_times #[ t_events==1 ]
     
     event_rank = 2*np.argsort( event_times ).astype(float) / float(len(event_times)) - 1.0
     
-    event_ranks[ ids[t_events==1] ] = event_rank
+    #event_ranks[ ids[t_events==1] ] = event_rank
+    event_ranks[ ids ] = event_rank
     
     #pdb.set_trace()
     
@@ -2383,8 +2384,8 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     mn = train_X.mean(0)
     std = train_X.std(0)
     
-    train_X -= mn; train_X /= std
-    test_X -= mn; test_X /= std
+    #train_X -= mn; train_X /= std
+    #test_X -= mn; test_X /= std
     
     kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
     kmeans_labels = kmeans.predict(test_X ) #labels_
@@ -2400,8 +2401,8 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     mn = train_X.mean(0)
     std = train_X.std(0)
     
-    train_X -= mn; train_X /= std
-    test_X -= mn; test_X /= std
+    #train_X -= mn; train_X /= std
+    #test_X -= mn; test_X /= std
     
     kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
     kmeans_labels = kmeans.predict(test_X ) #labels_
@@ -2425,14 +2426,17 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     k_events = events[k_ids]
     k_event_ranks = event_ranks[k_ids]
     
-    mean_event_ranks[k] = np.mean(k_event_ranks[k_events==1])
-    std_event_ranks[k] = np.std(k_event_ranks[k_events==1])
+    mean_event_ranks[k] = np.mean(k_event_ranks) #[k_events==1])
+    std_event_ranks[k] = np.std(k_event_ranks) #[k_events==1])
     
   #pdb.set_trace()
   
   y = kmeans_labels #M.fit_predict( affinity_matrix )
   k_pallette = sns.color_palette("rainbow", K)
-  k_pallette = [k_pallette[i] for i in np.argsort(mean_event_ranks)]
+  k_order = np.argsort(mean_event_ranks/std_event_ranks)
+  
+  #k_pallette = [k_pallette[i] for i in np.argsort(mean_event_ranks/std_event_ranks)]
+  #pdb.set_trace()
   kmeans_T = MiniBatchKMeans(n_clusters=K, random_state=0 ).fit(new_X.T)
   kmeans_labels_T = kmeans_T.labels_
   
@@ -2450,8 +2454,8 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
       continue
   
     y_tissue = y[ ids ]
-    patient_order = np.argsort(y_tissue)
-    k_colors = np.array([k_pallette[int(i)] for i in y_tissue[patient_order]] )
+    patient_order = np.argsort([k_order[i] for i in y_tissue])
+    k_colors = np.array([k_pallette[k_order[int(i)]] for i in y_tissue[patient_order]] )
     
     X_sorted = pd.DataFrame( new_X[ids[patient_order],:][:,z_order], index = X.index.values[ids[patient_order]], columns=X.columns[z_order] )
     
@@ -2858,7 +2862,7 @@ if __name__ == "__main__":
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
-  repeat_kmeans_global( data, data.Z, "Z", K = 20, repeats=20 )
+  repeat_kmeans_global( data, data.Z, "Z", K = 10, repeats=20 )
   # repeat_kmeans_global( data, K = 2, repeats=50 )
   # repeat_kmeans_global( data, K = 3, repeats=50 )
   # repeat_kmeans_global( data, K = 4, repeats=50 )
