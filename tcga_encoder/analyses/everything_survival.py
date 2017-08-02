@@ -2363,8 +2363,8 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     mn = train_X.mean(0)
     std = train_X.std(0)
     
-    #train_X -= mn; train_X /= std
-    #test_X -= mn; test_X /= std
+    train_X -= mn; train_X /= std
+    test_X -= mn; test_X /= std
     
     kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
     kmeans_labels = kmeans.predict(test_X ) #labels_
@@ -2380,8 +2380,8 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     mn = train_X.mean(0)
     std = train_X.std(0)
     
-    #train_X -= mn; train_X /= std
-    #test_X -= mn; test_X /= std
+    train_X -= mn; train_X /= std
+    test_X -= mn; test_X /= std
     
     kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
     kmeans_labels = kmeans.predict(test_X ) #labels_
@@ -2822,8 +2822,8 @@ if __name__ == "__main__":
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
   
-  repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
-  repeat_kmeans_global( data, data.Z, "Z", K = 10, repeats=10 )
+  repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 5, repeats=20 )
+  repeat_kmeans_global( data, data.Z, "Z", K = 5, repeats=20 )
   # repeat_kmeans_global( data, K = 2, repeats=50 )
   # repeat_kmeans_global( data, K = 3, repeats=50 )
   # repeat_kmeans_global( data, K = 4, repeats=50 )
