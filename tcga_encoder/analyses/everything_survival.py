@@ -2863,7 +2863,7 @@ if __name__ == "__main__":
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
-  repeat_kmeans_global( data, data.Z, "Z", K = 20, K2=10, repeats=50 )
+  repeat_kmeans_global( data, data.Z, "Z", K = 10, K2=5, repeats=50 )
   # repeat_kmeans_global( data, K = 2, repeats=50 )
   # repeat_kmeans_global( data, K = 3, repeats=50 )
   # repeat_kmeans_global( data, K = 4, repeats=50 )
