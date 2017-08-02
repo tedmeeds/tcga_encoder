@@ -2307,14 +2307,14 @@ def repeat_gmm( data, K = 20, repeats=10 ):
     t_idx+=1
   f_all.savefig( save_dir + "/AA_survival.png", format="png", dpi=300)
 
-def repeat_kmeans_global( data, K = 20, repeats=10 ):
+def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
   Z           = data.Z
-  X=Z
-  STD = data.Z_std
+  X=DATA
+  #STD = data.Z_std
   #X = quantize(X)
   #X = normalize(X)
   
-  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d_std_global"%(K) )
+  save_dir = os.path.join( data.save_dir, "repeat_kmeans_K%d_%s_global"%(K,data_name) )
   check_and_mkdir(save_dir) 
   results = {}
   data.data_store.open()
@@ -2335,7 +2335,7 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
 
   bcs = bcs[good]
   X = X.loc[bcs]
-  STD = STD.loc[bcs]
+  #STD = STD.loc[bcs]
   T = T.loc[bcs]
   times = data.survival.data.loc[ bcs ]["T"].values
   events = data.survival.data.loc[ bcs ]["E"].values
@@ -2358,13 +2358,13 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
     
     train_ids = shuffle_ids[:N /2 ]
     test_ids  = shuffle_ids[N/2:]
-    train_X = X.values[train_ids,:] + STD.values[train_ids,:]*np.random.randn(len(train_ids),D)
-    test_X  = X.values[test_ids,:] + STD.values[test_ids,:]*np.random.randn(len(test_ids),D)
+    train_X = X.values[train_ids,:] #+ STD.values[train_ids,:]*np.random.randn(len(train_ids),D)
+    test_X  = X.values[test_ids,:] #+ STD.values[test_ids,:]*np.random.randn(len(test_ids),D)
     mn = train_X.mean(0)
     std = train_X.std(0)
     
-    train_X -= mn; train_X /= std
-    test_X -= mn; test_X /= std
+    #train_X -= mn; train_X /= std
+    #test_X -= mn; test_X /= std
     
     kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
     kmeans_labels = kmeans.predict(test_X ) #labels_
@@ -2375,13 +2375,13 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
 
     train_ids = shuffle_ids[N /2: ]
     test_ids  = shuffle_ids[:N/2]
-    train_X = X.values[train_ids,:] + STD.values[train_ids,:]*np.random.randn(len(train_ids),D)
-    test_X  = X.values[test_ids,:] + STD.values[test_ids,:]*np.random.randn(len(test_ids),D)
+    train_X = X.values[train_ids,:]# + STD.values[train_ids,:]*np.random.randn(len(train_ids),D)
+    test_X  = X.values[test_ids,:] #+ STD.values[test_ids,:]*np.random.randn(len(test_ids),D)
     mn = train_X.mean(0)
     std = train_X.std(0)
     
-    train_X -= mn; train_X /= std
-    test_X -= mn; test_X /= std
+    #train_X -= mn; train_X /= std
+    #test_X -= mn; test_X /= std
     
     kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit( train_X )
     kmeans_labels = kmeans.predict(test_X ) #labels_
@@ -2449,7 +2449,7 @@ def repeat_kmeans_global( data, K = 20, repeats=10 ):
     ax_all.set_title("%s"%(tissue_name))
     ax_all.set_ylim(0,1)
     ax.set_ylim(0,1)
-    pp.title("%s"%(tissue_name))
+    pp.title("%s using %s"%(tissue_name, data_name))
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
     pp.close() 
     t_idx+=1
@@ -2819,8 +2819,11 @@ if __name__ == "__main__":
   #describe_latent(data)
   #cluster_latent_space_by_inputs( data )
   
-  repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
-  repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
+  #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
+  #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
+  
+  repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
+  repeat_kmeans_global( data, data.Z, "Z", K = 10, repeats=10 )
   # repeat_kmeans_global( data, K = 2, repeats=50 )
   # repeat_kmeans_global( data, K = 3, repeats=50 )
   # repeat_kmeans_global( data, K = 4, repeats=50 )
