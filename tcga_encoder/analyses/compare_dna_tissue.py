@@ -53,7 +53,7 @@ if __name__ == "__main__":
   weighted_tissues_prc = []
   
   for tissue in common_tissues:
-    if tissue[-3:] == "png":
+    if tissue[-3:] == "png" or tissue=="meso":
       continue
     tissue_dir_1 = os.path.join( dir_1, tissue )
     tissue_dir_2 = os.path.join( dir_2, tissue )
@@ -63,8 +63,11 @@ if __name__ == "__main__":
     
     common_genes = np.intersect1d( perf1.index.values, perf2.index.values )
     print tissue
+    print name1
     print perf1
+    print name2
     print perf2
+    print "commin_genes:"
     print common_genes
     
     #pdb.set_trace()
@@ -146,7 +149,7 @@ if __name__ == "__main__":
   #
   #
   for tissue in common_tissues:
-    if tissue[-3:] == "png":
+    if tissue[-3:] == "png" or tissue == "meso":
       continue
     #gene_dir1 = os.path.join( dir_1, gene )
     #gene_dir2 = os.path.join( dir_2, gene )

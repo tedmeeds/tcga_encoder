@@ -670,8 +670,8 @@ def deeper_meaning_dna_and_data_correct_by_tissue( data, DATA, data_name, nbr_dn
   n_dna = len(dna_names)
   dna = data.dna[ dna_names ]
   
-  min_features = 5
-  max_features = 20
+  min_features = 10
+  max_features = 50
   k_idx = 1
   results = []
   random_state=0
@@ -814,7 +814,9 @@ def deeper_meaning_dna_and_data_correct_by_tissue( data, DATA, data_name, nbr_dn
       #plot_heatmap( gene_dir, gene, METH_scale[meth_y_p_gene.index.values].loc[bcs], y_est_full.loc[bcs], meth_y_rho_gene, "METH", normalize=True )
       #plot_heatmap( gene_dir, gene, T.loc[bcs], y_est_full.loc[bcs], None, "TISSUE" )
       #pdb.set_trace()
-    pd.concat( tissue_performances.values(), axis=1).to_csv( tissue_dir + "/performance.csv", index_label = "measure" )
+    #pdb.set_trace()
+    if len(tissue_performances.values())>0:
+      pd.concat( tissue_performances.values(), axis=1).to_csv( tissue_dir + "/performance.csv", index_label = "measure" )
     #pdb.set_trace()
     
     #pdb.set_trace()

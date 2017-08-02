@@ -2807,9 +2807,11 @@ if __name__ == "__main__":
   #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )  
   nbr_dna_genes2process = 10
   Cs = [0.00001,0.0001, 0.001,0.01,0.1,1.0,10.0,100.0,1000.0] 
-  
-  deeper_meaning_dna_and_data_correct_by_tissue( data, data.Z, "Z", nbr_dna_genes2process=10, K=5, min_p_value=1, threshold=0.0, Cs = Cs )
-  deeper_meaning_dna_and_data_correct_by_tissue( data, data.RNA_fair, "RNA", nbr_dna_genes2process=10, K=5, min_p_value=1, threshold=0.0, Cs = Cs )
+  K = 5
+  min_p_value=1
+  threshold=0.0
+  deeper_meaning_dna_and_data_correct_by_tissue( data, data.Z, "Z", nbr_dna_genes2process=nbr_dna_genes2process, K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  deeper_meaning_dna_and_data_correct_by_tissue( data, data.RNA_fair, "RNA", nbr_dna_genes2process=nbr_dna_genes2process, K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
   
 
   
