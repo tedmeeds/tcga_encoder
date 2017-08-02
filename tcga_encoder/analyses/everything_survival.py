@@ -2302,10 +2302,10 @@ def repeat_gmm( data, K = 20, repeats=10 ):
         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
         kmf.plot(ax=ax_all,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
     pp.title("%s"%(tissue_name))
-    pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
+    pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png" ) #, dpi=300)
     pp.close() 
     t_idx+=1
-  f_all.savefig( save_dir + "/AA_survival.png", format="png", dpi=300)
+  f_all.savefig( save_dir + "/AA_survival.png", format="png" , dpi=300)
 
 def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
   Z           = data.Z
@@ -2485,7 +2485,7 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     ax_all.set_ylim(0,1)
     ax.set_ylim(0,1)
     pp.title("%s using %s"%(tissue_name, data_name))
-    pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
+    pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png") #, dpi=300)
     pp.close() 
     t_idx+=1
   f_all.savefig( save_dir + "/AA_survival.png", format="png", dpi=300)
