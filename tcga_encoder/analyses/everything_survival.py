@@ -2340,6 +2340,26 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
   times = data.survival.data.loc[ bcs ]["T"].values
   events = data.survival.data.loc[ bcs ]["E"].values
   
+  event_ranks = 0*events.astype(float)
+  for tissue_name in T.columns:
+    print "working ", tissue_name
+    ids = pp.find( T[tissue_name]==1 )
+    n_ids = len(ids); n_tissue=n_ids
+    if n_ids==0:
+      continue
+    t_times = times[ids]
+    t_events = events[ids]
+    
+    event_times = t_times[ t_events==1 ]
+    
+    event_rank = 2*np.argsort( event_times ).astype(float) / float(len(event_times)) - 1.0
+    
+    event_ranks[ ids[t_events==1] ] = event_rank
+    
+    #pdb.set_trace()
+    
+  
+  
   data.data_store.open()
   dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
   data.data_store.close()
@@ -2395,9 +2415,24 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
   
   kmeans = MiniBatchKMeans(n_clusters=K, random_state=r ).fit(new_X)
   kmeans_labels = kmeans.labels_
+  
+  mean_event_ranks = np.zeros( K, dtype=float )
+  std_event_ranks = np.zeros( K, dtype=float )
+  for k in range(K):
+    k_ids = kmeans_labels==k
+    
+    k_times = times[k_ids]
+    k_events = events[k_ids]
+    k_event_ranks = event_ranks[k_ids]
+    
+    mean_event_ranks[k] = np.mean(k_event_ranks[k_events==1])
+    std_event_ranks[k] = np.std(k_event_ranks[k_events==1])
+    
+  #pdb.set_trace()
+  
   y = kmeans_labels #M.fit_predict( affinity_matrix )
   k_pallette = sns.color_palette("rainbow", K)
-
+  k_pallette = [k_pallette[i] for i in np.argsort(mean_event_ranks)]
   kmeans_T = MiniBatchKMeans(n_clusters=K, random_state=0 ).fit(new_X.T)
   kmeans_labels_T = kmeans_T.labels_
   
@@ -2822,8 +2857,8 @@ if __name__ == "__main__":
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
   
-  repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 20, repeats=5 )
-  repeat_kmeans_global( data, data.Z, "Z", K = 20, repeats=5 )
+  repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
+  repeat_kmeans_global( data, data.Z, "Z", K = 10, repeats=10 )
   # repeat_kmeans_global( data, K = 2, repeats=50 )
   # repeat_kmeans_global( data, K = 3, repeats=50 )
   # repeat_kmeans_global( data, K = 4, repeats=50 )
