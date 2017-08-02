@@ -2350,9 +2350,10 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     t_times = times[ids]
     t_events = events[ids]
     
-    event_times = t_times #[ t_events==1 ]
+    event_times = t_times[ t_events==1 ]
     
-    event_rank = 2*np.argsort( event_times ).astype(float) / float(len(event_times)) - 1.0
+    #event_rank = 2*np.argsort( event_times ).astype(float) / float(len(event_times)) - 1.0
+    event_rank = event_times.astype(float) / float(np.max(event_times)) 
     
     #event_ranks[ ids[t_events==1] ] = event_rank
     event_ranks[ ids ] = event_rank
@@ -2426,8 +2427,8 @@ def repeat_kmeans_global( data, DATA, data_name, K = 20, repeats=10 ):
     k_events = events[k_ids]
     k_event_ranks = event_ranks[k_ids]
     
-    mean_event_ranks[k] = np.mean(k_events) #[k_events==1])
-    std_event_ranks[k] = np.std(k_events) #[k_events==1])
+    mean_event_ranks[k] = np.mean(k_events[k_events==1])
+    std_event_ranks[k] = np.std(k_events[k_events==1])
     
   #pdb.set_trace()
   
