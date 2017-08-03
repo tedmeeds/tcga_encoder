@@ -19,7 +19,7 @@ from lifelines.statistics import logrank_test, multivariate_logrank_test
   
   
 def main( data_location, results_location ):
-  K = 5
+  K = 2
   
   data_path    = os.path.join( HOME_DIR ,data_location ) #, "data.h5" )
   results_path = os.path.join( HOME_DIR, results_location )

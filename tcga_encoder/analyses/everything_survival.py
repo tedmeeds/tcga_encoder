@@ -2270,11 +2270,11 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
 def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitter=AalenAdditiveFitter ):
   Z           = data.Z
   X=DATA
-  
+  z_names = X.columns.values
   if fitter==AalenAdditiveFitter:
     save_dir = os.path.join( data.save_dir, "survival_regression_local_%s_K_%d_Aalen"%(data_name,K) )
   elif fitter == CoxPHFitter:
-    save_dir = os.path.join( data.save_dir, "survival_regression_local_%s_K_%d_Cox"%(data_name,K) )
+    save_dir = os.path.join( data.save_dir, "survival_regression_local_%s_K_%d_Cox2"%(data_name,K) )
   check_and_mkdir(save_dir) 
   results = {}
   data.data_store.open()
@@ -2304,7 +2304,7 @@ def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitte
   #pdb.set_trace()
   data_columns.append("T"); data_columns.append("E")
   
-  dataset = pd.DataFrame( np.hstack( (X.values, np.log(times[:,np.newaxis]), events[:,np.newaxis]) ), index = X.index, columns = data_columns )
+  dataset = pd.DataFrame( np.hstack( (X.values, times[:,np.newaxis], events[:,np.newaxis]) ), index = X.index, columns = data_columns )
   
   data.data_store.open()
   dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
@@ -2338,14 +2338,15 @@ def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitte
         cph = fitter(penalizer=penalizer )
       fold_scores = k_fold_cross_validation(cph, dataset.loc[ bcs[ids] ], 'T', event_col='E', k=K2use)
       mean_score.append( np.mean(fold_scores))
-      print penalizer, mean_score[-1]
+      print penalizer, fold_scores, mean_score[-1]
     
     mean_score = np.array(mean_score)
     best_idx = np.argmax( mean_score )  
     best_l2 = L2s[best_idx]
     
-    repeats = 3
+    repeats = 5
     predicted_death = np.zeros( (len(ids),repeats) )
+    weighted_death = np.zeros( (len(ids),repeats) )
     for r in range(repeats):
       print "repeat ",r
       folds = StratifiedKFold(n_splits=K2use, shuffle = True, random_state=r)
@@ -2363,12 +2364,18 @@ def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitte
         #cph = fitter(penalizer=best_l2 )
         cph.fit(train_X, duration_col='T', event_col='E')
         test_survival = cph.predict_survival_function( test_X )
-      
-        predicted_death[ test_ids,: ][:,r] = test_survival.index.values[ np.argmin(test_survival.values,0) ]
-    
+        
+        wd = np.squeeze( np.dot( test_X[z_names].values, cph.hazards_[z_names].T ) )
+        prd = test_survival.index.values[ np.argmin(test_survival.values,0) ]
+        weighted_death[:,r][ test_ids] = wd
+        predicted_death[:,r][ test_ids ] = prd
+        
+        #pdb.set_trace()   
     predicted_death = pd.Series( predicted_death.mean(1), index = bcs[ids], name=tissue_name )
+    weighted_death = pd.Series( weighted_death.mean(1), index = bcs[ids], name=tissue_name )
     
-    patient_order = np.argsort( -predicted_death.values )
+    patient_order = np.argsort( weighted_death ) #-
+    #patient_order = np.argsort( -predicted_death.values )
     predicted_death_sort = predicted_death.sort_values()
     #pdb.set_trace()
     
@@ -3129,7 +3136,7 @@ if __name__ == "__main__":
   
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
-  survival_regression_local( data, data.Z, "Z", K = 5 )
+  survival_regression_local( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
   #repeat_kmeans_global( data, data.Z, "Z", K = 2, K2=10, repeats=10 )
