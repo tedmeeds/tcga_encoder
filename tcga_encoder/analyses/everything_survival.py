@@ -2304,7 +2304,7 @@ def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitte
   #pdb.set_trace()
   data_columns.append("T"); data_columns.append("E")
   
-  dataset = pd.DataFrame( np.hstack( (X.values, times[:,np.newaxis], events[:,np.newaxis]) ), index = X.index, columns = data_columns )
+  dataset = pd.DataFrame( np.hstack( (X.values, np.log(times[:,np.newaxis]), events[:,np.newaxis]) ), index = X.index, columns = data_columns )
   
   data.data_store.open()
   dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
