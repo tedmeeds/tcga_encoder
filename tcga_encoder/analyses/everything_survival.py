@@ -2213,7 +2213,7 @@ def survival_regression_local( data, DATA, data_name, K = 5 ):
     test_bcs  = bcs[ids]
 
     # model selection for L2
-    L2s = [0.0,0.001,0.01,0.1]
+    L2s = [0.01,0.1,0.5,1.0]
     mean_score = []
     for penalizer in L2s:
       cph = CoxPHFitter(penalizer=penalizer )
@@ -2226,7 +2226,7 @@ def survival_regression_local( data, DATA, data_name, K = 5 ):
     best_l2 = L2s[best_idx]
     
     predicted_death = np.zeros( len(ids) )
-    folds = StratifiedKFold(n_splits=K, shuffle = True, random_state=random_state)
+    folds = StratifiedKFold(n_splits=K2use, shuffle = True, random_state=random_state)
     for train_ids, test_ids in folds.split( X.values[ids,:], events[ids] ): #[:,np.newaxis].astype(int) ):
     
       train_bcs = bcs[ids[train_ids]]
@@ -3004,7 +3004,7 @@ if __name__ == "__main__":
   
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
-  survival_regression_local( data, data.Z, "Z" )
+  survival_regression_local( data, data.Z, "Z", K = 4 )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
   #repeat_kmeans_global( data, data.Z, "Z", K = 2, K2=10, repeats=10 )
