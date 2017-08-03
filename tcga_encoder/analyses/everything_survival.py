@@ -2313,7 +2313,7 @@ def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitte
   dim = X.shape[1]
   
   random_state=0
-  for tissue_name in T.columns[8:]:
+  for tissue_name in T.columns: #[8:]:
     if tissue_name == "dlbc":
       continue
     print "working ", tissue_name
