@@ -14,7 +14,7 @@ from sklearn.neighbors import KDTree
 from scipy.spatial.distance import pdist, squareform
 from scipy.spatial.distance import squareform
 import seaborn as sns
-from lifelines import CoxPHFitter
+from lifelines import CoxPHFitter, AalenAdditiveFitter
 from lifelines.datasets import load_regression_dataset
 from lifelines.utils import k_fold_cross_validation
 from lifelines import KaplanMeierFitter
@@ -2154,11 +2154,14 @@ def repeat_kmeans( data, DATA, data_name, K = 20, repeats=10 ):
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
     pp.close('all')  
 
-def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4 ):
+def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitter=AalenAdditiveFitter ):
   Z           = data.Z
   X=DATA
   
-  save_dir = os.path.join( data.save_dir, "survival_regression_local_%s_K_%d"%(data_name,K) )
+  if fitter==AalenAdditiveFitter:
+    save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Aalen"%(data_name,K) )
+  elif fitter == CoxPHFitter:
+    save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Cox"%(data_name,K) )
   check_and_mkdir(save_dir) 
   results = {}
   data.data_store.open()
@@ -2216,7 +2219,10 @@ def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4 ):
     L2s = [0.01,0.1,0.5,1.0]
     mean_score = []
     for penalizer in L2s:
-      cph = CoxPHFitter(penalizer=penalizer )
+      if fitter==AalenAdditiveFitter:
+        cph = fitter(smoothing_penalizer=penalizer )
+      else:
+        cph = fitter(penalizer=penalizer )
       fold_scores = k_fold_cross_validation(cph, dataset.loc[ bcs[ids] ], 'T', event_col='E', k=K2use)
       mean_score.append( np.mean(fold_scores))
       print penalizer, mean_score[-1]
@@ -2225,23 +2231,142 @@ def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4 ):
     best_idx = np.argmax( mean_score )  
     best_l2 = L2s[best_idx]
     
-    predicted_death = np.zeros( len(ids) )
-    folds = StratifiedKFold(n_splits=K2use, shuffle = True, random_state=random_state)
-    for train_ids, test_ids in folds.split( X.values[ids,:], events[ids] ): #[:,np.newaxis].astype(int) ):
+    repeats = 3
+    predicted_death = np.zeros( (len(ids),repeats) )
+    for r in range(repeats):
+      print "repeat ",r
+      folds = StratifiedKFold(n_splits=K2use, shuffle = True, random_state=r)
+      for train_ids, test_ids in folds.split( X.values[ids,:], events[ids] ): #[:,np.newaxis].astype(int) ):
     
-      train_bcs = bcs[ids[train_ids]]
-      test_bcs  = bcs[ids[test_ids]]
+        train_bcs = bcs[ids[train_ids]]
+        test_bcs  = bcs[ids[test_ids]]
       
-      train_X = dataset.loc[ train_bcs ]
-      test_X  = dataset.loc[test_bcs] 
+        train_X = dataset.loc[ train_bcs ]
+        test_X  = dataset.loc[test_bcs] 
+        if fitter==AalenAdditiveFitter:
+          cph = fitter(smoothing_penalizer=best_l2 )
+        else:
+          cph = fitter(penalizer=best_l2 )
+        #cph = fitter(penalizer=best_l2 )
+        cph.fit(train_X, duration_col='T', event_col='E')
+        test_survival = cph.predict_survival_function( test_X )
+      
+        predicted_death[ test_ids,: ][:,r] = test_survival.index.values[ np.argmin(test_survival.values,0) ]
+    
+    predicted_death = pd.Series( predicted_death.mean(1), index = bcs[ids], name=tissue_name )
+    
+    patient_order = np.argsort( -predicted_death.values )
+    predicted_death_sort = predicted_death.sort_values()
+    #pdb.set_trace()
+    
+    I_splits = survival_splits( events[ids], patient_order, K_groups )
+    groups   = groups_by_splits( len(ids), I_splits )
 
-      cph = CoxPHFitter(penalizer=best_l2 )
-      cph.fit(train_X, duration_col='T', event_col='E')
-      test_survival = cph.predict_survival_function( test_X )
-      
-      predicted_death[ test_ids ] = test_survival.index.values[ np.argmin(test_survival.values,0) ]
+    f=pp.figure()
+    ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow")
+    pp.title( "%s"%( tissue_name ) )
+    pp.savefig( save_dir + "/%s.png"%(tissue_name), format="png" )
     
-    predicted_death = pd.Series( predicted_death, index = bcs[ids], name=tissue_name )
+def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitter=AalenAdditiveFitter ):
+  Z           = data.Z
+  X=DATA
+  
+  if fitter==AalenAdditiveFitter:
+    save_dir = os.path.join( data.save_dir, "survival_regression_local_%s_K_%d_Aalen"%(data_name,K) )
+  elif fitter == CoxPHFitter:
+    save_dir = os.path.join( data.save_dir, "survival_regression_local_%s_K_%d_Cox"%(data_name,K) )
+  check_and_mkdir(save_dir) 
+  results = {}
+  data.data_store.open()
+  #pdb.set_trace()
+  try:
+    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  except:
+    #pdb.set_trace()
+    T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_pallette = sns.hls_palette(len(T.columns))
+  bcs = X.index.values
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  good = pp.find( np.isnan(times) == False )
+  #pdb.set_trace()
+
+  bcs = bcs[good]
+  X = X.loc[bcs]
+  #STD = STD.loc[bcs]
+  T = T.loc[bcs]
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  data_columns = list(X.columns.values)
+  #pdb.set_trace()
+  data_columns.append("T"); data_columns.append("E")
+  
+  dataset = pd.DataFrame( np.hstack( (X.values, times[:,np.newaxis], events[:,np.newaxis]) ), index = X.index, columns = data_columns )
+  
+  data.data_store.open()
+  dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
+  data.data_store.close()
+  
+  dim = X.shape[1]
+  
+  random_state=0
+  for tissue_name in T.columns:
+    print "working ", tissue_name
+    ids = pp.find( T[tissue_name]==1 )
+    n_ids = len(ids); n_tissue=n_ids
+    if n_ids==0:
+      continue
+  
+    K2use = K
+    n_events = events[ids].sum()
+    if n_events < 10:
+      K2use=2
+    
+    train_bcs = bcs[ids]
+    test_bcs  = bcs[ids]
+
+    # model selection for L2
+    L2s = [0.01,0.1,0.5,1.0]
+    mean_score = []
+    for penalizer in L2s:
+      if fitter==AalenAdditiveFitter:
+        cph = fitter(smoothing_penalizer=penalizer )
+      else:
+        cph = fitter(penalizer=penalizer )
+      fold_scores = k_fold_cross_validation(cph, dataset.loc[ bcs[ids] ], 'T', event_col='E', k=K2use)
+      mean_score.append( np.mean(fold_scores))
+      print penalizer, mean_score[-1]
+    
+    mean_score = np.array(mean_score)
+    best_idx = np.argmax( mean_score )  
+    best_l2 = L2s[best_idx]
+    
+    repeats = 3
+    predicted_death = np.zeros( (len(ids),repeats) )
+    for r in range(repeats):
+      print "repeat ",r
+      folds = StratifiedKFold(n_splits=K2use, shuffle = True, random_state=r)
+      for train_ids, test_ids in folds.split( X.values[ids,:], events[ids] ): #[:,np.newaxis].astype(int) ):
+    
+        train_bcs = bcs[ids[train_ids]]
+        test_bcs  = bcs[ids[test_ids]]
+      
+        train_X = dataset.loc[ train_bcs ]
+        test_X  = dataset.loc[test_bcs] 
+        if fitter==AalenAdditiveFitter:
+          cph = fitter(smoothing_penalizer=best_l2 )
+        else:
+          cph = fitter(penalizer=best_l2 )
+        #cph = fitter(penalizer=best_l2 )
+        cph.fit(train_X, duration_col='T', event_col='E')
+        test_survival = cph.predict_survival_function( test_X )
+      
+        predicted_death[ test_ids,: ][:,r] = test_survival.index.values[ np.argmin(test_survival.values,0) ]
+    
+    predicted_death = pd.Series( predicted_death.mean(1), index = bcs[ids], name=tissue_name )
     
     patient_order = np.argsort( -predicted_death.values )
     predicted_death_sort = predicted_death.sort_values()
@@ -3004,7 +3129,7 @@ if __name__ == "__main__":
   
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
-  survival_regression_local( data, data.Z, "Z", K = 10 )
+  survival_regression_local( data, data.Z, "Z", K = 5 )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
   #repeat_kmeans_global( data, data.Z, "Z", K = 2, K2=10, repeats=10 )
