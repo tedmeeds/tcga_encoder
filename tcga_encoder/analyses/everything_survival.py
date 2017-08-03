@@ -2154,7 +2154,7 @@ def repeat_kmeans( data, DATA, data_name, K = 20, repeats=10 ):
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
     pp.close('all')  
 
-def survival_regression_local( data, DATA, data_name, K = 5 ):
+def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4 ):
   Z           = data.Z
   X=DATA
   
@@ -2243,11 +2243,11 @@ def survival_regression_local( data, DATA, data_name, K = 5 ):
     
     predicted_death = pd.Series( predicted_death, index = bcs[ids], name=tissue_name )
     
-    patient_order = np.argsort( predicted_death.values )
+    patient_order = np.argsort( -predicted_death.values )
     predicted_death_sort = predicted_death.sort_values()
     #pdb.set_trace()
     
-    I_splits = survival_splits( events[ids], patient_order, K )
+    I_splits = survival_splits( events[ids], patient_order, K_groups )
     groups   = groups_by_splits( len(ids), I_splits )
 
     f=pp.figure()
@@ -3004,7 +3004,7 @@ if __name__ == "__main__":
   
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
-  survival_regression_local( data, data.Z, "Z", K = 4 )
+  survival_regression_local( data, data.Z, "Z", K = 10 )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
   #repeat_kmeans_global( data, data.Z, "Z", K = 2, K2=10, repeats=10 )
