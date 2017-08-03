@@ -2200,7 +2200,7 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   dim = X.shape[1]
   
   random_state=0
-  L2s = [1.0,2.5,5.0,10.0,20.0,50.0]
+  L2s = [0.01,0.1,1.0,2.5,5.0,10.0] #,20.0,50.0]
   mean_score = []
   for penalizer in L2s:
     cph = fitter( penalizer=penalizer, strata = "tissue" )
@@ -2213,7 +2213,7 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   best_idx = np.argmax( mean_score )  
   best_l2 = L2s[best_idx]
     
-  repeats = 5
+  repeats = 20
   predicted_death = np.zeros( (len(X),repeats) )
   weighted_death = np.zeros( (len(X),repeats) )
   for r in range(repeats):
@@ -3146,6 +3146,7 @@ if __name__ == "__main__":
   
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
+  survival_regression_global( data, data.Z, "Z", K = 20, fitter = CoxPHFitter  )
   survival_regression_global( data, data.Z, "Z", K = 10, fitter = CoxPHFitter  )
   survival_regression_global( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
   survival_regression_global( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
