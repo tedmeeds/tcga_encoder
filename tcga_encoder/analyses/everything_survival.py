@@ -2313,7 +2313,9 @@ def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitte
   dim = X.shape[1]
   
   random_state=0
-  for tissue_name in T.columns:
+  for tissue_name in T.columns[8:]:
+    if tissue_name == "dlbc":
+      continue
     print "working ", tissue_name
     ids = pp.find( T[tissue_name]==1 )
     n_ids = len(ids); n_tissue=n_ids
@@ -2329,7 +2331,7 @@ def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitte
     test_bcs  = bcs[ids]
 
     # model selection for L2
-    L2s = [0.01,0.1,0.5,1.0]
+    L2s = [1.0,2.5,5.0,10.0,20.0,50.0]
     mean_score = []
     for penalizer in L2s:
       if fitter==AalenAdditiveFitter:
