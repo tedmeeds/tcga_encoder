@@ -2200,7 +2200,7 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   dim = X.shape[1]
   
   random_state=0
-  L2s = [[1.0,2.5,5.0,10.0,20.0,50.0]
+  L2s = [1.0,2.5,5.0,10.0,20.0,50.0]
   mean_score = []
   for penalizer in L2s:
     cph = fitter( penalizer=penalizer, strata = "tissue" )
