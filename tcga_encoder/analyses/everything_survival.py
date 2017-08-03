@@ -2157,11 +2157,11 @@ def repeat_kmeans( data, DATA, data_name, K = 20, repeats=10 ):
 def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitter=AalenAdditiveFitter ):
   Z           = data.Z
   X=DATA
-  
+  z_names = X.columns.values
   if fitter==AalenAdditiveFitter:
     save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Aalen"%(data_name,K) )
   elif fitter == CoxPHFitter:
-    save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Cox"%(data_name,K) )
+    save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Cox2"%(data_name,K) )
   check_and_mkdir(save_dir) 
   results = {}
   data.data_store.open()
@@ -2189,9 +2189,9 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   
   data_columns = list(X.columns.values)
   #pdb.set_trace()
-  data_columns.append("T"); data_columns.append("E")
+  data_columns.append("T"); data_columns.append("E"); data_columns.append("tissue")
   
-  dataset = pd.DataFrame( np.hstack( (X.values, times[:,np.newaxis], events[:,np.newaxis]) ), index = X.index, columns = data_columns )
+  dataset = pd.DataFrame( np.hstack( (X.values, times[:,np.newaxis], events[:,np.newaxis], np.argmax(T.values,1)[:,np.newaxis] ) ), index = X.index, columns = data_columns )
   
   data.data_store.open()
   dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
@@ -2200,72 +2200,80 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   dim = X.shape[1]
   
   random_state=0
-  for tissue_name in T.columns:
+  L2s = [[1.0,2.5,5.0,10.0,20.0,50.0]
+  mean_score = []
+  for penalizer in L2s:
+    cph = fitter( penalizer=penalizer, strata = "tissue" )
+    fold_scores = k_fold_cross_validation(cph, dataset, 'T', event_col='E', k=K)
+    mean_score.append( np.mean(fold_scores))
+    
+    print penalizer, fold_scores, mean_score[-1]
+    
+  mean_score = np.array(mean_score)
+  best_idx = np.argmax( mean_score )  
+  best_l2 = L2s[best_idx]
+    
+  repeats = 5
+  predicted_death = np.zeros( (len(X),repeats) )
+  weighted_death = np.zeros( (len(X),repeats) )
+  for r in range(repeats):
+    print "repeat ",r
+    folds = StratifiedKFold(n_splits=K, shuffle = True, random_state=r)
+    for train_ids, test_ids in folds.split( X.values, events ): #[:,np.newaxis].astype(int) ):
+
+      train_bcs = bcs[train_ids]
+      test_bcs  = bcs[test_ids]
+
+      train_X = dataset.loc[ train_bcs ]
+      test_X  = dataset.loc[ test_bcs ]
+      
+      cph = fitter(penalizer=best_l2, strata="tissue" )
+      cph.fit(train_X, duration_col='T', event_col='E')
+      test_survival = cph.predict_survival_function( test_X )
+
+      wd = np.squeeze( np.dot( test_X[z_names].values, cph.hazards_[z_names].T ) )
+      prd = test_survival.index.values[ np.argmin(test_survival.values,0) ]
+      weighted_death[:,r][ test_ids] = wd
+      predicted_death[:,r][ test_ids ] = prd
+
+      #pdb.set_trace()
+  predicted_death = pd.Series( predicted_death.mean(1), index = bcs, name="PAN" )
+  weighted_death = pd.Series( weighted_death.mean(1), index = bcs, name="PAN" )
+
+  patient_order = np.argsort( weighted_death ) 
+  predicted_death_sort = predicted_death.sort_values()
+  
+  for tissue_name in T.columns: #[8:]:
+    if tissue_name == "dlbc":
+      continue
     print "working ", tissue_name
     ids = pp.find( T[tissue_name]==1 )
     n_ids = len(ids); n_tissue=n_ids
     if n_ids==0:
       continue
   
-    K2use = K
+    K2use = K_groups
     n_events = events[ids].sum()
     if n_events < 10:
       K2use=2
-    
-    train_bcs = bcs[ids]
-    test_bcs  = bcs[ids]
-
-    # model selection for L2
-    L2s = [0.01,0.1,0.5,1.0]
-    mean_score = []
-    for penalizer in L2s:
-      if fitter==AalenAdditiveFitter:
-        cph = fitter(smoothing_penalizer=penalizer )
-      else:
-        cph = fitter(penalizer=penalizer )
-      fold_scores = k_fold_cross_validation(cph, dataset.loc[ bcs[ids] ], 'T', event_col='E', k=K2use)
-      mean_score.append( np.mean(fold_scores))
-      print penalizer, mean_score[-1]
-    
-    mean_score = np.array(mean_score)
-    best_idx = np.argmax( mean_score )  
-    best_l2 = L2s[best_idx]
-    
-    repeats = 3
-    predicted_death = np.zeros( (len(ids),repeats) )
-    for r in range(repeats):
-      print "repeat ",r
-      folds = StratifiedKFold(n_splits=K2use, shuffle = True, random_state=r)
-      for train_ids, test_ids in folds.split( X.values[ids,:], events[ids] ): #[:,np.newaxis].astype(int) ):
-    
-        train_bcs = bcs[ids[train_ids]]
-        test_bcs  = bcs[ids[test_ids]]
       
-        train_X = dataset.loc[ train_bcs ]
-        test_X  = dataset.loc[test_bcs] 
-        if fitter==AalenAdditiveFitter:
-          cph = fitter(smoothing_penalizer=best_l2 )
-        else:
-          cph = fitter(penalizer=best_l2 )
-        #cph = fitter(penalizer=best_l2 )
-        cph.fit(train_X, duration_col='T', event_col='E')
-        test_survival = cph.predict_survival_function( test_X )
-      
-        predicted_death[ test_ids,: ][:,r] = test_survival.index.values[ np.argmin(test_survival.values,0) ]
-    
-    predicted_death = pd.Series( predicted_death.mean(1), index = bcs[ids], name=tissue_name )
-    
-    patient_order = np.argsort( -predicted_death.values )
-    predicted_death_sort = predicted_death.sort_values()
-    #pdb.set_trace()
-    
+    patient_order = np.argsort( weighted_death[ids] ) 
     I_splits = survival_splits( events[ids], patient_order, K_groups )
     groups   = groups_by_splits( len(ids), I_splits )
-
     f=pp.figure()
     ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow")
     pp.title( "%s"%( tissue_name ) )
     pp.savefig( save_dir + "/%s.png"%(tissue_name), format="png" )
+    
+    # #pdb.set_trace()
+    #
+    # I_splits = survival_splits( events[ids], patient_order, K_groups )
+    # groups   = groups_by_splits( len(ids), I_splits )
+    #
+    # f=pp.figure()
+    # ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow")
+    # pp.title( "%s"%( tissue_name ) )
+    # pp.savefig( save_dir + "/%s.png"%(tissue_name), format="png" )
     
 def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitter=AalenAdditiveFitter ):
   Z           = data.Z
@@ -3138,7 +3146,11 @@ if __name__ == "__main__":
   
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
-  survival_regression_local( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.Z, "Z", K = 10, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.Z, "Z", K = 2, fitter = CoxPHFitter  )
+  #survival_regression_local( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
   #repeat_kmeans_global( data, data.Z, "Z", K = 2, K2=10, repeats=10 )
