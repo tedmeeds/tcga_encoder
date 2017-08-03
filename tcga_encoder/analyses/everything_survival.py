@@ -2153,7 +2153,149 @@ def repeat_kmeans( data, DATA, data_name, K = 20, repeats=10 ):
     pp.title("%s using %s"%(tissue_name, data_name))
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
     pp.close('all')  
+
+def survival_regression_local( data, DATA, data_name, K = 5 ):
+  Z           = data.Z
+  X=DATA
+  
+  save_dir = os.path.join( data.save_dir, "survival_regression_local_%s_K_%d"%(data_name,K) )
+  check_and_mkdir(save_dir) 
+  results = {}
+  data.data_store.open()
+  #pdb.set_trace()
+  try:
+    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  except:
+    #pdb.set_trace()
+    T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
+  data.data_store.close()
+  tissue_pallette = sns.hls_palette(len(T.columns))
+  bcs = X.index.values
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  good = pp.find( np.isnan(times) == False )
+  #pdb.set_trace()
+
+  bcs = bcs[good]
+  X = X.loc[bcs]
+  #STD = STD.loc[bcs]
+  T = T.loc[bcs]
+  times = data.survival.data.loc[ bcs ]["T"].values
+  events = data.survival.data.loc[ bcs ]["E"].values
+  
+  data_columns = list(X.columns.values)
+  #pdb.set_trace()
+  data_columns.append("T"); data_columns.append("E")
+  
+  dataset = pd.DataFrame( np.hstack( (X.values, times[:,np.newaxis], events[:,np.newaxis]) ), index = X.index, columns = data_columns )
+  
+  data.data_store.open()
+  dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
+  data.data_store.close()
+  
+  dim = X.shape[1]
+  
+  random_state=0
+  for tissue_name in T.columns:
+    print "working ", tissue_name
+    ids = pp.find( T[tissue_name]==1 )
+    n_ids = len(ids); n_tissue=n_ids
+    if n_ids==0:
+      continue
+  
+    K2use = K
+    n_events = events[ids].sum()
+    if n_events < 10:
+      K2use=2
+    
+    train_bcs = bcs[ids]
+    test_bcs  = bcs[ids]
+
+    # model selection for L2
+    L2s = [0.0,0.001,0.01,0.1]
+    mean_score = []
+    for penalizer in L2s:
+      cph = CoxPHFitter(penalizer=penalizer )
+      fold_scores = k_fold_cross_validation(cph, dataset.loc[ bcs[ids] ], 'T', event_col='E', k=K2use)
+      mean_score.append( np.mean(fold_scores))
+      print penalizer, mean_score[-1]
+    
+    mean_score = np.array(mean_score)
+    best_idx = np.argmax( mean_score )  
+    best_l2 = L2s[best_idx]
+    
+    predicted_death = np.zeros( len(ids) )
+    folds = StratifiedKFold(n_splits=K, shuffle = True, random_state=random_state)
+    for train_ids, test_ids in folds.split( X.values[ids,:], events[ids] ): #[:,np.newaxis].astype(int) ):
+    
+      train_bcs = bcs[ids[train_ids]]
+      test_bcs  = bcs[ids[test_ids]]
       
+      train_X = dataset.loc[ train_bcs ]
+      test_X  = dataset.loc[test_bcs] 
+
+      cph = CoxPHFitter(penalizer=best_l2 )
+      cph.fit(train_X, duration_col='T', event_col='E')
+      test_survival = cph.predict_survival_function( test_X )
+      
+      predicted_death[ test_ids ] = test_survival.index.values[ np.argmin(test_survival.values,0) ]
+    
+    predicted_death = pd.Series( predicted_death, index = bcs[ids], name=tissue_name )
+    
+    patient_order = np.argsort( predicted_death.values )
+    predicted_death_sort = predicted_death.sort_values()
+    #pdb.set_trace()
+    
+    I_splits = survival_splits( events[ids], patient_order, K )
+    groups   = groups_by_splits( len(ids), I_splits )
+
+    f=pp.figure()
+    ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow")
+    pp.title( "%s"%( tissue_name ) )
+    pp.savefig( save_dir + "/%s.png"%(tissue_name), format="png" )
+    #
+    # pdb.set_trace()
+    # k_pallette = sns.color_palette("rainbow", K)
+    # #patient_order = np.argsort(y)
+    # k_colors = np.array([k_pallette[int(i)] for i in y[patient_order]] )
+    #
+    # kmeans_T = MiniBatchKMeans(n_clusters=K, random_state=0 ).fit(new_X.T)
+    # kmeans_labels_T = kmeans_T.labels_
+    #
+    # z_order = np.argsort(kmeans_labels_T)
+    #
+    # #X_sorted = pd.DataFrame( X.values[ ids[patient_order],:], index = X.index.values[ids[patient_order]], columns=X.columns )
+    # X_sorted = pd.DataFrame( new_X[patient_order,:][:,z_order], index = X.index.values[ids[patient_order]], columns=X.columns[z_order] )
+    #
+    # h = sns.clustermap( X_sorted, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(10,10) )
+    # pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    # pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    # pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+    # pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+    # h.ax_row_dendrogram.set_visible(False)
+    # h.ax_col_dendrogram.set_visible(False)
+    # h.cax.set_visible(False)
+    # h.ax_heatmap.hlines(n_tissue-pp.find(np.diff(y[patient_order]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
+    # pp.savefig( save_dir + "/%s_repeat_kmeans.png"%(tissue_name), fmt="png" )#, dpi=300, bbox_inches='tight')
+    # pp.close('all')
+    #
+    # f = pp.figure()
+    # ax=f.add_subplot(111)
+    # for k in range(K):
+    #   Ik = pp.find( y == k )
+    #   k_bcs = bcs[ ids[Ik] ]
+    #
+    #   k_times = times[ids[Ik]]
+    #   k_events = events[ids[Ik]]
+    #   kmf = KaplanMeierFitter()
+    #   if len(k_bcs) > 0:
+    #     kmf.fit(k_times, event_observed=k_events, label="k%d"%(k)  )
+    #     ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
+    # pp.title("%s using %s"%(tissue_name, data_name))
+    # pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
+    # pp.close('all')
+          
 def repeat_gmm( data, K = 20, repeats=10 ):
   Z           = data.Z
   X=Z
@@ -2484,6 +2626,7 @@ def repeat_kmeans_global( data, DATA, data_name, K = 5, K2=10, repeats=10 ):
       kmf = KaplanMeierFitter()
       if len(k_bcs) > 0:
         kmf.fit(k_times, event_observed=k_events, label="k%d"%(k)  )
+        pdb.set_trace()
         ax=kmf.plot(ax=ax,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
         kmf.plot(ax=ax_all,at_risk_counts=False,show_censors=True, color=k_pallette[k],ci_show=False)
     ax_all.set_title("%s"%(tissue_name))
@@ -2861,9 +3004,10 @@ if __name__ == "__main__":
   
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
+  survival_regression_local( data, data.Z, "Z" )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
-  repeat_kmeans_global( data, data.Z, "Z", K = 2, K2=10, repeats=100 )
+  #repeat_kmeans_global( data, data.Z, "Z", K = 2, K2=10, repeats=10 )
   # repeat_kmeans_global( data, K = 2, repeats=50 )
   # repeat_kmeans_global( data, K = 3, repeats=50 )
   # repeat_kmeans_global( data, K = 4, repeats=50 )
