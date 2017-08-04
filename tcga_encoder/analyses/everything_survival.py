@@ -2321,11 +2321,11 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
     z_ids2use = np.hstack( (z_order[:10], z_order[-10:] ))
     z_names2use = np.hstack( (z_names[z_order[:10]], z_names[z_order[-10:]] ))
     #pdb.set_trace()
-    XV = np.dot( X.values[ ids[tissue_patient_order],:], np.diag(coefs_mean.values) )
+    XV = X.values[ ids[tissue_patient_order],:] # np.dot( X.values[ ids[tissue_patient_order],:], np.diag(coefs_mean.values) )
     XV /= XV.std(0)
     X_sorted = pd.DataFrame( XV[:,z_ids2use], index = X.index.values[ids[tissue_patient_order]], columns=z_names2use )
     
-    XV2 = np.hstack( (wd[:,np.newaxis][tissue_patient_order,:],XV) )
+    XV2 = np.hstack( (wd[:,np.newaxis][tissue_patient_order,:]/wd.std(),XV) )
     XV2cols = ["weighted"]
     XV2cols.extend(z_names2use)
     z_ids2use2 = [0]
