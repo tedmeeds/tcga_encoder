@@ -3146,7 +3146,7 @@ if __name__ == "__main__":
   
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
-  survival_regression_global( data, data.Z, "Z", K = 20, fitter = CoxPHFitter  )
+  #survival_regression_global( data, data.Z, "Z", K = 20, fitter = CoxPHFitter  )
   survival_regression_global( data, data.Z, "Z", K = 10, fitter = CoxPHFitter  )
   survival_regression_global( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
   survival_regression_global( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
