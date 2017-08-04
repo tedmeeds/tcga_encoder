@@ -3255,8 +3255,8 @@ if __name__ == "__main__":
   #survival_regression_global( data, data.Z, "Z", K = 20, fitter = CoxPHFitter  )
   #survival_regression_global( data, data.Z, "Z", K = 10, fitter = CoxPHFitter  )
   #survival_regression_global( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
-  survival_regression_global( data, data.Z, "Z", K = 5, repeats=5 fitter = CoxPHFitter  )
-  survival_regression_global( data, data.RNA_scale, "RNA", K = 5, repeats=5 fitter = CoxPHFitter  )
+  survival_regression_global( data, data.Z, "Z", K = 5, repeats=5, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.RNA_scale, "RNA", K = 5, repeats=5, fitter = CoxPHFitter  )
   #survival_regression_global( data, data.RNA_scale, "RNA", K = 2, fitter = CoxPHFitter  )
   #survival_regression_local( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
   
