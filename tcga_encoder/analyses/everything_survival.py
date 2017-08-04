@@ -2155,7 +2155,7 @@ def repeat_kmeans( data, DATA, data_name, K = 20, repeats=10 ):
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
     pp.close('all')  
 
-def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitter=AalenAdditiveFitter ):
+def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, repeats = 5, fitter=AalenAdditiveFitter ):
   Z           = data.Z
   X=DATA
   z_names = X.columns.values
@@ -2223,7 +2223,7 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   best_idx = np.argmax( mean_score )  
   best_l2 = L2s[best_idx]
     
-  repeats = 2
+  
   
   coefs = np.zeros( (dim_z,repeats*K) )
   predicted_death = np.zeros( (len(X),repeats) )
@@ -2263,6 +2263,16 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   #pdb.set_trace()
   
   z_order = np.argsort(coefs_mean)
+  
+  XV = np.dot( X.values, np.diag(coefs_mean.values) )
+  XV2 = np.hstack( (weighted_death_mean[:,np.newaxis],XV) )
+  z_ids2use = np.hstack( (z_order[:10], z_order[-10:] ))
+  z_names2use = np.hstack( (z_names[z_order[:10]], z_names[z_order[-10:]] ))
+  XV2cols = ["weighted"]
+  XV2cols.extend(z_names2use)
+  z_ids2use2 = [0]
+  z_ids2use2.extend( list(z_ids2use+1))
+  
   patient_order = np.argsort( weighted_death_mean ) 
   predicted_death_sort = predicted_death_mean.sort_values()
   f = pp.figure()
@@ -2318,20 +2328,14 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
     #pp.title( "%s concordance = %0.2f  p_value = %g test stat = %0.1f"%( tissue_name.upper(), tissue_concordance,tissue_p_value ,tissue_test_statistic ) )
 
     #
-    z_ids2use = np.hstack( (z_order[:10], z_order[-10:] ))
-    z_names2use = np.hstack( (z_names[z_order[:10]], z_names[z_order[-10:]] ))
     #pdb.set_trace()
-    XV = X.values[ ids[tissue_patient_order],:] # np.dot( X.values[ ids[tissue_patient_order],:], np.diag(coefs_mean.values) )
-    XV /= XV.std(0)
-    X_sorted = pd.DataFrame( XV[:,z_ids2use], index = X.index.values[ids[tissue_patient_order]], columns=z_names2use )
+    #XV = X.values[ ids[tissue_patient_order],:] # np.dot( X.values[ ids[tissue_patient_order],:], np.diag(coefs_mean.values) )
+    #XV /= XV.std(0)
+    X_sorted = pd.DataFrame( XV[ids[tissue_patient_order],:][:,z_ids2use], index = X.index.values[ids[tissue_patient_order]], columns=z_names2use )
     
-    XV2 = np.hstack( (wd[:,np.newaxis][tissue_patient_order,:]/wd.std(),XV) )
-    XV2cols = ["weighted"]
-    XV2cols.extend(z_names2use)
-    z_ids2use2 = [0]
-    z_ids2use2.extend( list(z_ids2use+1))
+    #XV2 = np.hstack( (wd[:,np.newaxis][tissue_patient_order,:]/wd.std(),XV) )
     #pdb.set_trace()
-    X_sorted2 = pd.DataFrame( XV2[:,z_ids2use2], index = X_sorted.index.values, columns=XV2cols )
+    X_sorted2 = pd.DataFrame( XV2[ids[tissue_patient_order],:][:,z_ids2use2], index = X_sorted.index.values, columns=XV2cols )
     h = sns.clustermap( X_sorted2, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(10,10) )
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
@@ -3251,7 +3255,8 @@ if __name__ == "__main__":
   #survival_regression_global( data, data.Z, "Z", K = 20, fitter = CoxPHFitter  )
   #survival_regression_global( data, data.Z, "Z", K = 10, fitter = CoxPHFitter  )
   #survival_regression_global( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
-  survival_regression_global( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.Z, "Z", K = 5, repeats=5 fitter = CoxPHFitter  )
+  survival_regression_global( data, data.RNA_scale, "RNA", K = 5, repeats=5 fitter = CoxPHFitter  )
   #survival_regression_global( data, data.RNA_scale, "RNA", K = 2, fitter = CoxPHFitter  )
   #survival_regression_local( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
   
