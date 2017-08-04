@@ -14,6 +14,7 @@ from sklearn.neighbors import KDTree
 from scipy.spatial.distance import pdist, squareform
 from scipy.spatial.distance import squareform
 import seaborn as sns
+import lifelines
 from lifelines import CoxPHFitter, AalenAdditiveFitter
 from lifelines.datasets import load_regression_dataset
 from lifelines.utils import k_fold_cross_validation
@@ -2158,11 +2159,19 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   Z           = data.Z
   X=DATA
   z_names = X.columns.values
+  dim_z = len(z_names)
   if fitter==AalenAdditiveFitter:
     save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Aalen"%(data_name,K) )
   elif fitter == CoxPHFitter:
     save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Cox2"%(data_name,K) )
   check_and_mkdir(save_dir) 
+  
+  survival_fig_dir = os.path.join(save_dir, "survival_curves" )
+  heatmap_fig_dir = os.path.join(save_dir, "heatmaps" )
+  survival_info_dir = os.path.join(save_dir, "survival_info" )
+  check_and_mkdir(survival_fig_dir)
+  check_and_mkdir(survival_info_dir)
+  check_and_mkdir(heatmap_fig_dir)
   results = {}
   data.data_store.open()
   #pdb.set_trace()
@@ -2201,6 +2210,7 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   
   random_state=0
   L2s = [0.01,0.1,1.0,2.5,5.0,10.0] #,20.0,50.0]
+  L2s = [0.0] #,0.01,0.1] #,1.0,2.5,5.0,10.0] #,20.0,50.0]
   mean_score = []
   for penalizer in L2s:
     cph = fitter( penalizer=penalizer, strata = "tissue" )
@@ -2213,9 +2223,12 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
   best_idx = np.argmax( mean_score )  
   best_l2 = L2s[best_idx]
     
-  repeats = 20
+  repeats = 2
+  
+  coefs = np.zeros( (dim_z,repeats*K) )
   predicted_death = np.zeros( (len(X),repeats) )
   weighted_death = np.zeros( (len(X),repeats) )
+  rk=0
   for r in range(repeats):
     print "repeat ",r
     folds = StratifiedKFold(n_splits=K, shuffle = True, random_state=r)
@@ -2235,14 +2248,34 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
       prd = test_survival.index.values[ np.argmin(test_survival.values,0) ]
       weighted_death[:,r][ test_ids] = wd
       predicted_death[:,r][ test_ids ] = prd
-
+      coefs[:,rk] = cph.hazards_[z_names].values
+      rk+=1
       #pdb.set_trace()
-  predicted_death = pd.Series( predicted_death.mean(1), index = bcs, name="PAN" )
-  weighted_death = pd.Series( weighted_death.mean(1), index = bcs, name="PAN" )
-
-  patient_order = np.argsort( weighted_death ) 
-  predicted_death_sort = predicted_death.sort_values()
+  predicted_death_mean = pd.Series( predicted_death.mean(1), index = bcs, name="PAN" )
+  weighted_death_mean = pd.Series( weighted_death.mean(1), index = bcs, name="PAN" )
+  coefs_mean = pd.Series( coefs.mean(1), index = z_names, name="PAN" )
   
+  predicted_death_std = pd.Series( predicted_death.std(1), index = bcs, name="PAN" )
+  weighted_death_std = pd.Series( weighted_death.std(1), index = bcs, name="PAN" )
+  coefs_std = pd.Series( coefs.std(1), index = z_names, name="PAN" )
+  
+  global_concordance = lifelines.utils.concordance_index( times, -weighted_death_mean, events )
+  #pdb.set_trace()
+  
+  z_order = np.argsort(coefs_mean)
+  patient_order = np.argsort( weighted_death_mean ) 
+  predicted_death_sort = predicted_death_mean.sort_values()
+  f = pp.figure()
+  pp.plot( weighted_death[patient_order,:], '.', alpha=0.5  )
+  pp.title("global concordance = %0.3f"%(global_concordance))
+  pp.savefig( save_dir + "/predicted_death.png", format="png" )
+  f = pp.figure()
+  pp.plot(coefs[z_order,:], '.'  )
+  pp.title("global concordance = %0.3f"%(global_concordance))
+  pp.savefig( save_dir + "/coefs.png", format="png" )
+  #pdb.set_trace()
+  tissue_results = []
+  tissue_survivals=[]
   for tissue_name in T.columns: #[8:]:
     if tissue_name == "dlbc":
       continue
@@ -2257,15 +2290,73 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
     if n_events < 10:
       K2use=2
       
-    patient_order = np.argsort( weighted_death[ids] ) 
-    I_splits = survival_splits( events[ids], patient_order, K_groups )
-    groups   = groups_by_splits( len(ids), I_splits )
-    f=pp.figure()
-    ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow")
-    pp.title( "%s"%( tissue_name ) )
-    pp.savefig( save_dir + "/%s.png"%(tissue_name), format="png" )
+    tissue_patient_order = np.argsort( weighted_death_mean[ids] ) 
     
-    # #pdb.set_trace()
+    I_splits = survival_splits( events[ids], tissue_patient_order, K_groups )
+    groups   = groups_by_splits( len(ids), I_splits )
+    
+    wd = weighted_death_mean[ids]
+    prd = predicted_death_mean[ids]
+    tissue_concordance = lifelines.utils.concordance_index( times[ids], -weighted_death_mean[ids], events[ids] )
+    tissue_result = multivariate_logrank_test(times[ids], groups=groups, event_observed=events[ids] )
+    tissue_p_value = tissue_result.p_value
+    tissue_test_statistic = tissue_result.test_statistic
+    
+    
+    f=pp.figure()
+    ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow", labels=["v low","low","high","v high"])
+    pp.title( "%s concordance = %0.2f  p_value = %g test stat = %0.1f"%( tissue_name.upper(), tissue_concordance,tissue_p_value ,tissue_test_statistic ) )
+    pp.savefig( survival_fig_dir + "/%s.png"%(tissue_name), format="png" )
+
+    f=pp.figure()
+    #ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow", labels=["v low","low","high","v high"])
+    #pp.title( "%s concordance = %0.2f  p_value = %g test stat = %0.1f"%( tissue_name.upper(), tissue_concordance,tissue_p_value ,tissue_test_statistic ) )
+    k_pallette = sns.color_palette("rainbow", K_groups)
+    k_colors = np.array([k_pallette[int(i)] for i in groups[tissue_patient_order]] )
+
+    #
+    z_ids2use = np.hstack( (z_order[:10], z_order[-10:] ))
+    z_names2use = np.hstack( (z_names[z_order[:10]], z_names[z_order[-10:]] ))
+    #pdb.set_trace()
+    XV = np.dot( X.values[ ids[tissue_patient_order],:], np.diag(coefs_mean.values) )
+    
+    X_sorted = pd.DataFrame( XV[:,z_ids2use], index = X.index.values[ids[tissue_patient_order]], columns=z_names2use )
+    h = sns.clustermap( X_sorted, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(10,10) )
+    pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+    pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+    pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
+    pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
+    h.ax_row_dendrogram.set_visible(False)
+    h.ax_col_dendrogram.set_visible(False)
+    h.cax.set_visible(False)
+    #h.ax_heatmap.hlines(n_tissue-pp.find(np.diff(groups[patient_order]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
+    pp.savefig( heatmap_fig_dir + "/%s.png"%(tissue_name), format="png" )#, dpi=300, bbox_inches='tight')
+    pp.close('all')
+    
+
+    
+    tissue_results.append( pd.Series( [tissue_concordance,tissue_p_value,tissue_test_statistic], index=["concordance","p_value","test_statistic"], name=tissue_name ) )
+    
+    ts_data = np.vstack( (times[ids][tissue_patient_order], \
+                          events[ids][tissue_patient_order],\
+                          groups[tissue_patient_order],\
+                          prd[tissue_patient_order], wd[tissue_patient_order]) ).T
+    tissue_survival = pd.DataFrame( ts_data, index = bcs[ ids[tissue_patient_order] ], columns = ["T","E","group","predicted_death","weighted_death"] )
+    tissue_survival.to_csv( survival_info_dir  + "/%s_survival_info.csv"%(tissue_name), index_label="barcode")
+    
+    tissue_survivals.append( pd.DataFrame( tissue_survival.values, index=tissue_survival.index, columns=tissue_survival.columns ) )
+  tissue_results = pd.concat( tissue_results, axis=1).T
+  tissue_results.to_csv( save_dir + "/tissue_results.csv", index_label="tissue")
+  
+  coef = pd.DataFrame( np.vstack((coefs_mean,coefs_std)).T, index = z_names, columns=["mean","std"] ) 
+  coef.to_csv(save_dir + "/coefs.csv", index_label="feature" )
+  
+  global_predictions = pd.DataFrame( np.vstack( (predicted_death_mean,predicted_death_std,weighted_death_mean,weighted_death_std) ).T, index = bcs, columns=["predicted_death","predicted_death_std","weighted_death","weighted_death_std"] )
+  global_predictions.to_csv( save_dir + "/global_predictions.csv", index_label="barcode")
+  
+  global_survivals = pd.concat( tissue_survivals, axis = 0)
+  global_survivals.to_csv( save_dir + "/global_survival.csv", index_label="barcode")
+  #pdb.set_trace()
     #
     # I_splits = survival_splits( events[ids], patient_order, K_groups )
     # groups   = groups_by_splits( len(ids), I_splits )
@@ -3147,10 +3238,10 @@ if __name__ == "__main__":
   #repeat_kmeans( data, data.RNA_fair, "RNA", K = 5, repeats=10 )
   #repeat_kmeans( data, data.Z, "Z", K = 5, repeats=10 )
   #survival_regression_global( data, data.Z, "Z", K = 20, fitter = CoxPHFitter  )
-  survival_regression_global( data, data.Z, "Z", K = 10, fitter = CoxPHFitter  )
-  survival_regression_global( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
+  #survival_regression_global( data, data.Z, "Z", K = 10, fitter = CoxPHFitter  )
+  #survival_regression_global( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
   survival_regression_global( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
-  survival_regression_global( data, data.Z, "Z", K = 2, fitter = CoxPHFitter  )
+  #survival_regression_global( data, data.RNA_scale, "RNA", K = 2, fitter = CoxPHFitter  )
   #survival_regression_local( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
   
   #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )

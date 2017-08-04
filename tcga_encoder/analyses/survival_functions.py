@@ -80,7 +80,7 @@ def  survival_splits( events, event_order, split_nbr ):
   return split_indices
 
 
-def plot_survival_by_splits( times, events, split_indices, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow"):
+def plot_survival_by_splits( times, events, split_indices, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow", labels=None):
   
   split_nbr = len(split_indices)
   
@@ -95,7 +95,11 @@ def plot_survival_by_splits( times, events, split_indices, at_risk_counts=False,
     #rgb_color = c( int( c.N*float(k) / (len(split_indices)+1 ) ) )
     #print rgb_color, k, c.N*float(k) / (len(split_indices)+1 )
     #pdb.set_trace()
-    kmf.fit(times[splits], event_observed=events[splits], label="q=%d/%d"%(k+1,split_nbr)  )
+    if labels is None:
+      kmf.fit(times[splits], event_observed=events[splits], label="q=%d/%d"%(k+1,split_nbr)  )
+    else:
+      kmf.fit(times[splits], event_observed=events[splits], label=labels[k]  )
+      
     ax=kmf.plot(ax=ax,at_risk_counts=at_risk_counts,show_censors=show_censors,ci_show=ci_show, color=colors[k])
     k+=1
   pp.ylim(0,1)
