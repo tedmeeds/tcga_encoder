@@ -2155,7 +2155,7 @@ def repeat_kmeans( data, DATA, data_name, K = 20, repeats=10 ):
     pp.savefig( save_dir + "/%s_survival.png"%(tissue_name), format="png", dpi=300)
     pp.close('all')  
 
-def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, repeats = 5, fitter=AalenAdditiveFitter ):
+def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4, repeats = 5, fitter=AalenAdditiveFitter ):
   Z           = data.Z
   X=DATA
   z_names = X.columns.values
@@ -2209,8 +2209,8 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, repe
   dim = X.shape[1]
   
   random_state=0
-  L2s = [0.01,0.1,1.0,2.5,5.0,10.0] #,20.0,50.0]
-  L2s = [0.0] #,0.01,0.1] #,1.0,2.5,5.0,10.0] #,20.0,50.0]
+  # L2s = [0.01,0.1,1.0,2.5,5.0,10.0] #,20.0,50.0]
+  # L2s = [0.0] #,0.01,0.1] #,1.0,2.5,5.0,10.0] #,20.0,50.0]
   mean_score = []
   for penalizer in L2s:
     cph = fitter( penalizer=penalizer, strata = "tissue" )
@@ -3255,51 +3255,17 @@ if __name__ == "__main__":
   #survival_regression_global( data, data.Z, "Z", K = 20, fitter = CoxPHFitter  )
   #survival_regression_global( data, data.Z, "Z", K = 10, fitter = CoxPHFitter  )
   #survival_regression_global( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
-  survival_regression_global( data, data.Z, "Z", K = 5, repeats=5, fitter = CoxPHFitter  )
-  survival_regression_global( data, data.RNA_scale, "RNA", K = 5, repeats=5, fitter = CoxPHFitter  )
-  #survival_regression_global( data, data.RNA_scale, "RNA", K = 2, fitter = CoxPHFitter  )
-  #survival_regression_local( data, data.Z, "Z", K = 3, fitter = CoxPHFitter  )
   
-  #repeat_kmeans_global( data, data.RNA_fair, "RNA", K = 10, repeats=10 )
-  #repeat_kmeans_global( data, data.Z, "Z", K = 2, K2=10, repeats=10 )
-  # repeat_kmeans_global( data, K = 2, repeats=50 )
-  # repeat_kmeans_global( data, K = 3, repeats=50 )
-  # repeat_kmeans_global( data, K = 4, repeats=50 )
-  # repeat_kmeans_global( data, K = 5, repeats=50 )
-  # repeat_kmeans_global( data, K = 6, repeats=50 )
-  # repeat_kmeans_global( data, K = 7, repeats=50 )
-  # repeat_kmeans_global( data, K = 8, repeats=50 )
-  #repeat_gmm( data, K = 4, repeats=500 )
-  # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
-  # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
-  #
-  # result = hidden_neighbours( data, nbr=3 )
-  # result = latent_neighbours( data, nbr=3 )
+  K=2
+  L2s_Z = [0.001,0.01,0.1,1.0]
+  L2s_RNA = [0.001,0.01,0.1,1.0]
+  survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.RNA_fair, "RNA_fair", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
   
-  #result = neighbour_differences( data, data.Z, data.weighted_W_h2z, "latent", nbr = 10)
-  #result = neighbour_differences( data, data.H, data.W_input2h, "hidden", nbr=10 )
-  #within_tissue_neighbour_differences( data, data.Z, data.weighted_W_h2z, "within_tissue_latent", nbr = 20 )
-  #within_tissue_neighbour_differences( data, data.H, data.W_input2h, "within_tissue_hidden", nbr = 20 )
-
-  #cosine_within_tissue_neighbour_differences( data, data.Z, data.weighted_W_h2z, "within_tissue_latent", nbr = 20 )
-  #cosine_within_tissue_neighbour_differences( data, data.H, data.W_input2h, "within_tissue_hidden", nbr = 20 )
-
-  # G=data.nn_latent["full_G"]
-  # adj_dict = G.adj
-  # n = len(adj_dict)
-  # A = np.zeros( (n,n), dtype=int )
-  # name2idx = OrderedDict()
-  # i=0
-  # for name in data.Z.index.values:
-  #   name2idx[name] = i; i+=1
-  #
-  # for k,v in adj_dict.iteritems():
-  #   for k2 in v.keys():
-  #     A[ name2idx[k], name2idx[k2]] = 1
-  
-  #cluster_genes_by_hidden_weights(data)
-  #cluster_genes_by_hidden_weights(data)
-  #cluster_genes_by_hidden_weights(data)
-  
-  
-  
+  K=5
+  L2s_Z = [0.001,0.01,0.1,1.0]
+  L2s_RNA = [0.001,0.01,0.1,1.0]
+  survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
+  survival_regression_global( data, data.RNA_fair, "RNA_fair", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
