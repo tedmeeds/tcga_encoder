@@ -2302,26 +2302,37 @@ def survival_regression_global( data, DATA, data_name, K = 5, K_groups = 4, fitt
     tissue_p_value = tissue_result.p_value
     tissue_test_statistic = tissue_result.test_statistic
     
+    assert K_groups==4, "not set up for differnt groups"
+    k_pallette = sns.color_palette("RdBu_r", K_groups+2)
+    k_pallette = [k_pallette[0],k_pallette[1],k_pallette[-2],k_pallette[-1]]
+    k_colors = np.array([k_pallette[int(i)] for i in groups[tissue_patient_order]] )
+    k_colors2 = np.array([k_pallette[int(i)] for i in groups] )
     
     f=pp.figure()
-    ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow", labels=["v low","low","high","v high"])
+    ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = None, colors=k_pallette, labels=["v low","low","high","v high"])
     pp.title( "%s concordance = %0.2f  p_value = %g test stat = %0.1f"%( tissue_name.upper(), tissue_concordance,tissue_p_value ,tissue_test_statistic ) )
     pp.savefig( survival_fig_dir + "/%s.png"%(tissue_name), format="png" )
 
     f=pp.figure()
     #ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow", labels=["v low","low","high","v high"])
     #pp.title( "%s concordance = %0.2f  p_value = %g test stat = %0.1f"%( tissue_name.upper(), tissue_concordance,tissue_p_value ,tissue_test_statistic ) )
-    k_pallette = sns.color_palette("rainbow", K_groups)
-    k_colors = np.array([k_pallette[int(i)] for i in groups[tissue_patient_order]] )
 
     #
     z_ids2use = np.hstack( (z_order[:10], z_order[-10:] ))
     z_names2use = np.hstack( (z_names[z_order[:10]], z_names[z_order[-10:]] ))
     #pdb.set_trace()
     XV = np.dot( X.values[ ids[tissue_patient_order],:], np.diag(coefs_mean.values) )
-    
+    XV /= XV.std(0)
     X_sorted = pd.DataFrame( XV[:,z_ids2use], index = X.index.values[ids[tissue_patient_order]], columns=z_names2use )
-    h = sns.clustermap( X_sorted, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(10,10) )
+    
+    XV2 = np.hstack( (wd[:,np.newaxis][tissue_patient_order,:],XV) )
+    XV2cols = ["weighted"]
+    XV2cols.extend(z_names2use)
+    z_ids2use2 = [0]
+    z_ids2use2.extend( list(z_ids2use+1))
+    #pdb.set_trace()
+    X_sorted2 = pd.DataFrame( XV2[:,z_ids2use2], index = X_sorted.index.values, columns=XV2cols )
+    h = sns.clustermap( X_sorted2, row_colors=k_colors, row_cluster=False, col_cluster=False, figsize=(10,10) )
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
     pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
     pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
