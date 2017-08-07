@@ -628,8 +628,11 @@ def deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process = 100, 
     
     pp.close('all')
 
-def deeper_meaning_dna_and_data_correct_by_tissue( data, DATA, data_name, nbr_dna_genes2process = 100, K=10, min_p_value=1e-3, threshold = 0.01, Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
-  save_dir   = os.path.join( data.save_dir, "correct_by_tissue_dna_and_%s_tissue_%0.2f_p_spear_%g_logreg"%(data_name,threshold,min_p_value) )
+def deeper_meaning_dna_and_data_correct_by_tissue( data, DATA, data_name, \
+                                                   nbr_dna_genes2process = 100,   \
+                                                   min_features = 10, \
+                                                   max_features = 50, K=10, min_p_value=1e-3, threshold = 0.01, Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
+  save_dir   = os.path.join( data.save_dir, "correct_by_tissue_dna_and_%s_tissue_min_%d_max_%d_%0.2f_p_spear_%g_logreg"%(data_name,min_features,max_features,threshold,min_p_value) )
   check_and_mkdir(save_dir) 
   n_C = len(Cs)
   dna_auc_dir   = os.path.join( data.save_dir, "dna_auc_latent" )
@@ -670,8 +673,8 @@ def deeper_meaning_dna_and_data_correct_by_tissue( data, DATA, data_name, nbr_dn
   n_dna = len(dna_names)
   dna = data.dna[ dna_names ]
   
-  min_features = 10
-  max_features = 50
+  # min_features = 10
+  # max_features = 50
   k_idx = 1
   results = []
   random_state=0
@@ -727,19 +730,23 @@ def deeper_meaning_dna_and_data_correct_by_tissue( data, DATA, data_name, nbr_dn
        
       
         # find top z by spearmanr p-values
-        rho_dna_z = stats.spearmanr(y_train, X_train )
-        dna_z_rho = np.squeeze(rho_dna_z[0][:1,:][:,1:])
-        dna_z_p   = np.squeeze(rho_dna_z[1][:1,:][:,1:])
+        if min_features == X_train.shape[1]:
+          print "using all features"
+          I = np.arange(min_features)
+        else:
+          rho_dna_z = stats.spearmanr(y_train, X_train )
+          dna_z_rho = np.squeeze(rho_dna_z[0][:1,:][:,1:])
+          dna_z_p   = np.squeeze(rho_dna_z[1][:1,:][:,1:])
       
-        ok_dna_z_p = pp.find( dna_z_p < min_p_value )
-        J = np.argsort(dna_z_p)
-        I=np.argsort( ok_dna_z_p )
-        #pdb.set_trace()
-        if len(I) < min_features:
-          I = J[:min_features]
-          #bad_gene = True
-        elif len(I)>max_features:
-          I=I[:max_features]
+          ok_dna_z_p = pp.find( dna_z_p < min_p_value )
+          J = np.argsort(dna_z_p)
+          I=np.argsort( ok_dna_z_p )
+          #pdb.set_trace()
+          if len(I) < min_features:
+            I = J[:min_features]
+            #bad_gene = True
+          elif len(I)>max_features:
+            I=I[:max_features]
           
         print "  using %d zs"%(len(I))
         #c.update(z_names[np.sort(ok_dna_z_p[I])])
@@ -749,7 +756,7 @@ def deeper_meaning_dna_and_data_correct_by_tissue( data, DATA, data_name, nbr_dn
         X_test   = X[test_split,:][:,z_ids_k]
         Z_counts[k,z_ids_k] = 1.0
         M=LogisticBinaryClassifier()
-      
+        #pdb.set_trace()
         for C_idx, C in zip(range(n_C),Cs):
           M.fit( y_train, X_train, C=C )
           y_est[test_split,C_idx] = M.prob(X_test)
