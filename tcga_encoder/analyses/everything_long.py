@@ -628,6 +628,313 @@ def deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process = 100, 
     
     pp.close('all')
 
+def deeper_meaning_dna_and_data_correct_pan( data, DATA, data_name, \
+                                             nbr_dna_genes2process = 100, \
+                                             min_features = 10, \
+                                             max_features = 100, \
+                                             K=10, min_p_value=1e-3, \
+                                             threshold = 0.01, \
+                                             Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
+  
+  save_dir   = os.path.join( data.save_dir, "correct_pancancer_dna_and_%s_pan_min_%d_max_%d_%0.2f_p_spear_%g_logreg"%(data_name,min_features, max_features,threshold,min_p_value) )
+  check_and_mkdir(save_dir) 
+  
+  print "min_features = ",min_features
+  print "max_features = ",max_features
+  
+  n_C = len(Cs)
+  dna_auc_dir   = os.path.join( data.save_dir, "dna_auc_latent" )
+  spearmanr_dir = os.path.join( data.save_dir, "spearmans_latent_tissue" )
+
+  RNA_fair    = data.RNA_fair
+  RNA_scale   =  tanh(data.RNA_scale)  
+  miRNA_scale = tanh(data.miRNA_scale)
+  METH_scale  = tanh(data.METH_scale )  
+  
+  n_rna   = data.n_rna
+  n_mirna = data.n_mirna
+  n_meth  = data.n_meth
+  
+  rna_z_rho = pd.read_csv( spearmanr_dir + "/rna_z_rho.csv", index_col="gene" )
+  # rna_z_p   = pd.read_csv( spearmanr_dir + "/rna_z_p.csv", index_col="gene" )
+  #
+  mirna_z_rho = pd.read_csv( spearmanr_dir + "/mirna_z_rho.csv", index_col="gene" )
+  # mirna_z_p   = pd.read_csv( spearmanr_dir + "/mirna_z_p.csv", index_col="gene" )
+  #
+  meth_z_rho = pd.read_csv( spearmanr_dir + "/meth_z_rho.csv", index_col="gene" )
+  # meth_z_p   = pd.read_csv( spearmanr_dir + "/meth_z_p.csv", index_col="gene" )
+
+  #min_features = 5
+  #max_features = 20
+  Z           = data.Z
+  barcodes    = Z.index.values
+  
+  #DATA        = RNA_fair.loc[barcodes]
+  X_ALL       = DATA.values
+  n           = len(X_ALL)
+
+  z_names     = DATA.columns
+  n_z         = len(z_names)
+  
+  T           = data.T
+  
+  tissue_names = T.columns
+  n_tissues    = len(tissue_names)
+  tissue2idx = OrderedDict()
+  for tissue,t_idx in zip( tissue_names, range(n_tissues)):
+    tissue2idx[ tissue ] = t_idx
+  
+  dna_names = data.dna.sum(0).sort_values(ascending=False).index.values
+  n_dna = len(dna_names)
+  dna = data.dna[ dna_names ]
+  
+  k_idx = 1
+  results = []
+  random_state=0
+  Z_W = []
+  Y_full_best=[]
+  performances = []
+  results = []
+  tissues_used_all = []
+  bcs_used_all=[]
+  tissue_performances = {}
+  for gene in dna_names[:nbr_dna_genes2process]:
+    bad_gene = False
+    dna_values = dna[gene].values
+    ids_with_n, relevant_tissues = ids_with_at_least_p_mutations( dna_values, T, p = threshold )
+    ids2use = pp.find(ids_with_n)
+    tissues_used = np.zeros( n_tissues, dtype=int)
+    for tissue in relevant_tissues:
+      tissues_used[ tissue2idx[tissue] ] = 1
+      
+    tissue_series = pd.Series( tissues_used, index = tissue_names, name=gene)
+    if len(ids_with_n)==0:
+      print "1 skipping ",gene
+      continue    
+    
+    gene_bcs = barcodes[ ids_with_n ]
+    
+    bcs_used = np.zeros( n, dtype = bool )
+    bcs_used[ids_with_n] = True
+    bcs_used = pd.Series( bcs_used, index = barcodes, name = gene )
+    k = 0
+    
+    y_true = dna_values[ids_with_n]
+    y_est = np.zeros( ( len(y_true),n_C) )
+    X = DATA[ ids_with_n ].values
+    assert len(y_true) == len(X), "should be same"
+    c=Counter()
+    #best_ridge = 10.001
+    Z_weights = np.zeros( (n_C,K,n_z) )
+    Z_counts  = np.zeros( (K,n_z) )
+    K_use = min( int(y_true.sum()),K)
+    
+    if K_use <K:
+      bad_gene=True
+      print "2 skipping ",gene
+      continue
+    y_full = np.zeros( (len(X_ALL),n_C) )
+    folds = StratifiedKFold(n_splits=K_use, shuffle = True, random_state=random_state)
+    for train_split, test_split in folds.split( X, y_true ):
+      
+      if bad_gene is True:
+        continue 
+      y_train = y_true[train_split]; X_train = X[train_split,:]
+      y_test = y_true[test_split]; 
+       
+      
+      if min_features == X_train.shape[1]:
+        print "using all features"
+        I = np.arange(min_features)
+      else:
+        # find top z by spearmanr p-values
+        rho_dna_z = stats.spearmanr(y_train, X_train )
+        dna_z_rho = np.squeeze(rho_dna_z[0][:1,:][:,1:])
+        dna_z_p   = np.squeeze(rho_dna_z[1][:1,:][:,1:])
+      
+        ok_dna_z_p = pp.find( dna_z_p < min_p_value )
+        J = np.argsort(dna_z_p)
+        I=np.argsort( ok_dna_z_p )
+        #pdb.set_trace()
+        if len(I) < min_features:
+          I = J[:min_features]
+          #bad_gene = True
+        elif len(I)>max_features:
+          I=J[:max_features]
+        else:
+          I = ok_dna_z_p
+        
+      print "  using %d zs"%(len(I))
+      #pdb.set_trace()
+      c.update(z_names[np.sort(I)])
+      #print gene, k, z_names[np.sort(ok_dna_z_p[I])]
+      
+      z_ids_k = I #ok_dna_z_p[I]
+      #X_all  = Z_values
+      X_ALL_gene = X_ALL[:,z_ids_k]
+      #pdb.set_trace()
+      X_train = X[train_split,:][:,z_ids_k]
+      X_test = X[test_split,:][:,z_ids_k]
+      Z_counts[k,z_ids_k] = 1.0
+      M=LogisticBinaryClassifier()
+      
+      for C_idx, C in zip(range(n_C),Cs):
+        M.fit( y_train, X_train, C=C )
+        y_est[test_split,C_idx] = M.prob(X_test)
+        y_full[:,C_idx] +=  M.prob(X_ALL_gene)
+        weights = np.zeros(n_z)
+        #pdb.set_trace()
+         
+        Z_weights[C_idx,k,z_ids_k] = M.coef_
+      k+=1
+    if bad_gene is True:
+      continue
+    y_full /= K
+    aucs = np.zeros(n_C)
+    aucs_p = np.zeros(n_C)
+    mean_precisions = np.zeros(n_C)
+    for C_idx, C in zip(range(n_C),Cs):
+      auc_y_est, p_value_y_est = auc_and_pvalue( y_true, y_est[:,C_idx] )
+      mean_precisions[C_idx] = average_precision_score(y_true, y_est[:,C_idx])
+      aucs[C_idx] = auc_y_est; aucs_p[C_idx] = p_value_y_est
+    best_c_idx = np.argmax(aucs)
+    best_mean_precision=mean_precisions[best_c_idx]
+    best_c = Cs[best_c_idx]
+    y_est_best = y_est[:,best_c_idx]
+    
+    best_auc = aucs[best_c_idx]
+    best_auc_p = aucs_p[best_c_idx]
+    best_Z_weights = Z_weights[best_c_idx]
+    
+    z_w = pd.Series( best_Z_weights.sum(0) / Z_counts.sum(0), index = z_names, name = gene )
+    y_full_best = pd.Series( y_full[:,best_c_idx], index = barcodes, name = gene )
+    
+    #
+    tissue_performance = tissue_level_performance( ids2use, dna_values, y_full_best, relevant_tissues, data.T )
+    #pdb.set_trace()
+    
+    bad = np.isnan(z_w); z_w[bad]=0
+    #pdb.set_trace()
+    order_y_est = np.argsort(y_est_best)
+    y_est_best_pd = pd.DataFrame( np.vstack((y_true[order_y_est],y_est_best[order_y_est])).T, index = gene_bcs[order_y_est], columns=["true","est"] )
+    performance = pd.Series( [best_mean_precision,best_auc,best_auc_p, len(y_true), int(np.sum(y_true))], index = ["AUPRC","AUROC","p-value","wildtype","mutations"], name = gene )
+    z_w = pd.Series( z_w, index = z_names, name = gene )
+    
+    performances.append(performance)
+    Z_W.append(z_w)
+    Y_full_best.append( y_full_best )
+    tissues_used_all.append(tissue_series)
+    bcs_used_all.append(bcs_used)
+    
+    print gene, "AUC/p/pr/c", best_auc,  best_auc_p, best_mean_precision, best_c
+    #print gene, "Z", [cj[0] for cj in c.most_common()]
+    #print gene, "C", [cj[1] for cj in c.most_common()]
+    
+    gene_dir =  os.path.join( save_dir, "%s"%(gene) )
+    check_and_mkdir(gene_dir)
+    
+    y_est_best_pd.to_csv( gene_dir +"/y_est_best.csv",index_label="barcode" )
+    performance.to_csv( gene_dir +"/performance.csv" )
+    z_w.to_csv( gene_dir +"/rna_fair_w.csv" )
+    tissue_series.to_csv( gene_dir + "/tissue_series.csv")
+    bcs_used.to_csv( gene_dir +"/bcs_used.csv")
+    tissue_performance.to_csv( gene_dir+ "/tissue_performance.csv", index_label="tissue")
+  
+    tissue_performances[gene] = pd.DataFrame( tissue_performance.values, index=tissue_performance.index, columns=tissue_performance.columns)
+    pp.close('all')
+  print "FINALIZING"
+  
+  Y_full_best_concat  = pd.concat( Y_full_best, axis = 1 ) 
+  Z_W_concat          = pd.concat( Z_W, axis=1 )
+  performances_concat = pd.concat( performances, axis=1 )
+  tissues_used_all    = pd.concat( tissues_used_all, axis = 1 )
+  bcs_used_all        = pd.concat(bcs_used_all, axis=1)
+  #tissue_performances_concat = pd.concat( tissue_performances, axis=1, names = Y_full_best_concat.columns )
+  order_ = performances_concat.loc["AUROC"].sort_values(ascending=False).index.values
+  #pdb.set_trace()
+  bcs_used_all = bcs_used_all[order_]
+  tissues_used_all=tissues_used_all[order_]
+  Y_full_best_concat = Y_full_best_concat[order_]
+  Z_W_concat = Z_W_concat[order_]
+  performances_concat = performances_concat[order_]
+  
+  bcs_used_all.to_csv( save_dir +"/barcodes.csv", index_label="barcode" )
+  tissues_used_all.to_csv( save_dir +"/tissues.csv", index_label="tissue")
+  Y_full_best_concat.to_csv( save_dir +"/Y_full_best.csv", index_label="barcode")
+  Z_W_concat.to_csv( save_dir +"/rna_fair_w.csv",index_label="z" )
+  performances_concat.to_csv( save_dir +"/performances.csv",index_label="measure" )
+  
+  print "spearman with inputs"
+  print "computing RNA-Z spearman rho's"
+  rho_rna_y = stats.spearmanr( RNA_scale.values, Y_full_best_concat.values )
+  #pdb.set_trace()
+  print "computing miRNA-Z spearman rho's"
+  rho_mirna_y = stats.spearmanr( miRNA_scale.values, Y_full_best_concat.values )
+  print "computing METH-Z spearman rho's"
+  rho_meth_y  = stats.spearmanr( METH_scale.values, Y_full_best_concat.values )
+  print "computing DNA-Z spearman rho's"
+  rho_dna_y   = stats.spearmanr(2*dna.values-1, Y_full_best_concat.values )
+
+  rna_y_rho = pd.DataFrame( rho_rna_y[0][:n_rna,:][:,n_rna:], index = data.rna_names, columns= Y_full_best_concat.columns )
+  rna_y_p   = pd.DataFrame( rho_rna_y[1][:n_rna,:][:,n_rna:], index = data.rna_names, columns=Y_full_best_concat.columns)
+
+  mirna_y_rho = pd.DataFrame( rho_mirna_y[0][:n_mirna,:][:,n_mirna:], index = data.mirna_names, columns=Y_full_best_concat.columns)
+  mirna_y_p   = pd.DataFrame( rho_mirna_y[1][:n_mirna,:][:,n_mirna:], index = data.mirna_names, columns=Y_full_best_concat.columns)
+ 
+  meth_y_rho = pd.DataFrame( rho_meth_y[0][:n_meth,:][:,n_meth:], index = data.meth_names, columns=Y_full_best_concat.columns)
+  meth_y_p   = pd.DataFrame( rho_meth_y[1][:n_meth,:][:,n_meth:], index = data.meth_names, columns=Y_full_best_concat.columns)
+
+  #dna_y_rho = pd.DataFrame( rho_dna_y[0][:n_dna,:][:,n_dna:], index = data.dna_names, columns=Y_full_best_concat.columns)
+  #dna_y_p   = pd.DataFrame( rho_dna_y[1][:n_dna,:][:,n_dna:], index = data.dna_names, columns=Y_full_best_concat.columns)
+
+  
+  rna_y_rho.to_csv( save_dir + "/rna_y_rho.csv", index_label="gene" )
+  rna_y_p.to_csv( save_dir + "/rna_y_p.csv", index_label="gene" )
+  
+  mirna_y_rho.to_csv( save_dir + "/mirna_y_rho.csv", index_label="gene" )
+  mirna_y_p.to_csv( save_dir + "/mirna_y_p.csv", index_label="gene" )
+  
+  meth_y_rho.to_csv( save_dir + "/meth_y_rho.csv", index_label="gene" )
+  meth_y_p.to_csv( save_dir + "/meth_y_p.csv", index_label="gene" )
+  
+  nbr_genes_to_keep=20
+  nbr_z_to_keep = 20
+  results = []
+  for gene in order_:
+    gene_dir =  os.path.join( save_dir, "%s"%(gene) )
+    print "finalizing ",gene
+    dna_gene     = dna[gene]
+    performance    = performances_concat[ gene ]
+    tissues_used   = tissues_used_all[gene][tissues_used_all[gene]==1].index.values
+    y_est_full     = Y_full_best_concat[gene] #.sort_values()
+    z_w            = np.abs(Z_W_concat[gene]).sort_values(ascending=False)[:nbr_z_to_keep]
+    bcs            = bcs_used_all[gene][bcs_used_all[gene]].index.values
+    
+    rna_y_p_gene   = rna_y_p[gene].sort_values()[:nbr_genes_to_keep]
+    mirna_y_p_gene = mirna_y_p[gene].sort_values()[:nbr_genes_to_keep]
+    meth_y_p_gene  = meth_y_p[gene].sort_values()[:nbr_genes_to_keep]
+    
+    
+    rna_y_rho_gene   = rna_y_rho[gene].loc[rna_y_p_gene.index]
+    mirna_y_rho_gene = mirna_y_rho[gene].loc[mirna_y_p_gene.index]
+    meth_y_rho_gene  = meth_y_rho[gene].loc[meth_y_p_gene.index]
+    
+    plot_roc( gene_dir, gene, y_est_full.loc[bcs], dna_gene.loc[bcs], T.loc[bcs], performance.loc["AUROC"] )
+    plot_pr( gene_dir, gene, y_est_full.loc[bcs], dna_gene.loc[bcs], T.loc[bcs], performance.loc["AUPRC"] )
+    plot_predictions( gene_dir, gene, y_est_full.loc[bcs], dna_gene.loc[bcs], T.loc[bcs], performance.loc["AUROC"], performance.loc["AUPRC"] )
+    
+    plot_pr_tissues( gene_dir, gene, bcs, y_est_full, dna_gene, tissues_used, data.T, tissue_performances[gene] )
+    plot_roc_tissues( gene_dir, gene, bcs, y_est_full, dna_gene, tissues_used, data.T, tissue_performances[gene] )
+    
+    plot_heatmap( gene_dir, gene, DATA[z_w.index.values].loc[bcs], y_est_full.loc[bcs], z_w, "RNA", normalize=True )
+    plot_heatmap( gene_dir, gene, RNA_scale[rna_y_p_gene.index.values].loc[bcs], y_est_full.loc[bcs], rna_y_rho_gene, "RNA", normalize=True )
+    plot_heatmap( gene_dir, gene, miRNA_scale[mirna_y_p_gene.index.values].loc[bcs], y_est_full.loc[bcs], mirna_y_rho_gene, "miRNA", normalize=True )
+    plot_heatmap( gene_dir, gene, METH_scale[meth_y_p_gene.index.values].loc[bcs], y_est_full.loc[bcs], meth_y_rho_gene, "METH", normalize=True )
+    plot_heatmap( gene_dir, gene, T.loc[bcs], y_est_full.loc[bcs], None, "TISSUE" )
+    #pdb.set_trace()
+    
+    pp.close('all')
+    
 def deeper_meaning_dna_and_data_correct_by_tissue( data, DATA, data_name, \
                                                    nbr_dna_genes2process = 100,   \
                                                    min_features = 10, \

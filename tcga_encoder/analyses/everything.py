@@ -2807,38 +2807,37 @@ if __name__ == "__main__":
   #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )  
   nbr_dna_genes2process = 100
   Cs = [0.00001,0.0001, 0.001,0.01,0.1,1.0,10.0,100.0,1000.0] 
-  #deeper_meaning_dna_and_rna_fair_correct_by_tissue( data, nbr_dna_genes2process=10, K=10, min_p_value=1e-3, threshold=0.0, Cs = Cs )
-  
-  #deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.1, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  #deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.1, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  #deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  #deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  #deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  #deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=5, min_p_value=1.0, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+
   K=10
   min_p_value=1.0
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=1, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.5, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.5, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  threshold=0.0
+  min_features = data.Z.values.shape[1]
+  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  
+  min_features = data.RNA_fair.values.shape[1]
+  deeper_meaning_dna_and_data_correct_pan( data, data.RNA_scale, "RNA_scale", min_features=min_features,max_features=min_features,nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  deeper_meaning_dna_and_data_correct_pan( data, data.RNA_fair, "RNA_fair", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+
+  threshold=0.05
+  min_features = data.Z.values.shape[1]
+  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  
+  min_features = data.RNA_fair.values.shape[1]
+  deeper_meaning_dna_and_data_correct_pan( data, data.RNA_scale, "RNA_scale", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  deeper_meaning_dna_and_data_correct_pan( data, data.RNA_fair, "RNA_fair", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+
 
   min_p_value=1e-4
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=1, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.5, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.5, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=1, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.25, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.5, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.5, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
 
   # deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   # deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1.0, threshold=0.05, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
