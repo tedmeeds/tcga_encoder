@@ -412,8 +412,9 @@ def tissue_level_performance( ids, y_true, y_est, relevant_tissues, tissues ):
     y_true_tissue = y_true[tissue_ids]
     y_est_tissue  = y_est[tissue_ids]
     
+    n = len(y_true_tissue)
     mutations = int(np.sum(y_true_tissue))
-    wildtype  = len(tissue_ids)-mutations
+    wildtype  = n-mutations
     if mutations==0 or wildtype==0:
       print "skipping ",tissue
       continue
@@ -421,7 +422,7 @@ def tissue_level_performance( ids, y_true, y_est, relevant_tissues, tissues ):
     auc_y_est, p_value_y_est = auc_and_pvalue(y_true_tissue, y_est_tissue )
     mean_precision = average_precision_score(y_true_tissue, y_est_tissue )
     
-    performances.append( pd.Series( [mean_precision,auc_y_est,p_value_y_est,wildtype,mutations],index = ["AUPRC","AUROC","p-value","wildtype","mutations"], name = tissue ) )
+    performances.append( pd.Series( [mean_precision,auc_y_est,p_value_y_est,n,wildtype,mutations],index = ["AUPRC","AUROC","p-value","n","wildtype","mutations"], name = tissue ) )
   
   performances = pd.concat(performances, axis=1).T
   #pdb.set_trace()

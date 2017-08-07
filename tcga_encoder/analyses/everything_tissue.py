@@ -2814,9 +2814,9 @@ if __name__ == "__main__":
   
   deeper_meaning_dna_and_data_correct_by_tissue( data, data.Z, "Z", nbr_dna_genes2process=nbr_dna_genes2process, min_features=min_features, max_features=min_features, K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
   
-  min_features = data.RNA_fair.values.shape[1]
-  deeper_meaning_dna_and_data_correct_by_tissue( data, data.RNA_fair, "RNA_fair", nbr_dna_genes2process=nbr_dna_genes2process, min_features=min_features, max_features=min_features, K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
-  deeper_meaning_dna_and_data_correct_by_tissue( data, data.RNA_scale, "RNA_scale", nbr_dna_genes2process=nbr_dna_genes2process, min_features=min_features, max_features=min_features, K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  # min_features = data.RNA_fair.values.shape[1]
+  # deeper_meaning_dna_and_data_correct_by_tissue( data, data.RNA_fair, "RNA_fair", nbr_dna_genes2process=nbr_dna_genes2process, min_features=min_features, max_features=min_features, K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  # deeper_meaning_dna_and_data_correct_by_tissue( data, data.RNA_scale, "RNA_scale", nbr_dna_genes2process=nbr_dna_genes2process, min_features=min_features, max_features=min_features, K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
   
 
   
