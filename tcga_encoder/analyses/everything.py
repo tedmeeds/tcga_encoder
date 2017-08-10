@@ -414,7 +414,7 @@ def normalize_counts( C ):
 
 def cluster_genes_by_hidden_weights_spectral( data, Ks = [400,200,100] ):
   results = {}
-  save_dir = os.path.join( data.save_dir, "input2hidden_weight_clustering_spectral" )
+  save_dir = os.path.join( data.save_dir, "B_input2hidden_weight_clustering_spectral" )
   
   # take weight matrix, find small groupds of co-activated weights
   W = pd.concat( data.W_input2h.values() )
@@ -2801,7 +2801,7 @@ if __name__ == "__main__":
   data = load_data_and_fill( data_location, results_location )
   
   #dna_auc_using_latent_space( data, force =True )
-  spearmanr_latent_space_by_inputs(data, force=True)
+  #spearmanr_latent_space_by_inputs(data, force=True)
   # ridges = [0.00001, 0.001,1.0]
   #
   # #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
@@ -2872,8 +2872,8 @@ if __name__ == "__main__":
   # repeat_kmeans_global( data, K = 7, repeats=50 )
   # repeat_kmeans_global( data, K = 8, repeats=50 )
   #repeat_gmm( data, K = 4, repeats=500 )
-  # result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
-  # result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
+  result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
+  result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
   #
   # result = hidden_neighbours( data, nbr=3 )
   # result = latent_neighbours( data, nbr=3 )
