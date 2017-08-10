@@ -1442,6 +1442,95 @@ def cosine_within_tissue_neighbour_differences(data, X, Ws, title, nbr = 10):
 #   results["full_G"] = G
 #   results["save_dir"] = save_dir
 #   data.nn_latent_dif = results
+
+def  spearmanr_hidden_by_inputs( data, force = False ):
+  H           = data.H
+  RNA_scale   = tanh(data.RNA_scale) 
+  miRNA_scale = tanh(data.miRNA_scale) 
+  METH_scale  = tanh(data.METH_scale )  
+  
+  
+  dna_names = data.dna.sum(0).sort_values(ascending=False).index.values
+  n_dna = len(dna_names)
+  dna = data.dna[ dna_names ]
+  
+  save_dir = os.path.join( data.save_dir, "A_spearmans_hidden_tissue" )
+  check_and_mkdir(save_dir)
+  
+  data.data_store.open()
+  try:
+    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ Z.index ]
+  except:
+    T=data.data_store["/CLINICAL/TISSUE"].loc[ Z.index ]
+  data.data_store.close()
+  
+  #pdb.set_trace()
+  rna_names   = data.rna_names    
+  mirna_names = data.mirna_names 
+  meth_names  = data.meth_names   
+  
+  z_names = data.z_names
+  h_names = data.h_names
+  n_rna   = len(rna_names)
+  n_mirna = len(mirna_names)
+  n_meth  = len(meth_names)
+
+
+  barcodes = T.index.values
+  
+  try:
+    rna_z_rho = pd.read_csv( save_dir + "/rna_h_rho.csv", index_col="gene" )
+    rna_z_p   = pd.read_csv( save_dir + "/rna_h_p.csv", index_col="gene" )
+  
+    mirna_z_rho = pd.read_csv( save_dir + "/mirna_h_rho.csv", index_col="gene" )
+    mirna_z_p   = pd.read_csv( save_dir + "/mirna_h_p.csv", index_col="gene" )
+   
+    meth_z_rho = pd.read_csv( save_dir + "/meth_h_rho.csv", index_col="gene" )
+    meth_z_p   = pd.read_csv( save_dir + "/meth_h_p.csv", index_col="gene" )
+
+    dna_z_rho = pd.read_csv( save_dir + "/dna_h_rho.csv", index_col="gene" )
+    dna_z_p   = pd.read_csv( save_dir + "/dna_h_p.csv", index_col="gene" )
+  
+  except: 
+    print "could not load, forcing..."  
+    force=True
+    
+  if force is True:
+    print "computing RNA-H spearman rho's"
+    rho_rna_z = stats.spearmanr( RNA_scale.values, H.values )
+    #pdb.set_trace()
+    print "computing miRNA-Z spearman rho's"
+    rho_mirna_z = stats.spearmanr( miRNA_scale.values, H.values )
+    print "computing METH-Z spearman rho's"
+    rho_meth_z = stats.spearmanr( METH_scale.values, H.values )
+    print "computing DNA-Z spearman rho's"
+    rho_dna_z = stats.spearmanr(2*dna.values-1, H.values )
+  
+    rna_z_rho = pd.DataFrame( rho_rna_z[0][:n_rna,:][:,n_rna:], index = rna_names, columns=h_names)
+    rna_z_p   = pd.DataFrame( rho_rna_z[1][:n_rna,:][:,n_rna:], index = rna_names, columns=h_names)
+  
+    mirna_z_rho = pd.DataFrame( rho_mirna_z[0][:n_mirna,:][:,n_mirna:], index = mirna_names, columns=h_names)
+    mirna_z_p   = pd.DataFrame( rho_mirna_z[1][:n_mirna,:][:,n_mirna:], index = mirna_names, columns=h_names)
+   
+    meth_z_rho = pd.DataFrame( rho_meth_z[0][:n_meth,:][:,n_meth:], index = meth_names, columns=h_names)
+    meth_z_p   = pd.DataFrame( rho_meth_z[1][:n_meth,:][:,n_meth:], index = meth_names, columns=h_names)
+
+    dna_z_rho = pd.DataFrame( rho_dna_z[0][:n_dna,:][:,n_dna:], index = dna_names, columns=h_names)
+    dna_z_p   = pd.DataFrame( rho_dna_z[1][:n_dna,:][:,n_dna:], index = dna_names, columns=h_names)
+
+  
+  rna_z_rho.to_csv( save_dir + "/rna_h_rho.csv", index_label="gene" )
+  rna_z_p.to_csv( save_dir + "/rna_h_p.csv", index_label="gene" )
+  
+  mirna_z_rho.to_csv( save_dir + "/mirna_h_rho.csv", index_label="gene" )
+  mirna_z_p.to_csv( save_dir + "/mirna_h_p.csv", index_label="gene" )
+  
+  meth_z_rho.to_csv( save_dir + "/meth_h_rho.csv", index_label="gene" )
+  meth_z_p.to_csv( save_dir + "/meth_h_p.csv", index_label="gene" )
+  
+  dna_z_rho.to_csv( save_dir + "/dna_h_rho.csv", index_label="gene" )
+  dna_z_p.to_csv( save_dir + "/dna_h_p.csv", index_label="gene" )
+  
 def  spearmanr_latent_space_by_inputs( data, force = False ):
   Z           = data.Z
   RNA_scale   = tanh(data.RNA_scale) 
@@ -2802,6 +2891,7 @@ if __name__ == "__main__":
   
   #dna_auc_using_latent_space( data, force =True )
   #spearmanr_latent_space_by_inputs(data, force=True)
+  spearmanr_hidden_by_inputs(data, force=True)
   # ridges = [0.00001, 0.001,1.0]
   #
   # #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
@@ -2872,8 +2962,8 @@ if __name__ == "__main__":
   # repeat_kmeans_global( data, K = 7, repeats=50 )
   # repeat_kmeans_global( data, K = 8, repeats=50 )
   #repeat_gmm( data, K = 4, repeats=500 )
-  result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
-  result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
+  #result = cluster_genes_by_hidden_weights_spectral(data, Ks = [200,100,50])
+  #result = cluster_genes_by_latent_weights_spectral(data, Ks = [100,50,20])
   #
   # result = hidden_neighbours( data, nbr=3 )
   # result = latent_neighbours( data, nbr=3 )
