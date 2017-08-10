@@ -60,7 +60,7 @@ def load_data_and_fill( data_location, results_location ):
   n_h     = len(h_names)
   n_z     = len(z_names)
   
-  everything_dir = os.path.join( os.path.join( HOME_DIR, results_location ), "everything" )
+  everything_dir = os.path.join( os.path.join( HOME_DIR, results_location ), "everything2" )
   check_and_mkdir(everything_dir)
 
   data                = EverythingObject()

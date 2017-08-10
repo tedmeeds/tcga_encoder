@@ -59,7 +59,7 @@ def load_data_and_fill( data_location, results_location ):
   n_h     = len(h_names)
   n_z     = len(z_names)
   
-  everything_dir = os.path.join( os.path.join( HOME_DIR, results_location ), "everything" )
+  everything_dir = os.path.join( os.path.join( HOME_DIR, results_location ), "everything2" )
   check_and_mkdir(everything_dir)
 
   data                = EverythingObject()
@@ -1444,16 +1444,16 @@ def cosine_within_tissue_neighbour_differences(data, X, Ws, title, nbr = 10):
 #   data.nn_latent_dif = results
 def  spearmanr_latent_space_by_inputs( data, force = False ):
   Z           = data.Z
-  RNA_scale   = 2.0 / (1+np.exp(-data.RNA_scale)) -1   
-  miRNA_scale = 2.0 / (1+np.exp(-data.miRNA_scale))-1 
-  METH_scale  = 2.0 / (1+np.exp(-data.METH_scale ))-1  
+  RNA_scale   = tanh(data.RNA_scale) 
+  miRNA_scale = tanh(data.miRNA_scale) 
+  METH_scale  = tanh(data.METH_scale )  
   
   
   dna_names = data.dna.sum(0).sort_values(ascending=False).index.values
   n_dna = len(dna_names)
   dna = data.dna[ dna_names ]
   
-  save_dir = os.path.join( data.save_dir, "spearmans_latent_tissue" )
+  save_dir = os.path.join( data.save_dir, "A_spearmans_latent_tissue" )
   check_and_mkdir(save_dir)
   
   data.data_store.open()
@@ -1529,124 +1529,124 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   dna_z_rho.to_csv( save_dir + "/dna_z_rho.csv", index_label="gene" )
   dna_z_p.to_csv( save_dir + "/dna_z_p.csv", index_label="gene" )
   
-  f=pp.figure( figsize=(24,12) )
-  
-  nbr_genes = 20
-  nbr_zs    = 10
-  genes = dna_names[:nbr_genes]
-  k_idx = 1
-  for gene in genes:
-    best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
-    dna_values = dna[gene].values
-    
-    #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
-    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
-    
-    barcodes_with_n = barcodes[ids_with_n]
-    
-    mutations = pp.find( dna_values[ids_with_n] == 1)
-    wildtype = pp.find( dna_values[ids_with_n]==0)
-    
-
-    z_idx = 0
-    for z_name in best_z_names:
-      z_values = Z[z_name].loc[barcodes_with_n].values
-      z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
-      
-      ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
-
-      ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
-      ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
-      ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
-
-      ax.set_title(gene+"-"+z_name)
-      # if z_idx == 0:
-      #   ax.set_ylabel(gene)
-      # ax.set_xlabel(z_name)
-      z_idx+=1
-      k_idx+=1
-  pp.savefig( save_dir + "/dna_top_z.png", fmt="png", dpi=300)
-
-  z_scores = -np.sum( np.log2(dna_z_p),1)
-  
-  f=pp.figure( figsize=(24,12) )
-  genes = z_scores.sort_values()[-nbr_genes:].index.values #dna_names[:nbr_genes]
-  #pdb.set_trace()
-  k_idx = 1
-  for gene in genes:
-    best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
-    dna_values = dna[gene].values
-    
-    #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
-    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
-    
-    barcodes_with_n = barcodes[ids_with_n]
-    
-    mutations = pp.find( dna_values[ids_with_n] == 1)
-    wildtype = pp.find( dna_values[ids_with_n]==0)
-    
-
-    z_idx = 0
-    for z_name in best_z_names:
-      z_values = Z[z_name].loc[barcodes_with_n].values
-      z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
-      
-      ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
-
-      ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
-      ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
-      ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
-
-      ax.set_title(gene+"-"+z_name)
-      # if z_idx == 0:
-      #   ax.set_ylabel(gene)
-      # ax.set_xlabel(z_name)
-      z_idx+=1
-      k_idx+=1
-  pp.savefig( save_dir + "/dna_top_genes.png", fmt="png", dpi=300)
-    
-  global_order = np.argsort( dna_z_p.values.flatten() )
+  # f=pp.figure( figsize=(24,12) )
   #
-  rr = np.unravel_index(global_order[:nbr_genes*nbr_zs], dims=dna_z_p.values.shape )
-  dna_s = dna_names[rr[0]]
-  z_s = z_names[rr[1]]
-  
-  f=pp.figure( figsize=(24,12) )
-  #order = np.argsort(dna_s)
-  #dna_s = dna_s[order]
-  #z_s = z_s[order]
-  k_idx=1
-  for gene, z_name in zip(dna_s,z_s):
-    #best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
-    dna_values = dna[gene].values
-    # mutations = pp.find( dna_values == 1)
-    # wildtype = pp.find( dna_values==0)
-    #
-    # z_values = Z[z_name].values
-    
-    #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
-    ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
-    
-    #if gene == "APC":
-    #  pdb.set_trace()
-    barcodes_with_n = barcodes[ids_with_n]
-    
-    mutations = pp.find( dna_values[ids_with_n] == 1)
-    wildtype = pp.find( dna_values[ids_with_n]==0)
-
-    z_values = Z[z_name].loc[barcodes_with_n].values
-
-    z_all_wild = Z[z_name].values[pp.find( dna_values==0)] 
-
-    ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
-
-    #ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
-    ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
-    ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
-    ax.set_title(gene+"-"+z_name)
-    ax.set_xlabel("")
-    k_idx+=1
-  pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)
+  # nbr_genes = 20
+  # nbr_zs    = 10
+  # genes = dna_names[:nbr_genes]
+  # k_idx = 1
+  # for gene in genes:
+  #   best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+  #   dna_values = dna[gene].values
+  #
+  #   #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+  #   ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
+  #
+  #   barcodes_with_n = barcodes[ids_with_n]
+  #
+  #   mutations = pp.find( dna_values[ids_with_n] == 1)
+  #   wildtype = pp.find( dna_values[ids_with_n]==0)
+  #
+  #
+  #   z_idx = 0
+  #   for z_name in best_z_names:
+  #     z_values = Z[z_name].loc[barcodes_with_n].values
+  #     z_all_wild = Z[z_name].values[pp.find( dna_values==0)]
+  #
+  #     ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
+  #
+  #     ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
+  #     ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
+  #     ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
+  #
+  #     ax.set_title(gene+"-"+z_name)
+  #     # if z_idx == 0:
+  #     #   ax.set_ylabel(gene)
+  #     # ax.set_xlabel(z_name)
+  #     z_idx+=1
+  #     k_idx+=1
+  # pp.savefig( save_dir + "/dna_top_z.png", fmt="png", dpi=300)
+  #
+  # z_scores = -np.sum( np.log2(dna_z_p),1)
+  #
+  # f=pp.figure( figsize=(24,12) )
+  # genes = z_scores.sort_values()[-nbr_genes:].index.values #dna_names[:nbr_genes]
+  # #pdb.set_trace()
+  # k_idx = 1
+  # for gene in genes:
+  #   best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+  #   dna_values = dna[gene].values
+  #
+  #   #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+  #   ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
+  #
+  #   barcodes_with_n = barcodes[ids_with_n]
+  #
+  #   mutations = pp.find( dna_values[ids_with_n] == 1)
+  #   wildtype = pp.find( dna_values[ids_with_n]==0)
+  #
+  #
+  #   z_idx = 0
+  #   for z_name in best_z_names:
+  #     z_values = Z[z_name].loc[barcodes_with_n].values
+  #     z_all_wild = Z[z_name].values[pp.find( dna_values==0)]
+  #
+  #     ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
+  #
+  #     ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
+  #     ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
+  #     ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
+  #
+  #     ax.set_title(gene+"-"+z_name)
+  #     # if z_idx == 0:
+  #     #   ax.set_ylabel(gene)
+  #     # ax.set_xlabel(z_name)
+  #     z_idx+=1
+  #     k_idx+=1
+  # pp.savefig( save_dir + "/dna_top_genes.png", fmt="png", dpi=300)
+  #
+  # global_order = np.argsort( dna_z_p.values.flatten() )
+  # #
+  # rr = np.unravel_index(global_order[:nbr_genes*nbr_zs], dims=dna_z_p.values.shape )
+  # dna_s = dna_names[rr[0]]
+  # z_s = z_names[rr[1]]
+  #
+  # f=pp.figure( figsize=(24,12) )
+  # #order = np.argsort(dna_s)
+  # #dna_s = dna_s[order]
+  # #z_s = z_s[order]
+  # k_idx=1
+  # for gene, z_name in zip(dna_s,z_s):
+  #   #best_z_names = dna_z_p.loc[gene].sort_values()[:nbr_zs].index.values
+  #   dna_values = dna[gene].values
+  #   # mutations = pp.find( dna_values == 1)
+  #   # wildtype = pp.find( dna_values==0)
+  #   #
+  #   # z_values = Z[z_name].values
+  #
+  #   #ids_with_n = ids_with_at_least_n_mutations( dna_values, T, n = 5 )
+  #   ids_with_n = ids_with_at_least_p_mutations( dna_values, T, p = 0.01 )
+  #
+  #   #if gene == "APC":
+  #   #  pdb.set_trace()
+  #   barcodes_with_n = barcodes[ids_with_n]
+  #
+  #   mutations = pp.find( dna_values[ids_with_n] == 1)
+  #   wildtype = pp.find( dna_values[ids_with_n]==0)
+  #
+  #   z_values = Z[z_name].loc[barcodes_with_n].values
+  #
+  #   z_all_wild = Z[z_name].values[pp.find( dna_values==0)]
+  #
+  #   ax = f.add_subplot(nbr_genes, nbr_zs ,k_idx)
+  #
+  #   #ax.hist( z_all_wild, 30, normed=True,histtype="step", lw=1, color="black" )
+  #   ax.hist( z_values[wildtype], 30, normed=True,histtype="step", lw=2, color="blue" )
+  #   ax.hist( z_values[mutations], 15, normed=True,histtype="step", lw=2, color="red" )
+  #   ax.set_title(gene+"-"+z_name)
+  #   ax.set_xlabel("")
+  #   k_idx+=1
+  # pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)
 
 
   
@@ -2801,33 +2801,33 @@ if __name__ == "__main__":
   data = load_data_and_fill( data_location, results_location )
   
   #dna_auc_using_latent_space( data, force =True )
-  #spearmanr_latent_space_by_inputs(data, force=True)
-  ridges = [0.00001, 0.001,1.0]
-  
-  #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )  
-  nbr_dna_genes2process = 100
-  Cs = [0.00001,0.0001, 0.001,0.01,0.1,1.0,10.0,100.0,1000.0] 
-
-  K=10
-  min_p_value=1.0
-  threshold=0.0
-  min_features = data.Z.values.shape[1]
-  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
-  
-  min_features = data.RNA_fair.values.shape[1]
-  deeper_meaning_dna_and_data_correct_pan( data, data.RNA_scale, "RNA_scale", min_features=min_features,max_features=min_features,nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
-  deeper_meaning_dna_and_data_correct_pan( data, data.RNA_fair, "RNA_fair", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
-
-  threshold=0.05
-  min_features = data.Z.values.shape[1]
-  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
-  
-  min_features = data.RNA_fair.values.shape[1]
-  deeper_meaning_dna_and_data_correct_pan( data, data.RNA_scale, "RNA_scale", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
-  deeper_meaning_dna_and_data_correct_pan( data, data.RNA_fair, "RNA_fair", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
-
-
-  min_p_value=1e-4
+  spearmanr_latent_space_by_inputs(data, force=True)
+  # ridges = [0.00001, 0.001,1.0]
+  #
+  # #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
+  # nbr_dna_genes2process = 100
+  # Cs = [0.00001,0.0001, 0.001,0.01,0.1,1.0,10.0,100.0,1000.0]
+  #
+  # K=10
+  # min_p_value=1.0
+  # threshold=0.0
+  # min_features = data.Z.values.shape[1]
+  # deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  #
+  # min_features = data.RNA_fair.values.shape[1]
+  # deeper_meaning_dna_and_data_correct_pan( data, data.RNA_scale, "RNA_scale", min_features=min_features,max_features=min_features,nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  # deeper_meaning_dna_and_data_correct_pan( data, data.RNA_fair, "RNA_fair", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  #
+  # threshold=0.05
+  # min_features = data.Z.values.shape[1]
+  # deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  #
+  # min_features = data.RNA_fair.values.shape[1]
+  # deeper_meaning_dna_and_data_correct_pan( data, data.RNA_scale, "RNA_scale", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  # deeper_meaning_dna_and_data_correct_pan( data, data.RNA_fair, "RNA_fair", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  #
+  #
+  # min_p_value=1e-4
   # deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   # deeper_meaning_dna_and_z_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=0.0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
   # deeper_meaning_dna_and_rna_fair_correct( data, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=1, threshold=0.01, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
