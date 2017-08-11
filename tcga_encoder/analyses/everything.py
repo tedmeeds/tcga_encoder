@@ -1738,7 +1738,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   # pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)
 
 
-def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_nbr = 8, add_pvalue = False ):
+def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_nbr = 8, add_pvalue = False, max_lines=1000 ):
   
   if z_or_h == "z":
     save_dir = os.path.join( data.save_dir, "A_spearmans_latent_tissue" )
@@ -1795,6 +1795,9 @@ def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_
       z_names_[z_names[-1]]=1
 
       print gene, " added ", z_names[-1], dna_z.values[j]
+      
+      if len(z_names)==max_lines:
+        break
        
     fptr = open( save_dir + "/%s_table_ordered_by_%s.tex"%(z_or_h,order_by), "w+")
   else:
@@ -1809,7 +1812,7 @@ def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_
     fptr.write("%s & DNA & RNA & METH & miRNA & Description\\\\  \\hline \\hline  \n"%(z_or_h.upper()))
   #fptr.write("\\\\")
   idx = 0
-  for z_name in z_names:
+  for z_name in z_names[:max_lines]:
     rna_z   = rna_z_p[z_name].sort_values()[:genes_per]
     mirna_z = mirna_z_p[z_name].sort_values()[:genes_per]
     meth_z  = meth_z_p[z_name].sort_values()[:genes_per]
@@ -3016,10 +3019,10 @@ if __name__ == "__main__":
   #spearmanr_hidden_by_inputs(data, force=True)
   
   # write latex table guts
-  tables_for_z(data,z_or_h="z")
-  tables_for_z(data,z_or_h="h")
-  tables_for_z(data,order_by="dna", z_or_h="z")
-  tables_for_z(data,order_by="dna",z_or_h="h")
+  tables_for_z(data,z_or_h="z", max_lines=100 )
+  tables_for_z(data,z_or_h="h", max_lines=100 )
+  tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
+  tables_for_z(data,order_by="dna",z_or_h="h", max_lines=100 )
   
   # ridges = [0.00001, 0.001,1.0]
   #
