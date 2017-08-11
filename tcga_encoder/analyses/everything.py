@@ -1800,7 +1800,7 @@ def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_
   else:
     fptr = open( save_dir + "/%s_table.tex"%(z_or_h), "w+")
   
-  pdb.set_trace()  
+  #pdb.set_trace()  
   #fptr.write("\\hline \n")
   if add_pvalue is True:
     fptr.write(" & \multicolumn{DNA}{2} & \multicolumn{RNA}{2} & \multicolumn{METH}{2} & \multicolumn{miRNA}{2} & \\\\\n")
