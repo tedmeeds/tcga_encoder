@@ -1738,7 +1738,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   # pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)
 
 
-def tables_for_z( data, z_or_h = "z", genes_per = 5, uncomment_nbr = 8, add_pvalue = False ):
+def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_nbr = 8, add_pvalue = False ):
   
   if z_or_h == "z":
     save_dir = os.path.join( data.save_dir, "A_spearmans_latent_tissue" )
@@ -1775,9 +1775,32 @@ def tables_for_z( data, z_or_h = "z", genes_per = 5, uncomment_nbr = 8, add_pval
     print save_dir + "/rna_z_rho.csv"
     assert False, "cannot find precomputed pvalues"
     return
+  
+  n_z = len(z_names)  
+  z_names_ = {}
+  if order_by == "dna":
+    min_p_values_by_z = pd.Series( dna_z_p.values.argmin(0), index=z_names ).sort_values()
     
-    
-  fptr = open( save_dir + "/%s_table.tex"%z_or_h, "w+")
+    z_names = min_p_values_by_z.index.values
+    # gene_names = dna_z_rho.index.values[:n_z]
+    # z_names = []
+    #
+    # for gene in gene_names:
+    #   dna_z = dna_z_p.loc[gene].sort_values()
+    #   j=0
+    #   while z_names_.has_key(dna_z.index.values[j]) == True:
+    #     j+=1
+    #
+    #   z_names.append( dna_z.index.values[j] )
+    #   z_names_[z_names[-1]]=1
+    #
+    #   print gene, " added ", z_names[-1], dna_z.values[j]
+       
+    fptr = open( save_dir + "/%s_table_ordered_by_%s.tex"%(z_or_h,order_by), "w+")
+  else:
+    fptr = open( save_dir + "/%s_table.tex"%(z_or_h), "w+")
+  
+  pdb.set_trace()  
   #fptr.write("\\hline \n")
   if add_pvalue is True:
     fptr.write(" & \multicolumn{DNA}{2} & \multicolumn{RNA}{2} & \multicolumn{METH}{2} & \multicolumn{miRNA}{2} & \\\\\n")
@@ -2995,6 +3018,8 @@ if __name__ == "__main__":
   # write latex table guts
   tables_for_z(data,"z")
   tables_for_z(data,"h")
+  tables_for_z(data,order_by="dna", z_or_h="z")
+  tables_for_z(data,order_by="dna",z_or_h="h")
   
   # ridges = [0.00001, 0.001,1.0]
   #
