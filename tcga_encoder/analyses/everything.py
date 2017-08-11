@@ -3016,8 +3016,8 @@ if __name__ == "__main__":
   #spearmanr_hidden_by_inputs(data, force=True)
   
   # write latex table guts
-  tables_for_z(data,"z")
-  tables_for_z(data,"h")
+  tables_for_z(data,z_or_h="z")
+  tables_for_z(data,z_or_h="h")
   tables_for_z(data,order_by="dna", z_or_h="z")
   tables_for_z(data,order_by="dna",z_or_h="h")
   
