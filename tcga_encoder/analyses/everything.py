@@ -1738,30 +1738,37 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   # pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)
 
 
-def tables_for_z( data, genes_per = 10, uncomment_nbr = 5, add_pvalue = False ):
-  save_dir = os.path.join( data.save_dir, "A_spearmans_latent_tissue" )
+def tables_for_z( data, z_or_h = "z", genes_per = 5, uncomment_nbr = 8, add_pvalue = False ):
+  
+  if z_or_h == "z":
+    save_dir = os.path.join( data.save_dir, "A_spearmans_latent_tissue" )
+  if z_or_h == "h":
+    save_dir = os.path.join( data.save_dir, "A_spearmans_hidden_tissue" )
   
   rna_names   = data.rna_names    
   mirna_names = data.mirna_names 
   meth_names  = data.meth_names   
   
-  z_names = data.z_names
+  if z_or_h =="z":
+    z_names = data.z_names
+  else:
+    z_names = data.h_names
   n_rna   = len(rna_names)
   n_mirna = len(mirna_names)
   n_meth  = len(meth_names)
   
   try:
-    rna_z_rho = pd.read_csv( save_dir + "/rna_z_rho.csv", index_col="gene" )
-    rna_z_p   = pd.read_csv( save_dir + "/rna_z_p.csv", index_col="gene" )
+    rna_z_rho = pd.read_csv( save_dir + "/rna_%s_rho.csv"%z_or_h, index_col="gene" )
+    rna_z_p   = pd.read_csv( save_dir + "/rna_%s_p.csv"%z_or_h, index_col="gene" )
   
-    mirna_z_rho = pd.read_csv( save_dir + "/mirna_z_rho.csv", index_col="gene" )
-    mirna_z_p   = pd.read_csv( save_dir + "/mirna_z_p.csv", index_col="gene" )
+    mirna_z_rho = pd.read_csv( save_dir + "/mirna_%s_rho.csv"%z_or_h, index_col="gene" )
+    mirna_z_p   = pd.read_csv( save_dir + "/mirna_%s_p.csv"%z_or_h, index_col="gene" )
    
-    meth_z_rho = pd.read_csv( save_dir + "/meth_z_rho.csv", index_col="gene" )
-    meth_z_p   = pd.read_csv( save_dir + "/meth_z_p.csv", index_col="gene" )
+    meth_z_rho = pd.read_csv( save_dir + "/meth_%s_rho.csv"%z_or_h, index_col="gene" )
+    meth_z_p   = pd.read_csv( save_dir + "/meth_%s_p.csv"%z_or_h, index_col="gene" )
 
-    dna_z_rho = pd.read_csv( save_dir + "/dna_z_rho.csv", index_col="gene" )
-    dna_z_p   = pd.read_csv( save_dir + "/dna_z_p.csv", index_col="gene" )
+    dna_z_rho = pd.read_csv( save_dir + "/dna_%s_rho.csv"%z_or_h, index_col="gene" )
+    dna_z_p   = pd.read_csv( save_dir + "/dna_%s_p.csv"%z_or_h, index_col="gene" )
   
   except: 
     print "could not load..."  
@@ -1770,13 +1777,13 @@ def tables_for_z( data, genes_per = 10, uncomment_nbr = 5, add_pvalue = False ):
     return
     
     
-  fptr = open( save_dir + "/z_table.tex", "w+")
-  
+  fptr = open( save_dir + "/%s_table.tex"%z_or_h, "w+")
+  #fptr.write("\\hline \n")
   if add_pvalue is True:
     fptr.write(" & \multicolumn{DNA}{2} & \multicolumn{RNA}{2} & \multicolumn{METH}{2} & \multicolumn{miRNA}{2} & \\\\\n")
-    fptr.write("Z & Gene & p-value & Gene & p-value & Gene & p-value & Strand & p-value & Description\\\\\n")
+    fptr.write("%s & Gene & p-value & Gene & p-value & Gene & p-value & Strand & p-value & Description \\\\  \\hline \\hline  \n"%(z_or_h.upper()))
   else:
-    fptr.write("Z & DNA & RNA & METH & miRNA & Description\\\\\n")
+    fptr.write("%s & DNA & RNA & METH & miRNA & Description\\\\  \\hline \\hline  \n"%(z_or_h.upper()))
   #fptr.write("\\\\")
   idx = 0
   for z_name in z_names:
@@ -1793,10 +1800,11 @@ def tables_for_z( data, genes_per = 10, uncomment_nbr = 5, add_pvalue = False ):
     print meth_z
     print mirna_z
     
+    # \multirow{%d}{*}{%s}
     if idx + 1 <= uncomment_nbr:
-      s = "%s & "%z_name
+      s = "\\multirow{%d}{*}{%s} & "%(genes_per,z_name)
     else:
-      s = "%%%s & "%z_name
+      s = "%%\\multirow{%d}{*}{%s} & "%(genes_per,z_name)
     
     k = 0
     for d_name, d_p, r_name, r_p, m_name, m_p, mi_name, mi_p in zip(dna_z.index.values,dna_z.values,rna_z.index.values,rna_z.values,meth_z.index.values,meth_z.values,mirna_z.index.values,mirna_z.values):
@@ -1810,14 +1818,22 @@ def tables_for_z( data, genes_per = 10, uncomment_nbr = 5, add_pvalue = False ):
           s += "%"
         s+="& "
       if add_pvalue is True:
-        s += "%s & %f & %s & %f & %s & %f & %s & %f & \\\\\n"%(d_name, d_p, r_name, r_p, m_name, m_p, mi_name, mi_p)
+        s += "%s & %f & %s & %f & %s & %f & %s & %f & "%(d_name, d_p, r_name, r_p, m_name, m_p, mi_name, mi_p)
       else:
-        s += "%s & %s & %s & %s & \\\\\n"%(d_name, r_name, m_name, mi_name)
+        s += "%s & %s & %s & %s & "%(d_name, r_name, m_name, mi_name)
+      if k==0:
+        s += "\\multirow{%d}{*}{}"%(genes_per)
+      
+      if k+1 == genes_per:
+        s+="\\\\  \\hline  \n"
+      else:
+        s+="\\\\\n"
       k+=1    
     fptr.write(s)
     
     
     idx+=1
+  #fptr.write("\\hline \n")
   fptr.close()
   #pdb.set_trace()
   
@@ -2977,7 +2993,8 @@ if __name__ == "__main__":
   #spearmanr_hidden_by_inputs(data, force=True)
   
   # write latex table guts
-  tables_for_z(data)
+  tables_for_z(data,"z")
+  tables_for_z(data,"h")
   
   # ridges = [0.00001, 0.001,1.0]
   #
