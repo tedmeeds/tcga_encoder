@@ -1738,6 +1738,89 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   # pp.savefig( save_dir + "/dna_top_z2.png", fmt="png", dpi=300)
 
 
+def tables_for_z( data, genes_per = 10, uncomment_nbr = 5, add_pvalue = False ):
+  save_dir = os.path.join( data.save_dir, "A_spearmans_latent_tissue" )
+  
+  rna_names   = data.rna_names    
+  mirna_names = data.mirna_names 
+  meth_names  = data.meth_names   
+  
+  z_names = data.z_names
+  n_rna   = len(rna_names)
+  n_mirna = len(mirna_names)
+  n_meth  = len(meth_names)
+  
+  try:
+    rna_z_rho = pd.read_csv( save_dir + "/rna_z_rho.csv", index_col="gene" )
+    rna_z_p   = pd.read_csv( save_dir + "/rna_z_p.csv", index_col="gene" )
+  
+    mirna_z_rho = pd.read_csv( save_dir + "/mirna_z_rho.csv", index_col="gene" )
+    mirna_z_p   = pd.read_csv( save_dir + "/mirna_z_p.csv", index_col="gene" )
+   
+    meth_z_rho = pd.read_csv( save_dir + "/meth_z_rho.csv", index_col="gene" )
+    meth_z_p   = pd.read_csv( save_dir + "/meth_z_p.csv", index_col="gene" )
+
+    dna_z_rho = pd.read_csv( save_dir + "/dna_z_rho.csv", index_col="gene" )
+    dna_z_p   = pd.read_csv( save_dir + "/dna_z_p.csv", index_col="gene" )
+  
+  except: 
+    print "could not load..."  
+    print save_dir + "/rna_z_rho.csv"
+    assert False, "cannot find precomputed pvalues"
+    return
+    
+    
+  fptr = open( save_dir + "/z_table.tex", "w+")
+  
+  if add_pvalue is True:
+    fptr.write(" & \multicolumn{DNA}{2} & \multicolumn{RNA}{2} & \multicolumn{METH}{2} & \multicolumn{miRNA}{2} & \\\\\n")
+    fptr.write("Z & Gene & p-value & Gene & p-value & Gene & p-value & Strand & p-value & Description\\\\\n")
+  else:
+    fptr.write("Z & DNA & RNA & METH & miRNA & Description\\\\\n")
+  #fptr.write("\\\\")
+  idx = 0
+  for z_name in z_names:
+    rna_z   = rna_z_p[z_name].sort_values()[:genes_per]
+    mirna_z = mirna_z_p[z_name].sort_values()[:genes_per]
+    meth_z  = meth_z_p[z_name].sort_values()[:genes_per]
+    dna_z   = dna_z_p[z_name].sort_values()[:genes_per]
+
+    print "-----"
+    print z_name
+    print "-----"
+    print dna_z
+    print rna_z
+    print meth_z
+    print mirna_z
+    
+    if idx + 1 <= uncomment_nbr:
+      s = "%s & "%z_name
+    else:
+      s = "%%%s & "%z_name
+    
+    k = 0
+    for d_name, d_p, r_name, r_p, m_name, m_p, mi_name, mi_p in zip(dna_z.index.values,dna_z.values,rna_z.index.values,rna_z.values,meth_z.index.values,meth_z.values,mirna_z.index.values,mirna_z.values):
+    # for j in genes_per:
+
+      
+      if k>0:
+        if idx + 1 <= uncomment_nbr:
+          s += ""
+        else:
+          s += "%"
+        s+="& "
+      if add_pvalue is True:
+        s += "%s & %f & %s & %f & %s & %f & %s & %f & \\\\\n"%(d_name, d_p, r_name, r_p, m_name, m_p, mi_name, mi_p)
+      else:
+        s += "%s & %s & %s & %s & \\\\\n"%(d_name, r_name, m_name, mi_name)
+      k+=1    
+    fptr.write(s)
+    
+    
+    idx+=1
+  fptr.close()
+  #pdb.set_trace()
+  
   
 def  correlation_latent_space_by_inputs( data, force = False ):
   Z           = data.Z
@@ -2891,7 +2974,11 @@ if __name__ == "__main__":
   
   #dna_auc_using_latent_space( data, force =True )
   #spearmanr_latent_space_by_inputs(data, force=True)
-  spearmanr_hidden_by_inputs(data, force=True)
+  #spearmanr_hidden_by_inputs(data, force=True)
+  
+  # write latex table guts
+  tables_for_z(data)
+  
   # ridges = [0.00001, 0.001,1.0]
   #
   # #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
