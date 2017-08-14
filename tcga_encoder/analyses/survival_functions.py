@@ -80,12 +80,13 @@ def  survival_splits( events, event_order, split_nbr ):
   return split_indices
 
 
-def plot_survival_by_splits( times, events, split_indices, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow", colors = None, labels=None):
+def plot_survival_by_splits( times, events, split_indices, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow", colors = None, labels=None, lw=5,ax=None):
   
   split_nbr = len(split_indices)
   
-  f = pp.figure()
-  ax= f.add_subplot(111)
+  if ax is None:
+    f = pp.figure()
+    ax= f.add_subplot(111)
   kmf = KaplanMeierFitter()
   if colors is None:
     c = pp.get_cmap(cmap)
@@ -102,8 +103,12 @@ def plot_survival_by_splits( times, events, split_indices, at_risk_counts=False,
       else:
         kmf.fit(times[splits], event_observed=events[splits], label=labels[k]  )
       
-      ax=kmf.plot(ax=ax,at_risk_counts=at_risk_counts,show_censors=show_censors,ci_show=ci_show, color=colors[k],lw=3)
+      ax=kmf.plot(ax=ax,at_risk_counts=at_risk_counts,show_censors=show_censors,ci_show=ci_show, color=colors[k],lw=lw)
+
     k+=1
+  ax.set_xlabel("Time (Days)",fontsize=16)
+  ax.set_ylabel("Survival Probability",fontsize=16)
+  ax.legend(fontsize=12)
   pp.ylim(0,1)
   
   return ax

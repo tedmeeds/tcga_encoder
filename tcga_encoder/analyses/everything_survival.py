@@ -2260,10 +2260,7 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   coefs_std = pd.Series( coefs.std(1), index = z_names, name="PAN" )
   
   global_concordance = lifelines.utils.concordance_index( times, -weighted_death_mean, events )
-  #pdb.set_trace()
-  
   z_order = np.argsort(coefs_mean)
-  
   max_coef = np.max(np.abs(coefs_mean.values))
   XV = X.values #np.dot( X.values, np.diag(coefs_mean.values) )
   XV2 = np.hstack( (weighted_death_mean[:,np.newaxis],XV) )
@@ -2295,6 +2292,9 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   k_colors_global = np.array([k_pallette[int(i)] for i in groups_global[patient_order]] )
   f=pp.figure()
   ax = plot_survival_by_splits( times, events, I_splits_global, at_risk_counts=False,show_censors=True,ci_show=False, cmap = None, colors=k_pallette, labels=["v low","low","high","v high"])
+  
+  
+  
   #pp.title( "%s concordance = %0.2f  p_value = %g test stat = %0.1f"%( tissue_name.upper(), tissue_concordance,tissue_p_value ,tissue_test_statistic ) )
   pp.savefig( survival_fig_dir + "/PAN.png", format="png" )
 
@@ -2330,10 +2330,15 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   pp.title("global concordance = %0.3f"%(global_concordance))
   pp.savefig( save_dir + "/coefs.png", format="png" )
   #pdb.set_trace()
+  
+  f_subplots = pp.figure(figsize=(16,24))
+  subplot_rows = 6; subplot_cols = 5
+  avoid_tissues = {"dlbc":1}
   tissue_results = []
   tissue_survivals=[]
-  for tissue_name in T.columns: #[8:]:
-    if tissue_name == "dlbc":
+  t_idx=0
+  for tissue_name in np.sort(T.columns): #[8:]:
+    if avoid_tissues.has_key(tissue_name) is True:
       continue
     print "working ", tissue_name
     ids = pp.find( T[tissue_name]==1 )
@@ -2366,21 +2371,21 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
     
     f=pp.figure()
     ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = None, colors=k_pallette, labels=["v low","low","high","v high"])
-    pp.title( "%s concordance = %0.2f  p_value = %g test stat = %0.1f"%( tissue_name.upper(), tissue_concordance,tissue_p_value ,tissue_test_statistic ) )
+    pp.title( "%s concordance = %0.2f  P = %g test stat = %0.1f"%( tissue_name.upper(), tissue_concordance,tissue_p_value ,tissue_test_statistic ) )
     pp.savefig( survival_fig_dir + "/%s.png"%(tissue_name), format="png" )
 
-    f=pp.figure()
-    #ax = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = "rainbow", labels=["v low","low","high","v high"])
-    #pp.title( "%s concordance = %0.2f  p_value = %g test stat = %0.1f"%( tissue_name.upper(), tissue_concordance,tissue_p_value ,tissue_test_statistic ) )
-
-    #
-    #pdb.set_trace()
-    #XV = X.values[ ids[tissue_patient_order],:] # np.dot( X.values[ ids[tissue_patient_order],:], np.diag(coefs_mean.values) )
-    #XV /= XV.std(0)
-    X_sorted = pd.DataFrame( XV[ids[tissue_patient_order],:][:,z_ids2use], index = X.index.values[ids[tissue_patient_order]], columns=z_names2use )
+    ax_subplot = f_subplots.add_subplot(subplot_rows,subplot_cols, t_idx+1)
+    ax_subplot = plot_survival_by_splits( times[ids], events[ids], I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = None, colors=k_pallette, labels=["v low","low","high","v high"], ax=ax_subplot)
+    a  = ax_subplot.axis()
+    ax_subplot.text( 0.3*(a[1]-a[0]), 0.8, "%s\nP=%g"%(tissue_name.upper(),tissue_p_value), fontsize=16, bbox=dict(facecolor='green', alpha=0.5 ) )
+    #ax_subplot.set_title( "%s concordance = %0.2f  P = %g"%( tissue_name.upper(), tissue_concordance,tissue_p_value  ), fontsize=16 )
+    #ax_subplot.set_xt
+    if tissue_name == "uvm":
+      pass
+    else:
+      ax_subplot.legend([])
     
-    #XV2 = np.hstack( (wd[:,np.newaxis][tissue_patient_order,:]/wd.std(),XV) )
-    #pdb.set_trace()
+    X_sorted = pd.DataFrame( XV[ids[tissue_patient_order],:][:,z_ids2use], index = X.index.values[ids[tissue_patient_order]], columns=z_names2use )
     X_sorted2 = pd.DataFrame( XV2[ids[tissue_patient_order],:][:,z_ids2use2], index = X_sorted.index.values, columns=XV2cols )
     h = sns.clustermap( X_sorted2, \
                         row_colors=k_colors, \
@@ -2399,6 +2404,7 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
     #h.ax_heatmap.hlines(n_tissue-pp.find(np.diff(groups[patient_order]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
     pp.savefig( heatmap_fig_dir + "/%s.png"%(tissue_name), format="png" )#, dpi=300, bbox_inches='tight')
     pp.close('all')
+    t_idx+=1
     
 
     
@@ -2423,6 +2429,8 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   
   global_survivals = pd.concat( tissue_survivals, axis = 0)
   global_survivals.to_csv( save_dir + "/global_survival.csv", index_label="barcode")
+  
+  f_subplots.savefig( survival_fig_dir + "/survival_subplots.png", format="png", dpi=300, bbox_inches="tight" )
   #pdb.set_trace()
     #
     # I_splits = survival_splits( events[ids], patient_order, K_groups )
@@ -3424,8 +3432,8 @@ if __name__ == "__main__":
     #K=2
     L2s_Z = [0.001,0.01,0.1,1.0]
     L2s_RNA = [0.001,0.01,0.1,1.0]
-    survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=10, fitter = CoxPHFitter  )
-    survival_regression_global_g0_v_g3( data, data.Z, "Z", L2s_Z, K = K, repeats=10, fitter = CoxPHFitter  )
+    survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=20, fitter = CoxPHFitter  )
+    #survival_regression_global_g0_v_g3( data, data.Z, "Z", L2s_Z, K = K, repeats=10, fitter = CoxPHFitter  )
     #survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
     #survival_regression_global( data, data.RNA_fair, "RNA_fair", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
   
