@@ -58,7 +58,7 @@ if __name__ == "__main__":
   for bins in binses:
     pp.figure()
     pp.hist( random_auc, bins=np.linspace(0,1,bins+1), color="red", normed=True, histtype="step", lw=2, label="random" )
-    for name,values in zip(names,aucs_true):
+    for name,values in zip(names,aucs):
       pp.hist( values, bins=np.linspace(0,1,bins+1), normed=True, histtype="step", lw=2, label=name )
     
     #pp.plot( [0,1.0],[0.5,0.5], 'r-', lw=3)
