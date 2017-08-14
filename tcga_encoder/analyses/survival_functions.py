@@ -109,7 +109,7 @@ def plot_survival_by_splits( times, events, split_indices, at_risk_counts=False,
   ax.set_xlabel("Time (Days)",fontsize=16)
   ax.set_ylabel("Survival Probability",fontsize=16)
   ax.legend(fontsize=12)
-  pp.ylim(0,1)
+  ax.set_ylim(0,1)
   
   return ax
         
