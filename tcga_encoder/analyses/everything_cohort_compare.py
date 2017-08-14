@@ -7,6 +7,35 @@ from tcga_encoder.definitions.locations import *
 import seaborn as sns
 from sklearn.manifold import TSNE, locally_linear_embedding
 
+from scipy import stats
+
+def auc_standard_error( theta, nA, nN ):
+  # from: Hanley and McNeil (1982), The Meaning and Use of the Area under the ROC Curve
+  # theta: estimated AUC, can be 0.5 for a random test
+  # nA size of population A
+  # nN size of population N
+  
+  Q1=theta/(2.0-theta); Q2=2*theta*theta/(1+theta)
+  
+  SE = np.sqrt( (theta*(1-theta)+(nA-1)*(Q1-theta*theta) + (nN-1)*(Q2-theta*theta) )/(nA*nN) )
+  
+  return SE
+  
+def auc_p_value( auc1, auc2, std_error1, std_error2 ):
+  
+  se_combined = np.sqrt( std_error1**2 + std_error2**2 )
+  
+  difference = auc1 - auc2
+  z_values = difference / se_combined 
+  sign_difference = np.sign(difference)
+  
+  #p_values = 1.0 - stats.norm.cdf( np.abs(z_values) ) 
+  p_values = 1.0 - stats.norm.cdf( z_values ) 
+  
+  return p_values
+  
+  
+  
 def main( data_location, results_location ):
   data_path    = os.path.join( HOME_DIR ,data_location ) #, "data.h5" )
   results_path = os.path.join( HOME_DIR, results_location )
@@ -52,7 +81,13 @@ def main( data_location, results_location ):
   aucs_random  = np.ones( (n_tissues,n_trials), dtype=float)
   aucs_true_best  = np.ones( (n_tissues,n_z), dtype=float)
   aucs_random_best  = np.ones( (n_tissues,n_trials), dtype=float)
+
+  z_true_se       = np.ones( (n_tissues,n_z), dtype=float)
+  z_true_p_value  = np.ones( (n_tissues,n_z), dtype=float)
   
+  null_se  = np.ones( (n_tissues), dtype=float)
+  
+  null_auc=0.5
   true_y = np.ones(n, dtype=int)
   for t_idx in range(n_tissues):
     t_ids_cohort = tissue_idx == t_idx
@@ -72,11 +107,19 @@ def main( data_location, results_location ):
     
     if n_tissue < 1:
       continue
-      
+    
+    n1 =  true_y.sum()
+    n0 = n_tissue - true_y.sum()
+    null_se[t_idx] = auc_standard_error( null_auc, n1, n0 )
     for z_idx in range(n_z):
       z = Z_values[:,z_idx]
       aucs_true[t_idx,z_idx] = roc_auc_score( true_y, z )
       aucs_true_best[t_idx,z_idx] = max(aucs_true[t_idx,z_idx],1.0-aucs_true[t_idx,z_idx])
+      
+      z_true_auc = aucs_true[t_idx,z_idx]
+      z_true_se[t_idx,z_idx] = auc_standard_error( z_true_auc, n1, n0 )
+      
+      z_true_p_value[t_idx,z_idx] = auc_p_value( null_auc, z_true_auc, null_se[t_idx], z_true_se[t_idx,z_idx] )
       
     for trial_idx in range(n_trials):
       I = np.random.permutation(n_tissue)
@@ -91,16 +134,26 @@ def main( data_location, results_location ):
   #
   aucs_true_best  = pd.DataFrame( aucs_true_best, index = tissue_names, columns=z_names )
   aucs_random_best = pd.DataFrame( aucs_random_best, index = tissue_names, columns=trial_names )
+
+  null_se         = pd.Series( null_se, index = tissue_names )
+  z_true_se       = pd.DataFrame( z_true_se, index = tissue_names, columns=z_names )
+  z_true_p_value  = pd.DataFrame( z_true_p_value, index = tissue_names, columns=z_names )
   
   aucs_true.drop("gbm",inplace=True)
   aucs_random.drop("gbm",inplace=True)
   aucs_true_best.drop("gbm",inplace=True)
   aucs_random_best.drop("gbm",inplace=True)
+  z_true_se.drop("gbm",inplace=True)
+  z_true_p_value.drop("gbm",inplace=True)
+  null_se.drop("gbm",inplace=True)
   
-  aucs_true.to_csv( tissue_dir + "/aucs_true.csv" )
-  aucs_random.to_csv( tissue_dir + "/aucs_random.csv" )
-  aucs_true_best.to_csv( tissue_dir + "/aucs_true_best.csv" )
-  aucs_random_best.to_csv( tissue_dir + "/aucs_random_best.csv" )
+  aucs_true.to_csv( tissue_dir + "/aucs_true.csv", index_label = "tissue" )
+  aucs_random.to_csv( tissue_dir + "/aucs_random.csv", index_label = "tissue" )
+  aucs_true_best.to_csv( tissue_dir + "/aucs_true_best.csv", index_label = "tissue" )
+  aucs_random_best.to_csv( tissue_dir + "/aucs_random_best.csv", index_label = "tissue" )
+  z_true_se.to_csv( tissue_dir + "/z_true_se.csv", index_label = "tissue" )
+  z_true_p_value.to_csv( tissue_dir + "/z_true_p_value.csv", index_label = "tissue" )
+  null_se.to_csv( tissue_dir + "/null_se.csv", index_label = "tissue" )
   
   binses = [20,50,100,500]
   for bins in binses:
@@ -123,6 +176,18 @@ def main( data_location, results_location ):
     pp.ylabel("Pr(AUC)")
     pp.title("Comparison between AUC using latent space and random")
     pp.savefig( tissue_dir + "/auc_comparison_%dbins_best.png"%(bins), format='png', dpi=300 )
+
+    pp.figure()
+    pp.plot( [0,1.0],[1.0,1.0], 'r--', lw=2)
+    pp.hist( z_true_p_value.values.flatten(), bins=np.linspace(0,1,bins+1), normed=True, histtype="step", lw=2, label="True" )
+    #pp.hist( aucs_random.values.flatten(), bins=np.linspace(0,1,bins+1), color="red", normed=True, histtype="step", lw=2, label="Random" )
+    #pp.plot( [0,1.0],[0.5,0.5], 'r-', lw=3)
+    pp.legend()
+    pp.xlabel("p-value")
+    pp.ylabel("Pr(p-value)")
+    pp.title("Distribution of AUC p-values")
+    pp.savefig( tissue_dir + "/auc_p_values_%dbins.png"%(bins), format='png', dpi=300 )
+
 
   pp.close('all')
   #pdb.set_trace()
