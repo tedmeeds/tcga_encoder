@@ -34,8 +34,8 @@ if __name__ == "__main__":
   names = ["no scale","scale","entropy"]
   
   short_dirs = []
-  short_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers_no_cohort/20_z_100_h_1000_anti_0/fold_1_of_50/tissue_prediction/")
-  short_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_0/fold_1_of_50/tissue_prediction/")
+  short_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers_no_cohort/23_z_100_h_1000_anti_0/fold_1_of_50/tissue_prediction/")
+  short_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/22_z_100_h_1000_anti_0/fold_1_of_50/tissue_prediction/")
   short_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/tissue_prediction/")
 
   dirs = []
