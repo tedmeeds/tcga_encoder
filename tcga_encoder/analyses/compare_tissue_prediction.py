@@ -57,9 +57,9 @@ if __name__ == "__main__":
   binses = [20,50,100,500]
   for bins in binses:
     pp.figure()
-    pp.hist( random_auc, bins=np.linspace(0,1,bins+1), color="red", normed=True, histtype="step", lw=2, label="random" )
     for name,values in zip(names,aucs):
       pp.hist( values, bins=np.linspace(0,1,bins+1), normed=True, histtype="step", lw=2, label=name )
+    pp.hist( random_auc, bins=np.linspace(0,1,bins+1), color="red", normed=True, histtype="step", lw=2, label="random" )
     
     #pp.plot( [0,1.0],[0.5,0.5], 'r-', lw=3)
     pp.legend()
@@ -70,9 +70,9 @@ if __name__ == "__main__":
       pp.savefig( dir_1 + "/model_auc_comparison_%dbins.png"%(bins), format='png', dpi=300 )
 
     pp.figure()
-    pp.plot( [0,1.0],[1.0,1.0], 'r-', lw=2, label="random")
     for name,values in zip(names,pvalues):
       pp.hist( values, bins=np.linspace(0,1,bins+1), normed=True, histtype="step", lw=2, label=name )
+    pp.plot( [0,1.0],[1.0,1.0], 'r-', lw=2, label="random")
 
     pp.legend()
     pp.xlabel("p-value")
