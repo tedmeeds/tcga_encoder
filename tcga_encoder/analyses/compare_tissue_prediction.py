@@ -56,7 +56,7 @@ if __name__ == "__main__":
     
   binses = [20,50,100,500]
   for bins in binses:
-    pp.figure()
+    pp.figure(figsize=(12,12))
     for name,values in zip(names,aucs):
       pp.hist( values, bins=np.linspace(0,1,bins+1), normed=True, histtype="step", lw=2, label=name )
     pp.hist( random_auc, bins=np.linspace(0,1,bins+1), color="red", normed=True, histtype="step", lw=2, label="random" )
@@ -67,9 +67,9 @@ if __name__ == "__main__":
     pp.ylabel("Pr(AUC)")
     pp.title("Comparison of distributions Area under the ROC")
     for dir_1 in dirs:
-      pp.savefig( dir_1 + "/model_auc_comparison_%dbins.png"%(bins), format='png', dpi=300 )
+      pp.savefig( dir_1 + "/model_auc_comparison_%dbins.png"%(bins), format='png', dpi=300, bbox_inches="tight" )
 
-    pp.figure()
+    pp.figure(figsize=(12,12))
     for name,values in zip(names,pvalues):
       pp.hist( values, bins=np.linspace(0,1,bins+1), normed=True, histtype="step", lw=2, label=name )
     pp.plot( [0,1.0],[1.0,1.0], 'r-', lw=2, label="random")
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     pp.ylabel("Pr(p-value)")
     pp.title("Comparison of distributions AUC p-values")
     for dir_1 in dirs:
-      pp.savefig( dir_1 + "/model_auc_p_values_%dbins.png"%(bins), format='png', dpi=300 )
+      pp.savefig( dir_1 + "/model_auc_p_values_%dbins.png"%(bins), format='png', dpi=300, bbox_inches="tight" )
 
 
   pp.close('all')
