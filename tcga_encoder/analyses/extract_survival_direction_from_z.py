@@ -50,6 +50,13 @@ if __name__ == "__main__":
     dna_rho   = np.log(1e-12+pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" ))
     mirna_rho = np.log(1e-12+pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
     meth_rho  = np.log(1e-12+pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
+    
+    
+    rna_rho   = stats.norm.ppf(pd.read_csv( latent_dir + "/rna_z_p.csv", index_col = "gene" ))
+    dna_rho   = stats.norm.ppf(pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" ))
+    mirna_rho = stats.norm.ppf(pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
+    meth_rho  = stats.norm.ppf(pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
+    
     weighted  = pd.read_csv( weighted_dir + "/all_z_weighted.csv", index_col = "gene" )
     
     mean_coef = coefs["mean"] / np.sqrt(np.sum(np.square(coefs["mean"])))
