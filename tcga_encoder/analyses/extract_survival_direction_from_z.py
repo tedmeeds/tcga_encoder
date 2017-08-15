@@ -47,16 +47,21 @@ if __name__ == "__main__":
   for coefs_dir, latent_dir, weighted_dir in zip( coefs_dirs, latent_dirs, weighted_dirs ):
     coefs      = pd.read_csv( coefs_dir + "/coefs.csv", index_col = "feature" )
     
-    rna_rho   = np.log(1e-12+pd.read_csv( latent_dir + "/rna_z_p.csv", index_col = "gene" ))
-    dna_rho   = np.log(1e-12+pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" ))
-    mirna_rho = np.log(1e-12+pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
-    meth_rho  = np.log(1e-12+pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
+    # rna_rho   = np.log(1e-12+pd.read_csv( latent_dir + "/rna_z_p.csv", index_col = "gene" ))
+    # dna_rho   = np.log(1e-12+pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" ))
+    # mirna_rho = np.log(1e-12+pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
+    # meth_rho  = np.log(1e-12+pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
+    
+    rna_rho   = 1-pd.read_csv( latent_dir + "/rna_z_p.csv", index_col = "gene" )
+    dna_rho   = 1-pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" )
+    mirna_rho = 1-pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" )
+    meth_rho  = 1-pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" )
     
     # Stouffer's Z
-    rna_rho   = stats.norm.ppf(pd.read_csv( latent_dir + "/rna_z_p.csv", index_col = "gene" ))
-    dna_rho   = stats.norm.ppf(pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" ))
-    mirna_rho = stats.norm.ppf(pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
-    meth_rho  = stats.norm.ppf(pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
+    # rna_z   = stats.norm.ppf(pd.read_csv( latent_dir + "/rna_z_p.csv", index_col = "gene" ))
+    # dna_z   = stats.norm.ppf(pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" ))
+    # mirna_z = stats.norm.ppf(pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
+    # meth_z  = stats.norm.ppf(pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
     
     weighted  = pd.read_csv( weighted_dir + "/all_z_weighted.csv", index_col = "gene" )
     
