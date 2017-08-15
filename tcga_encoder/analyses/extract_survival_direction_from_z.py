@@ -1,6 +1,7 @@
 from tcga_encoder.utils.helpers import *
 from tcga_encoder.data.data import *
 from tcga_encoder.definitions.locations import *
+from scipy import stats
 
 if __name__ == "__main__":
   
