@@ -51,7 +51,7 @@ if __name__ == "__main__":
     mirna_rho = np.log(1e-12+pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
     meth_rho  = np.log(1e-12+pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
     
-    
+    # Stouffer's Z
     rna_rho   = stats.norm.ppf(pd.read_csv( latent_dir + "/rna_z_p.csv", index_col = "gene" ))
     dna_rho   = stats.norm.ppf(pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" ))
     mirna_rho = stats.norm.ppf(pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
