@@ -22,12 +22,12 @@ if __name__ == "__main__":
   short_weighted_dirs = []
   short_weighted_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/A_weighted_latent_tissue")
 
-  short_coefs_dirs = []
-  short_coefs_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_500_h_5000_anti_5000/fold_1_of_50/everything2/survival_regression_global_Z_K_2_Cox2")
-  short_latent_dirs = []
-  short_latent_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_500_h_5000_anti_5000/fold_1_of_50/everything2/A_spearmans_latent_tissue")
-  short_weighted_dirs = []
-  short_weighted_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_500_h_5000_anti_5000/fold_1_of_50/everything2/A_weighted_latent_tissue")
+  # short_coefs_dirs = []
+  # short_coefs_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_500_h_5000_anti_5000/fold_1_of_50/everything2/survival_regression_global_Z_K_2_Cox2")
+  # short_latent_dirs = []
+  # short_latent_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_500_h_5000_anti_5000/fold_1_of_50/everything2/A_spearmans_latent_tissue")
+  # short_weighted_dirs = []
+  # short_weighted_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_500_h_5000_anti_5000/fold_1_of_50/everything2/A_weighted_latent_tissue")
 
 
   #short_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/22_z_100_h_1000_anti_0/fold_1_of_50/tissue_prediction/")
