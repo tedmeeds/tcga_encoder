@@ -10,6 +10,9 @@ if __name__ == "__main__":
   # short_coefs_dirs.append("results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything2/survival_regression_global_Z_K_5_Cox2")
   # short_latent_dirs = []
   # short_latent_dirs.append("results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything2/A_spearmans_latent_tissue")
+  # short_weighted_dirs = []
+  # short_weighted_dirs.append("results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything2/A_weighted_latent_tissue")
+
 
   short_coefs_dirs = []
   short_coefs_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/survival_regression_global_Z_K_5_Cox2")
@@ -35,10 +38,11 @@ if __name__ == "__main__":
   for coefs_dir, latent_dir, weighted_dir in zip( coefs_dirs, latent_dirs, weighted_dirs ):
     coefs      = pd.read_csv( coefs_dir + "/coefs.csv", index_col = "feature" )
     
-    rna_rho   = pd.read_csv( latent_dir + "/rna_z_rho.csv", index_col = "gene" )
-    dna_rho   = pd.read_csv( latent_dir + "/dna_z_rho.csv", index_col = "gene" )
-    mirna_rho = pd.read_csv( latent_dir + "/mirna_z_rho.csv", index_col = "gene" )
-    meth_rho  = pd.read_csv( latent_dir + "/meth_z_rho.csv", index_col = "gene" )
+    rna_rho   = np.log(1e-12+pd.read_csv( latent_dir + "/rna_z_p.csv", index_col = "gene" ))
+    dna_rho   = np.log(1e-12+pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" ))
+    mirna_rho = np.log(1e-12+pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
+    meth_rho  = np.log(1e-12+pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
+    weighted  = pd.read_csv( weighted_dir + "/all_z_weighted.csv", index_col = "gene" )
     
     mean_coef = coefs["mean"]
     
@@ -46,17 +50,27 @@ if __name__ == "__main__":
     dna_projection   = pd.Series( np.dot( dna_rho, mean_coef ), index = dna_rho.index, name="DNA" ).sort_values()
     mirna_projection = pd.Series( np.dot( mirna_rho, mean_coef ), index = mirna_rho.index, name="miRNA" ).sort_values()
     meth_projection  = pd.Series( np.dot( meth_rho, mean_coef ), index = meth_rho.index, name="METH" ).sort_values()
+    all_projection  = pd.Series( np.dot( weighted, mean_coef ), index = weighted.index, name="ALL" ).sort_values()
+    
+    rna_projection.to_csv( latent_dir + "/rna_z_rho_projection.csv" )
+    dna_projection.to_csv( latent_dir + "/dna_z_rho_projection.csv" )
+    mirna_projection.to_csv( latent_dir + "/mirna_z_rho_projection.csv" )
+    meth_projection.to_csv( latent_dir + "/meth_z_rho_projection.csv" )
+    all_projection.to_csv( weighted_dir + "/all_z_weighted_projection.csv" )
     
     print "RNA-----------"
-    print rna_projection[:5]
-    print rna_projection[-5:]
+    print rna_projection[:20]
+    print rna_projection[-20:]
     print "DNA-----------"
-    print dna_projection[:5]
-    print dna_projection[-5:]
+    print dna_projection[:20]
+    print dna_projection[-20:]
     print "miRNA-----------"
-    print mirna_projection[:5]
-    print mirna_projection[-5:]
+    print mirna_projection[:20]
+    print mirna_projection[-20:]
     print "METH-----------"
-    print meth_projection[:5]
-    print meth_projection[-5:]
+    print meth_projection[:20]
+    print meth_projection[-20:]
+    print "ALL-----------"
+    print all_projection[:20]
+    print all_projection[-20:]
   #pdb.set_trace()
