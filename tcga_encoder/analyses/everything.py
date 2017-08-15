@@ -1617,7 +1617,33 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   
   dna_z_rho.to_csv( save_dir + "/dna_z_rho.csv", index_label="gene" )
   dna_z_p.to_csv( save_dir + "/dna_z_p.csv", index_label="gene" )
+
+def  weighted_latent_space_by_inputs( data, force = False ):
+  save_dir = os.path.join( data.save_dir, "A_weighted_latent_tissue" )
+  check_and_mkdir(save_dir)
   
+  try:
+    rna_z_weighted   = pd.read_csv( save_dir + "/rna_z_weighted.csv", index_col="gene" )
+    mirna_z_weighted = pd.read_csv( save_dir + "/mirna_z_weighted.csv", index_col="gene" )
+    meth_z_weighted  = pd.read_csv( save_dir + "/meth_z_weighted.csv", index_col="gene" )
+    all_z_weighted  = pd.read_csv( save_dir + "/all_z_weighted.csv", index_col="gene" )
+  
+  except: 
+    print "could not load, forcing..."  
+    force=True
+    
+  if force is True:
+    rna_z_weighted = data.weighted_W_h2z["RNA"]
+    mirna_z_weighted = data.weighted_W_h2z["miRNA"]
+    meth_z_weighted = data.weighted_W_h2z["METH"]
+    all_z_weighted = pd.concat( data.weighted_W_h2z.values(), axis=0 )
+
+  
+  rna_z_weighted.to_csv( save_dir + "/rna_z_weighted.csv", index_label="gene" )
+  mirna_z_weighted.to_csv( save_dir + "/mirna_z_weighted.csv", index_label="gene" )
+  meth_z_weighted.to_csv( save_dir + "/meth_z_weighted.csv", index_label="gene" )
+  all_z_weighted.to_csv( save_dir + "/all_z_weighted.csv", index_label="gene" )
+    
   # f=pp.figure( figsize=(24,12) )
   #
   # nbr_genes = 20
@@ -1863,7 +1889,121 @@ def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_
   fptr.close()
   #pdb.set_trace()
   
+def tables_for_weighted_z( data, order_by = None, genes_per = 10, uncomment_nbr = 20, add_pvalue = False, max_lines=1000 ):
   
+  save_dir = os.path.join( data.save_dir, "A_weighted_latent_tissue" )
+  spearmans_save_dir = os.path.join( data.save_dir, "A_spearmans_latent_tissue" )
+  
+  rna_names   = data.rna_names    
+  mirna_names = data.mirna_names 
+  meth_names  = data.meth_names   
+  
+  z_names = data.z_names
+  
+  n_rna   = len(rna_names)
+  n_mirna = len(mirna_names)
+  n_meth  = len(meth_names)
+  
+  try:
+    rna_z_weighted   = pd.read_csv( save_dir + "/rna_z_weighted.csv", index_col="gene" )
+    mirna_z_weighted = pd.read_csv( save_dir + "/mirna_z_weighted.csv", index_col="gene" )
+    meth_z_weighted  = pd.read_csv( save_dir + "/meth_z_weighted.csv", index_col="gene" )
+    all_z_weighted   = pd.read_csv( save_dir + "/all_z_weighted.csv", index_col="gene" )
+    dna_z_p          = pd.read_csv( spearmans_save_dir + "/dna_z_p.csv", index_col="gene" )
+    
+  except: 
+    print "could not load..."  
+    return
+  
+  #pdb.set_trace()
+  n_z = len(z_names)  
+  z_names_ = {}
+  if order_by == "dna":
+    min_p_values_by_z = pd.Series( dna_z_p.values.argmin(0), index=z_names ).sort_values()
+    
+    #z_names = min_p_values_by_z.index.values
+    gene_names = dna_z_p.index.values[:n_z]
+    z_names = []
+
+    for gene in gene_names:
+      dna_z = dna_z_p.loc[gene].sort_values()
+      j=0
+      while z_names_.has_key(dna_z.index.values[j]) == True:
+        j+=1
+
+      z_names.append( dna_z.index.values[j] )
+      z_names_[z_names[-1]]=1
+
+      print gene, " added ", z_names[-1], dna_z.values[j]
+      
+      if len(z_names)==max_lines:
+        break
+       
+    fptr = open( save_dir + "/%s_table_ordered_by_weighted_z.tex"%order_by, "w+")
+  else:
+    fptr = open( save_dir + "/weighted_z_table.tex", "w+")
+  
+  #pdb.set_trace()  
+  #fptr.write("\\hline \n")
+  if add_pvalue is True:
+    fptr.write(" & \multicolumn{DNA}{2} & \multicolumn{RNA}{2} & \multicolumn{METH}{2} & \multicolumn{miRNA}{2} & \\\\\n")
+    fptr.write("z & Gene & p-value & Gene & p-value & Gene & p-value & Strand & p-value & Description \\\\  \\hline \\hline  \n")
+  else:
+    fptr.write("z & DNA & RNA & METH & miRNA & Description\\\\  \\hline \\hline  \n")
+  #fptr.write("\\\\")
+  idx = 0
+  for z_name in z_names[:max_lines]:
+    zname2 = "z_%s"%(z_name[1:])
+    rna_z   = rna_z_weighted[zname2].loc[ (-np.abs( rna_z_weighted[zname2] )).sort_values()[:genes_per].index].sort_values() 
+    mirna_z = mirna_z_weighted[zname2].loc[ (-np.abs( mirna_z_weighted[zname2] )).sort_values()[:genes_per].index].sort_values()
+    meth_z  = meth_z_weighted[zname2].loc[ (-np.abs( meth_z_weighted[zname2] )).sort_values()[:genes_per].index].sort_values()
+    dna_z   = dna_z_p[z_name].sort_values()[:genes_per]
+
+    print "-----"
+    print z_name
+    print "-----"
+    print dna_z
+    print rna_z
+    print meth_z
+    print mirna_z
+    
+    # \multirow{%d}{*}{%s}
+    if idx + 1 <= uncomment_nbr:
+      s = "\\multirow{%d}{*}{%s} & "%(genes_per,z_name)
+    else:
+      s = "%%\\multirow{%d}{*}{%s} & "%(genes_per,z_name)
+    
+    k = 0
+    for d_name, d_p, r_name, r_p, m_name, m_p, mi_name, mi_p in zip(dna_z.index.values,dna_z.values,rna_z.index.values,rna_z.values,meth_z.index.values,meth_z.values,mirna_z.index.values,mirna_z.values):
+    # for j in genes_per:
+
+      
+      if k>0:
+        if idx + 1 <= uncomment_nbr:
+          s += ""
+        else:
+          s += "%"
+        s+="& "
+      if add_pvalue is True:
+        s += "%s & %f & %s & %f & %s & %f & %s & %f & "%(d_name, d_p, r_name, r_p, m_name, m_p, mi_name, mi_p)
+      else:
+        s += "%s & %s & %s & %s & "%(d_name, r_name, m_name, mi_name)
+      if k==0:
+        s += "\\multirow{%d}{*}{}"%(genes_per)
+      
+      if k+1 == genes_per:
+        s+="\\\\  \\hline  \n"
+      else:
+        s+="\\\\\n"
+      k+=1    
+    fptr.write(s)
+    
+    
+    idx+=1
+  #fptr.write("\\hline \n")
+  fptr.close()
+  #pdb.set_trace()
+    
 def  correlation_latent_space_by_inputs( data, force = False ):
   Z           = data.Z
   RNA_scale   = 2.0 / (1+np.exp(-data.RNA_scale)) -1   
@@ -3017,12 +3157,14 @@ if __name__ == "__main__":
   #dna_auc_using_latent_space( data, force =True )
   #spearmanr_latent_space_by_inputs(data, force=True)
   #spearmanr_hidden_by_inputs(data, force=True)
-  
+  weighted_latent_space_by_inputs(data, force=False)
   # write latex table guts
-  tables_for_z(data,z_or_h="z", max_lines=100 )
-  tables_for_z(data,z_or_h="h", max_lines=100 )
-  tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
-  tables_for_z(data,order_by="dna",z_or_h="h", max_lines=100 )
+  tables_for_weighted_z(data, max_lines=100 )
+  # tables_for_z(data,z_or_h="z", max_lines=100 )
+  # tables_for_z(data,z_or_h="h", max_lines=100 )
+  tables_for_weighted_z(data,order_by="dna", max_lines=100 )
+  # tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
+  # tables_for_z(data,order_by="dna",z_or_h="h", max_lines=100 )
   
   # ridges = [0.00001, 0.001,1.0]
   #

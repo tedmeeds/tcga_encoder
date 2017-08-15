@@ -15,26 +15,30 @@ if __name__ == "__main__":
   short_coefs_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/survival_regression_global_Z_K_5_Cox2")
   short_latent_dirs = []
   short_latent_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/A_spearmans_latent_tissue")
+  short_weighted_dirs = []
+  short_weighted_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/A_weighted_latent_tissue")
 
   #short_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/22_z_100_h_1000_anti_0/fold_1_of_50/tissue_prediction/")
   #short_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/tissue_prediction/")
 
   coefs_dirs = []
   latent_dirs = []
-  for short_coefs_dir, short_latent_dir in zip( short_coefs_dirs, short_latent_dirs ):
+  weighted_dirs=[]
+  for short_coefs_dir, short_latent_dir, short_weighted_dir in zip( short_coefs_dirs, short_latent_dirs, short_weighted_dirs ):
     coefs_dirs.append( os.path.join( HOME_DIR, short_coefs_dir ) )
     latent_dirs.append( os.path.join( HOME_DIR, short_latent_dir ) )
+    weighted_dirs.append( os.path.join( HOME_DIR, short_weighted_dir ) )
   
   random_auc = []
   aucs       = []
   pvalues    =[]
-  for coefs_dir, latent_dir in zip( coefs_dirs, latent_dirs ):
+  for coefs_dir, latent_dir, weighted_dir in zip( coefs_dirs, latent_dirs, weighted_dirs ):
     coefs      = pd.read_csv( coefs_dir + "/coefs.csv", index_col = "feature" )
     
-    rna_rho = pd.read_csv( latent_dir + "/rna_z_rho.csv", index_col = "gene" )
-    dna_rho = pd.read_csv( latent_dir + "/dna_z_rho.csv", index_col = "gene" )
+    rna_rho   = pd.read_csv( latent_dir + "/rna_z_rho.csv", index_col = "gene" )
+    dna_rho   = pd.read_csv( latent_dir + "/dna_z_rho.csv", index_col = "gene" )
     mirna_rho = pd.read_csv( latent_dir + "/mirna_z_rho.csv", index_col = "gene" )
-    meth_rho = pd.read_csv( latent_dir + "/meth_z_rho.csv", index_col = "gene" )
+    meth_rho  = pd.read_csv( latent_dir + "/meth_z_rho.csv", index_col = "gene" )
     
     mean_coef = coefs["mean"]
     
