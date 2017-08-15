@@ -52,7 +52,7 @@ if __name__ == "__main__":
     meth_rho  = np.log(1e-12+pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
     weighted  = pd.read_csv( weighted_dir + "/all_z_weighted.csv", index_col = "gene" )
     
-    mean_coef = coefs["mean"] / np.sum(np.square(coefs["mean"]))
+    mean_coef = coefs["mean"] / np.sqrt(np.sum(np.square(coefs["mean"])))
     
     rna_projection   = pd.Series( np.dot( rna_rho, mean_coef ), index = rna_rho.index, name="RNA" ).sort_values()
     dna_projection   = pd.Series( np.dot( dna_rho, mean_coef ), index = dna_rho.index, name="DNA" ).sort_values()
