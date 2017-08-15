@@ -46,10 +46,10 @@ if __name__ == "__main__":
     
     mean_coef = np.abs(coefs["mean"])
     
-    rna_projection   = pd.Series( np.dot( rna_rho, mean_coef ), index = rna_rho.index, name="RNA" ).sort_values()
-    dna_projection   = pd.Series( np.dot( dna_rho, mean_coef ), index = dna_rho.index, name="DNA" ).sort_values()
-    mirna_projection = pd.Series( np.dot( mirna_rho, mean_coef ), index = mirna_rho.index, name="miRNA" ).sort_values()
-    meth_projection  = pd.Series( np.dot( meth_rho, mean_coef ), index = meth_rho.index, name="METH" ).sort_values()
+    rna_projection   = pd.Series( np.dot( rna_rho, mean_coef ), index = rna_rho.index, name="RNA" )[:500].sort_values()
+    dna_projection   = pd.Series( np.dot( dna_rho, mean_coef ), index = dna_rho.index, name="DNA" )[:500].sort_values()
+    mirna_projection = pd.Series( np.dot( mirna_rho, mean_coef ), index = mirna_rho.index, name="miRNA" )[:500].sort_values()
+    meth_projection  = pd.Series( np.dot( meth_rho, mean_coef ), index = meth_rho.index, name="METH" )[:500].sort_values()
     all_projection  = pd.Series( np.dot( weighted, mean_coef ), index = weighted.index, name="ALL" ).sort_values()
     
     rna_projection.to_csv( latent_dir + "/rna_z_rho_projection.csv" )
