@@ -2495,9 +2495,15 @@ def survival_regression_global_g0_v_g3( data, DATA, data_name, L2s, K = 5, K_gro
   dim = X.shape[1]
 
   #pdb.set_trace()
+  f_subplots = pp.figure(figsize=(16,24))
+  subplot_rows = 6; subplot_cols = 5
+  avoid_tissues = {"dlbc":1}
   tissue_results = []
   tissue_survivals=[]
-  for tissue_name in T.columns: #[8:]:
+  t_idx=0
+  row_idx = 1
+  col_idx = 1
+  for tissue_name in np.sort(T.columns):
     if tissue_name == "dlbc":
       continue
     print "working ", tissue_name
@@ -2546,11 +2552,32 @@ def survival_regression_global_g0_v_g3( data, DATA, data_name, L2s, K = 5, K_gro
     pp.savefig( survival_fig_dir + "/%s_p0_v_p3.png"%(tissue_name), format="png" )
 
 
-    
+    ax_subplot = f_subplots.add_subplot(subplot_rows,subplot_cols, t_idx+1)
+    ax_subplot = plot_survival_by_splits( t_times, t_events, I_splits, at_risk_counts=False,show_censors=True,ci_show=False, cmap = None, colors=k_pallette, labels=["v low","v high"], ax=ax_subplot)
+    a  = ax_subplot.axis()
+    ax_subplot.text( 0.3*(a[1]-a[0]), 0.8, "%s\nP=%g"%(tissue_name.upper(),tissue_p_value), fontsize=16, bbox=dict(facecolor='green', alpha=0.35 ) )
+    if col_idx > 1:
+      ax_subplot.set_ylabel("")
+    if row_idx < subplot_rows:
+      ax_subplot.set_xlabel("")
+      
+    #ax_subplot.set_title( "%s concordance = %0.2f  P = %g"%( tissue_name.upper(), tissue_concordance,tissue_p_value  ), fontsize=16 )
+    #ax_subplot.set_xt
+    if tissue_name == "uvm":
+      pass
+    else:
+      ax_subplot.legend([])
+    t_idx+=1
+      
+    col_idx += 1
+    if col_idx > subplot_cols:
+      col_idx = 1
+      row_idx +=1
+      
     tissue_results.append( pd.Series( [tissue_concordance,tissue_p_value,tissue_test_statistic], index=["concordance","p_value","test_statistic"], name=tissue_name ) )
   tissue_results = pd.concat( tissue_results, axis=1).T
   tissue_results.to_csv( save_dir + "/tissue_results_g0_v_g3.csv", index_label="tissue")
-  
+  f_subplots.savefig( survival_fig_dir + "/survival_subplots_g0_v_g3.png", format="png", dpi=300, bbox_inches="tight" )
 
       
 def survival_regression_local( data, DATA, data_name, K = 5, K_groups = 4, fitter=AalenAdditiveFitter ):
@@ -3432,8 +3459,9 @@ if __name__ == "__main__":
     #K=2
     L2s_Z = [0.1,1.0]
     L2s_RNA = [0.001,0.01,0.1,1.0]
-    survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=20, fitter = CoxPHFitter  )
-    #survival_regression_global_g0_v_g3( data, data.Z, "Z", L2s_Z, K = K, repeats=10, fitter = CoxPHFitter  )
+    #survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=20, fitter = CoxPHFitter  )
+    #survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=10, fitter = CoxPHFitter  )
+    survival_regression_global_g0_v_g3( data, data.Z, "Z", L2s_Z, K = K, repeats=10, fitter = CoxPHFitter  )
     #survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
     #survival_regression_global( data, data.RNA_fair, "RNA_fair", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
   
