@@ -6,6 +6,22 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import average_precision_score, precision_recall_curve 
 
+
+def merge_tissues( T, tissues ):
+  ids = np.zeros( len(T), dtype=bool)
+  
+  s = ""
+  for tissue in tissues:
+    s += tissue
+    
+    ids |= (T[ tissue ]==1).values
+    
+    T = T.drop(tissue,axis=1)
+
+  T[s] = ids.astype(float)
+  
+  return T
+  
 def pearsonr( X, Y ):
   XN = X / np.sqrt(np.sum( X*X,0))
   YN = Y / np.sqrt(np.sum( Y*Y,0))

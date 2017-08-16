@@ -2175,11 +2175,14 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   results = {}
   data.data_store.open()
   #pdb.set_trace()
-  try:
-    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
-  except:
-    #pdb.set_trace()
-    T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
+  # try:
+  #   T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  # except:
+  #   #pdb.set_trace()
+  T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
+    
+  T = merge_tissues( T, ["coad","read"])
+    
   data.data_store.close()
   tissue_pallette = sns.hls_palette(len(T.columns))
   bcs = X.index.values
@@ -2461,11 +2464,14 @@ def survival_regression_global_g0_v_g3( data, DATA, data_name, L2s, K = 5, K_gro
   results = {}
   data.data_store.open()
   #pdb.set_trace()
-  try:
-    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
-  except:
-    #pdb.set_trace()
-    T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
+  # try:
+  #   T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ X.index ]
+  # except:
+  #   #pdb.set_trace()
+  #   T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
+  T=data.data_store["/CLINICAL/TISSUE"].loc[ X.index ]
+  T = merge_tissues( T, ["coad","read"])
+  
   data.data_store.close()
   tissue_pallette = sns.hls_palette(len(T.columns))
   bcs = X.index.values
