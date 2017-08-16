@@ -3317,28 +3317,28 @@ if __name__ == "__main__":
   data = load_data_and_fill( data_location, results_location )
   
   #dna_auc_using_latent_space( data, force =True )
-  spearmanr_latent_space_by_inputs(data, force=True)
+  #spearmanr_latent_space_by_inputs(data, force=True)
   #spearmanr_hidden_by_inputs(data, force=True)
   #weighted_latent_space_by_inputs(data, force=False)
   # write latex table guts
   #tables_for_weighted_z(data, max_lines=100 )
-  tables_for_z(data,z_or_h="z", max_lines=100 )
+  #tables_for_z(data,z_or_h="z", max_lines=100 )
   # tables_for_z(data,z_or_h="h", max_lines=100 )
   #tables_for_weighted_z(data,order_by="dna", max_lines=100 )
-  tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
+  #tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
   # tables_for_z(data,order_by="dna",z_or_h="h", max_lines=100 )
   
   # ridges = [0.00001, 0.001,1.0]
   #
   # #deeper_meaning_dna_and_z_correct( data, K=10, min_p_value=1e-3, threshold=0, Cs = [0.00001,0.0001, 0.001,0.1,1.0,10.0,1000.0] )
-  # nbr_dna_genes2process = 100
-  # Cs = [0.00001,0.0001, 0.001,0.01,0.1,1.0,10.0,100.0,1000.0]
+  nbr_dna_genes2process = 10
+  Cs = [0.00001,0.0001, 0.001,0.01,0.1,1.0,10.0,100.0,1000.0]
   #
-  # K=10
-  # min_p_value=1.0
-  # threshold=0.0
-  # min_features = data.Z.values.shape[1]
-  # deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  K=4
+  min_p_value=1.0
+  threshold=0.0
+  min_features = data.Z.values.shape[1]
+  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
   #
   # min_features = data.RNA_fair.values.shape[1]
   # deeper_meaning_dna_and_data_correct_pan( data, data.RNA_scale, "RNA_scale", min_features=min_features,max_features=min_features,nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )

@@ -644,7 +644,7 @@ def deeper_meaning_dna_and_data_correct_pan( data, DATA, data_name, \
   
   n_C = len(Cs)
   dna_auc_dir   = os.path.join( data.save_dir, "dna_auc_latent" )
-  spearmanr_dir = os.path.join( data.save_dir, "spearmans_latent_tissue" )
+  spearmanr_dir = os.path.join( data.save_dir, "A_spearmans_latent_tissue" )
 
   RNA_fair    = data.RNA_fair
   RNA_scale   =  tanh(data.RNA_scale)  
