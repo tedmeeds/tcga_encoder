@@ -1543,7 +1543,9 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
   dna = data.dna[ dna_names ]
   
   save_dir = os.path.join( data.save_dir, "A_spearmans_latent_tissue" )
+  cohort_dir = os.path.join( save_dir, "cohort" )
   check_and_mkdir(save_dir)
+  check_and_mkdir(cohort_dir)
   
   data.data_store.open()
   try:
@@ -1564,25 +1566,36 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
 
 
   barcodes = T.index.values
+  save_required = False
   
-  try:
-    rna_z_rho = pd.read_csv( save_dir + "/rna_z_rho.csv", index_col="gene" )
-    rna_z_p   = pd.read_csv( save_dir + "/rna_z_p.csv", index_col="gene" )
-  
-    mirna_z_rho = pd.read_csv( save_dir + "/mirna_z_rho.csv", index_col="gene" )
-    mirna_z_p   = pd.read_csv( save_dir + "/mirna_z_p.csv", index_col="gene" )
-   
-    meth_z_rho = pd.read_csv( save_dir + "/meth_z_rho.csv", index_col="gene" )
-    meth_z_p   = pd.read_csv( save_dir + "/meth_z_p.csv", index_col="gene" )
-
-    dna_z_rho = pd.read_csv( save_dir + "/dna_z_rho.csv", index_col="gene" )
-    dna_z_p   = pd.read_csv( save_dir + "/dna_z_p.csv", index_col="gene" )
-  
-  except: 
-    print "could not load, forcing..."  
-    force=True
-    
+  # try:
+  #   rna_z_rho = pd.read_csv( save_dir + "/rna_z_rho.csv", index_col="gene" )
+  #   rna_z_p   = pd.read_csv( save_dir + "/rna_z_p.csv", index_col="gene" )
+  #
+  #   mirna_z_rho = pd.read_csv( save_dir + "/mirna_z_rho.csv", index_col="gene" )
+  #   mirna_z_p   = pd.read_csv( save_dir + "/mirna_z_p.csv", index_col="gene" )
+  #
+  #   meth_z_rho = pd.read_csv( save_dir + "/meth_z_rho.csv", index_col="gene" )
+  #   meth_z_p   = pd.read_csv( save_dir + "/meth_z_p.csv", index_col="gene" )
+  #
+  #   dna_z_rho = pd.read_csv( save_dir + "/dna_z_rho.csv", index_col="gene" )
+  #   dna_z_p   = pd.read_csv( save_dir + "/dna_z_p.csv", index_col="gene" )
+  #
+  # except:
+  #   print "could not load, forcing..."
+  #   force=True
+  force=True  
   if force is True:
+    rna_z_rho_cohort = {}
+    rna_z_p_cohort = {}
+    meth_z_rho_cohort = {}
+    meth_z_p_cohort = {}
+    mirna_z_rho_cohort = {}
+    mirna_z_p_cohort = {}
+    dna_z_rho_cohort = {}
+    dna_z_p_cohort = {}
+    
+    save_required = True
     print "computing RNA-Z spearman rho's"
     rho_rna_z = stats.spearmanr( RNA_scale.values, Z.values )
     #pdb.set_trace()
@@ -1604,19 +1617,101 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
 
     dna_z_rho = pd.DataFrame( rho_dna_z[0][:n_dna,:][:,n_dna:], index = dna_names, columns=z_names)
     dna_z_p   = pd.DataFrame( rho_dna_z[1][:n_dna,:][:,n_dna:], index = dna_names, columns=z_names)
+    
+    rna_z_rho.to_csv( save_dir + "/rna_z_rho.csv", index_label="gene" )
+    rna_z_p.to_csv( save_dir + "/rna_z_p.csv", index_label="gene" )
+  
+    mirna_z_rho.to_csv( save_dir + "/mirna_z_rho.csv", index_label="gene" )
+    mirna_z_p.to_csv( save_dir + "/mirna_z_p.csv", index_label="gene" )
+  
+    meth_z_rho.to_csv( save_dir + "/meth_z_rho.csv", index_label="gene" )
+    meth_z_p.to_csv( save_dir + "/meth_z_p.csv", index_label="gene" )
+  
+    dna_z_rho.to_csv( save_dir + "/dna_z_rho.csv", index_label="gene" )
+    dna_z_p.to_csv( save_dir + "/dna_z_p.csv", index_label="gene" )
+    
+    consensus_rna = 0*rna_z_p
+    consensus_mirna = 0*mirna_z_p
+    consensus_meth = 0*meth_z_p
+    consensus_dna = 0*dna_z_p
+    
+    for tissue_name in T.columns:
+      ids = pp.find( T[tissue_name]==1 )
+      #bcs = barcodes[ids]
+      
+      print tissue_name
+      print "computing RNA-Z spearman rho's"
+      #pdb.set_trace()
+      rho_rna_z_cohort = stats.spearmanr( RNA_scale.values[ids,:], Z.values[ids,:] )
+      #pdb.set_trace()
+      print "computing miRNA-Z spearman rho's"
+      rho_mirna_z_cohort = stats.spearmanr( miRNA_scale.values[ids,:], Z.values[ids,:] )
+      print "computing METH-Z spearman rho's"
+      rho_meth_z_cohort = stats.spearmanr( METH_scale.values[ids,:], Z.values[ids,:] )
+      print "computing DNA-Z spearman rho's"
+      rho_dna_z_cohort = stats.spearmanr(2*dna.values[ids,:]-1, Z.values[ids,:] )
 
+      rna_z_rho_cohort[tissue_name] = pd.DataFrame( rho_rna_z_cohort[0][:n_rna,:][:,n_rna:], index = rna_names, columns=z_names)
+      rna_z_p_cohort[tissue_name]   = pd.DataFrame( rho_rna_z_cohort[1][:n_rna,:][:,n_rna:], index = rna_names, columns=z_names)
   
-  rna_z_rho.to_csv( save_dir + "/rna_z_rho.csv", index_label="gene" )
-  rna_z_p.to_csv( save_dir + "/rna_z_p.csv", index_label="gene" )
+      mirna_z_rho_cohort[tissue_name] = pd.DataFrame( rho_mirna_z_cohort[0][:n_mirna,:][:,n_mirna:], index = mirna_names, columns=z_names)
+      mirna_z_p_cohort[tissue_name]   = pd.DataFrame( rho_mirna_z_cohort[1][:n_mirna,:][:,n_mirna:], index = mirna_names, columns=z_names)
+   
+      meth_z_rho_cohort[tissue_name] = pd.DataFrame( rho_meth_z_cohort[0][:n_meth,:][:,n_meth:], index = meth_names, columns=z_names)
+      meth_z_p_cohort[tissue_name]   = pd.DataFrame( rho_meth_z_cohort[1][:n_meth,:][:,n_meth:], index = meth_names, columns=z_names)
+
+      dna_z_rho_cohort[tissue_name] = pd.DataFrame( rho_dna_z_cohort[0][:n_dna,:][:,n_dna:], index = dna_names, columns=z_names)
+      dna_z_p_cohort[tissue_name]   = pd.DataFrame( rho_dna_z_cohort[1][:n_dna,:][:,n_dna:], index = dna_names, columns=z_names)
+
+      rna_z_rho_cohort[tissue_name].to_csv( cohort_dir + "/%s_rna_z_rho.csv"%tissue_name, index_label="gene" )
+      rna_z_p_cohort[tissue_name].to_csv( cohort_dir + "/%s_rna_z_p.csv"%tissue_name, index_label="gene" )
   
-  mirna_z_rho.to_csv( save_dir + "/mirna_z_rho.csv", index_label="gene" )
-  mirna_z_p.to_csv( save_dir + "/mirna_z_p.csv", index_label="gene" )
+      mirna_z_rho_cohort[tissue_name].to_csv( cohort_dir + "/%s_mirna_z_rho.csv"%tissue_name, index_label="gene" )
+      mirna_z_p_cohort[tissue_name].to_csv( cohort_dir + "/%s_mirna_z_p.csv"%tissue_name, index_label="gene" )
   
-  meth_z_rho.to_csv( save_dir + "/meth_z_rho.csv", index_label="gene" )
-  meth_z_p.to_csv( save_dir + "/meth_z_p.csv", index_label="gene" )
+      meth_z_rho_cohort[tissue_name].to_csv( cohort_dir + "/%s_meth_z_rho.csv"%tissue_name, index_label="gene" )
+      meth_z_p_cohort[tissue_name].to_csv( cohort_dir + "/%s_meth_z_p.csv"%tissue_name, index_label="gene" )
   
-  dna_z_rho.to_csv( save_dir + "/dna_z_rho.csv", index_label="gene" )
-  dna_z_p.to_csv( save_dir + "/dna_z_p.csv", index_label="gene" )
+      dna_z_rho_cohort[tissue_name].to_csv( cohort_dir + "/%s_dna_z_rho.csv"%tissue_name, index_label="gene" )
+      dna_z_p_cohort[tissue_name].to_csv( cohort_dir + "/%s_dna_z_p.csv"%tissue_name, index_label="gene" )
+      
+      consensus_rna   += -2*np.log( rna_z_p_cohort[tissue_name].fillna(1.0) )
+      consensus_mirna += -2*np.log( mirna_z_p_cohort[tissue_name].fillna(1.0) )
+      consensus_dna   += -2*np.log( dna_z_p_cohort[tissue_name].fillna(1.0) )
+      consensus_meth  += -2*np.log( rna_z_p_cohort[tissue_name].fillna(1.0) )
+    
+    consensus_rna.to_csv( save_dir + "/consensus_rna_scores.csv", index_label="gene" )
+    consensus_mirna.to_csv( save_dir + "/consensus_mirna_scores.csv", index_label="gene" )
+    consensus_meth.to_csv( save_dir + "/consensus_meth_scores.csv", index_label="gene" )
+    consensus_dna.to_csv( save_dir + "/consensus_dna_scores.csv", index_label="gene" )
+    
+      #spdb.set_trace()
+
+  # if save_required is True:
+  #   rna_z_rho.to_csv( save_dir + "/rna_z_rho.csv", index_label="gene" )
+  #   rna_z_p.to_csv( save_dir + "/rna_z_p.csv", index_label="gene" )
+  #
+  #   mirna_z_rho.to_csv( save_dir + "/mirna_z_rho.csv", index_label="gene" )
+  #   mirna_z_p.to_csv( save_dir + "/mirna_z_p.csv", index_label="gene" )
+  #
+  #   meth_z_rho.to_csv( save_dir + "/meth_z_rho.csv", index_label="gene" )
+  #   meth_z_p.to_csv( save_dir + "/meth_z_p.csv", index_label="gene" )
+  #
+  #   dna_z_rho.to_csv( save_dir + "/dna_z_rho.csv", index_label="gene" )
+  #   dna_z_p.to_csv( save_dir + "/dna_z_p.csv", index_label="gene" )
+  #
+  #   for tissue_name in T.columns:
+  #     rna_z_rho_cohort[tissue_name].to_csv( cohort_dir + "/%s_rna_z_rho.csv"%tissue_name, index_label="gene" )
+  #     rna_z_p_cohort[tissue_name].to_csv( cohort_dir + "/%s_rna_z_p.csv"%tissue_name, index_label="gene" )
+  #
+  #     mirna_z_rho_cohort[tissue_name].to_csv( cohort_dir + "/%s_mirna_z_rho.csv"%tissue_name, index_label="gene" )
+  #     mirna_z_p_cohort[tissue_name].to_csv( cohort_dir + "/%s_mirna_z_p.csv"%tissue_name, index_label="gene" )
+  #
+  #     meth_z_rho_cohort[tissue_name].to_csv( cohort_dir + "/%s_meth_z_rho.csv"%tissue_name, index_label="gene" )
+  #     meth_z_p_cohort[tissue_name].to_csv( cohort_dir + "/%s_meth_z_p.csv"%tissue_name, index_label="gene" )
+  #
+  #     dna_z_rho_cohort[tissue_name].to_csv( cohort_dir + "/%s_dna_z_rho.csv"%tissue_name, index_label="gene" )
+  #     dna_z_p_cohort[tissue_name].to_csv( cohort_dir + "/%s_dna_z_p.csv"%tissue_name, index_label="gene" )
 
 def  weighted_latent_space_by_inputs( data, force = False ):
   save_dir = os.path.join( data.save_dir, "A_weighted_latent_tissue" )
@@ -1771,6 +1866,7 @@ def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_
   if z_or_h == "h":
     save_dir = os.path.join( data.save_dir, "A_spearmans_hidden_tissue" )
   
+  cohort_dir = os.path.join( save_dir, "cohort" )
   rna_names   = data.rna_names    
   mirna_names = data.mirna_names 
   meth_names  = data.meth_names   
@@ -1783,7 +1879,24 @@ def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_
   n_mirna = len(mirna_names)
   n_meth  = len(meth_names)
   
+  Z = data.Z
+  data.data_store.open()
   try:
+    T=data.data_store["/CLINICAL_USED/TISSUE"].loc[ Z.index ]
+  except:
+    T=data.data_store["/CLINICAL/TISSUE"].loc[ Z.index ]
+  data.data_store.close()
+  
+
+  rna_z_rho_cohort = {}
+  rna_z_p_cohort = {}
+  meth_z_rho_cohort = {}
+  meth_z_p_cohort = {}
+  mirna_z_rho_cohort = {}
+  mirna_z_p_cohort = {}
+  dna_z_rho_cohort = {}
+  dna_z_p_cohort = {}
+  if True:
     rna_z_rho = pd.read_csv( save_dir + "/rna_%s_rho.csv"%z_or_h, index_col="gene" )
     rna_z_p   = pd.read_csv( save_dir + "/rna_%s_p.csv"%z_or_h, index_col="gene" )
   
@@ -1795,8 +1908,41 @@ def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_
 
     dna_z_rho = pd.read_csv( save_dir + "/dna_%s_rho.csv"%z_or_h, index_col="gene" )
     dna_z_p   = pd.read_csv( save_dir + "/dna_%s_p.csv"%z_or_h, index_col="gene" )
-  
-  except: 
+
+    consensus_rna = pd.read_csv( save_dir + "/consensus_rna_scores.csv", index_col="gene" )
+    consensus_mirna = pd.read_csv( save_dir + "/consensus_mirna_scores.csv", index_col="gene" )
+    consensus_meth = pd.read_csv( save_dir + "/consensus_meth_scores.csv", index_col="gene" )
+    consensus_dna = pd.read_csv( save_dir + "/consensus_dna_scores.csv", index_col="gene" )
+    
+    # consensus_rna = 0*rna_z_p
+    # consensus_mirna = 0*mirna_z_p
+    # consensus_meth = 0*meth_z_p
+    # consensus_dna = 0*dna_z_p
+    #
+    # for tissue_name in T.columns:
+    #   ids = pp.find( T[tissue_name]==1 )
+    #   #bcs = barcodes[ids]
+    #
+    #   print tissue_name
+    #   print "computing RNA-Z spearman rho's"
+    #   rna_z_rho_cohort[tissue_name] = pd.read_csv( cohort_dir + "/%s_rna_z_rho.csv"%tissue_name, index_col="gene" ).fillna(0.0)
+    #   rna_z_p_cohort[tissue_name] = pd.read_csv( cohort_dir + "/%s_rna_z_p.csv"%tissue_name, index_col="gene" ).fillna(1.0)
+    #
+    #   mirna_z_rho_cohort[tissue_name] = pd.read_csv( cohort_dir + "/%s_mirna_z_rho.csv"%tissue_name, index_col="gene" ).fillna(0.0)
+    #   mirna_z_p_cohort[tissue_name] = pd.read_csv( cohort_dir + "/%s_mirna_z_p.csv"%tissue_name, index_col="gene" ).fillna(1.0)
+    #
+    #   meth_z_rho_cohort[tissue_name] = pd.read_csv( cohort_dir + "/%s_meth_z_rho.csv"%tissue_name, index_col="gene" ).fillna(0.0)
+    #   meth_z_p_cohort[tissue_name] = pd.read_csv( cohort_dir + "/%s_meth_z_p.csv"%tissue_name, index_col="gene" ).fillna(1.0)
+    #
+    #   dna_z_rho_cohort[tissue_name] = pd.read_csv( cohort_dir + "/%s_dna_z_rho.csv"%tissue_name, index_col="gene" ).fillna(0.0)
+    #   dna_z_p_cohort[tissue_name] = pd.read_csv( cohort_dir + "/%s_dna_z_p.csv"%tissue_name, index_col="gene" ).fillna(1.0)
+    #
+    #   consensus_rna   += -2*np.log( rna_z_p_cohort[tissue_name] )
+    #   consensus_mirna += -2*np.log( mirna_z_p_cohort[tissue_name] )
+    #   consensus_dna   += -2*np.log( dna_z_p_cohort[tissue_name] )
+    #   consensus_meth  += -2*np.log( rna_z_p_cohort[tissue_name] )
+    #
+  else: 
     print "could not load..."  
     print save_dir + "/rna_z_rho.csv"
     assert False, "cannot find precomputed pvalues"
@@ -1805,10 +1951,11 @@ def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_
   n_z = len(z_names)  
   z_names_ = {}
   if order_by == "dna":
-    min_p_values_by_z = pd.Series( dna_z_p.values.argmin(0), index=z_names ).sort_values()
+    #pdb.set_trace()
+    min_p_values_by_z = pd.Series( consensus_dna.values.max(1), index=consensus_dna.index ).sort_values(ascending=False)
     
     #z_names = min_p_values_by_z.index.values
-    gene_names = dna_z_rho.index.values[:n_z]
+    gene_names = min_p_values_by_z.index.values[:n_z]
     z_names = []
 
     for gene in gene_names:
@@ -1839,11 +1986,17 @@ def tables_for_z( data, order_by = None, z_or_h = "z", genes_per = 5, uncomment_
   #fptr.write("\\\\")
   idx = 0
   for z_name in z_names[:max_lines]:
-    rna_z   = rna_z_p[z_name].sort_values()[:genes_per]
-    mirna_z = mirna_z_p[z_name].sort_values()[:genes_per]
-    meth_z  = meth_z_p[z_name].sort_values()[:genes_per]
-    dna_z   = dna_z_p[z_name].sort_values()[:genes_per]
+    #rna_z   = rna_z_p[z_name].sort_values()[:genes_per]
+    #mirna_z = mirna_z_p[z_name].sort_values()[:genes_per]
+    #meth_z  = meth_z_p[z_name].sort_values()[:genes_per]
+    #dna_z   = dna_z_p[z_name].sort_values()[:genes_per]
+    
+    rna_z   = consensus_rna[z_name].sort_values(ascending=False)[:genes_per]
+    mirna_z = consensus_mirna[z_name].sort_values(ascending=False)[:genes_per]
+    meth_z  = consensus_meth[z_name].sort_values(ascending=False)[:genes_per]
+    dna_z   = consensus_dna[z_name].sort_values(ascending=False)[:genes_per]
 
+    #pdb.set_trace()
     print "-----"
     print z_name
     print "-----"
@@ -3155,15 +3308,15 @@ if __name__ == "__main__":
   data = load_data_and_fill( data_location, results_location )
   
   #dna_auc_using_latent_space( data, force =True )
-  #spearmanr_latent_space_by_inputs(data, force=True)
+  spearmanr_latent_space_by_inputs(data, force=True)
   #spearmanr_hidden_by_inputs(data, force=True)
-  weighted_latent_space_by_inputs(data, force=False)
+  #weighted_latent_space_by_inputs(data, force=False)
   # write latex table guts
-  tables_for_weighted_z(data, max_lines=100 )
-  # tables_for_z(data,z_or_h="z", max_lines=100 )
+  #tables_for_weighted_z(data, max_lines=100 )
+  tables_for_z(data,z_or_h="z", max_lines=100 )
   # tables_for_z(data,z_or_h="h", max_lines=100 )
-  tables_for_weighted_z(data,order_by="dna", max_lines=100 )
-  # tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
+  #tables_for_weighted_z(data,order_by="dna", max_lines=100 )
+  tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
   # tables_for_z(data,order_by="dna",z_or_h="h", max_lines=100 )
   
   # ridges = [0.00001, 0.001,1.0]
