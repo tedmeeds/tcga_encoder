@@ -1634,7 +1634,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
     consensus_mirna = 0*mirna_z_p
     consensus_meth = 0*meth_z_p
     consensus_dna = 0*dna_z_p
-    
+    #pdb.set_trace()
     for tissue_name in T.columns:
       if tissue_name == "gbm":
         print "skipping gbm"
@@ -1684,10 +1684,10 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
       consensus_dna   += -2*np.log( dna_z_p_cohort[tissue_name].fillna(1.0) )
       consensus_meth  += -2*np.log( rna_z_p_cohort[tissue_name].fillna(1.0) )
     
-    consensus_rna.drop("gbm",inplace=True)
-    consensus_mirna.drop("gbm",inplace=True)
-    consensus_meth.drop("gbm",inplace=True)
-    consensus_dna.drop("gbm",inplace=True)
+    # consensus_rna.drop("gbm",inplace=True)
+    # consensus_mirna.drop("gbm",inplace=True)
+    # consensus_meth.drop("gbm",inplace=True)
+    # consensus_dna.drop("gbm",inplace=True)
     
     consensus_rna.to_csv( save_dir + "/consensus_rna_scores.csv", index_label="gene" )
     consensus_mirna.to_csv( save_dir + "/consensus_mirna_scores.csv", index_label="gene" )
