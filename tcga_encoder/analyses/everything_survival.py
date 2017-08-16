@@ -2194,7 +2194,8 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
 
   bcs = bcs[good]
   X = X.loc[bcs]
-  #STD = STD.loc[bcs]
+  if data_name=="Z":
+    STD = data.Z_std.loc[bcs]
   T = T.loc[bcs]
   times = data.survival.data.loc[ bcs ]["T"].values
   events = data.survival.data.loc[ bcs ]["E"].values
@@ -2234,6 +2235,10 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   rk=0
   for r in range(repeats):
     print "repeat ",r
+    if data_name == "Z":
+      print "adding noise"
+      dataset = pd.DataFrame( np.hstack( (X.values+STD.values*np.random.randn(STD.values.shape[0],STD.values.shape[1]), times[:,np.newaxis], events[:,np.newaxis], np.argmax(T.values,1)[:,np.newaxis] ) ), index = X.index, columns = data_columns )
+      
     folds = StratifiedKFold(n_splits=K, shuffle = True, random_state=r)
     for train_ids, test_ids in folds.split( X.values, events ): #[:,np.newaxis].astype(int) ):
 
