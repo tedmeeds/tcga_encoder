@@ -76,15 +76,15 @@ if __name__ == "__main__":
     # mirna_z = stats.norm.ppf(pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" ))
     # meth_z  = stats.norm.ppf(pd.read_csv( latent_dir + "/meth_z_p.csv", index_col = "gene" ))
     
-    weighted  = pd.read_csv( weighted_dir + "/all_z_weighted.csv", index_col = "gene" )
+    #weighted  = pd.read_csv( weighted_dir + "/all_z_weighted.csv", index_col = "gene" )
     
-    mean_coef = coefs["mean"] / np.sqrt(np.sum(np.square(coefs["mean"])))
+    mean_coef = coefs["mean"] # / np.sqrt(np.sum(np.square(coefs["mean"])))
     
     rna_projection   = pd.Series( np.dot( rna_rho, mean_coef ), index = rna_rho.index, name="RNA" ).sort_values()
     dna_projection   = pd.Series( np.dot( dna_rho, mean_coef ), index = dna_rho.index, name="DNA" ).sort_values()
     mirna_projection = pd.Series( np.dot( mirna_rho, mean_coef ), index = mirna_rho.index, name="miRNA" ).sort_values()
     meth_projection  = pd.Series( np.dot( meth_rho, mean_coef ), index = meth_rho.index, name="METH" ).sort_values()
-    all_projection  = pd.Series( np.dot( weighted, mean_coef ), index = weighted.index, name="ALL" ).sort_values()
+    #all_projection  = pd.Series( np.dot( weighted, mean_coef ), index = weighted.index, name="ALL" ).sort_values()
     
     
     rna_projection_c   = pd.Series( np.dot( rna_c, mean_coef ), index = rna_c.index, name="RNA" ).sort_values()
@@ -96,7 +96,7 @@ if __name__ == "__main__":
     dna_projection.to_csv( latent_dir + "/dna_z_rho_projection.csv" )
     mirna_projection.to_csv( latent_dir + "/mirna_z_rho_projection.csv" )
     meth_projection.to_csv( latent_dir + "/meth_z_rho_projection.csv" )
-    all_projection.to_csv( weighted_dir + "/all_z_weighted_projection.csv" )
+    #all_projection.to_csv( weighted_dir + "/all_z_weighted_projection.csv" )
     
     
     rna_projection_c.to_csv( latent_dir + "/rna_z_concensus_projection.csv" )
