@@ -1682,7 +1682,7 @@ def  spearmanr_latent_space_by_inputs( data, force = False ):
       consensus_rna   += -2*np.log( rna_z_p_cohort[tissue_name].fillna(1.0) )
       consensus_mirna += -2*np.log( mirna_z_p_cohort[tissue_name].fillna(1.0) )
       consensus_dna   += -2*np.log( dna_z_p_cohort[tissue_name].fillna(1.0) )
-      consensus_meth  += -2*np.log( rna_z_p_cohort[tissue_name].fillna(1.0) )
+      consensus_meth  += -2*np.log( meth_z_p_cohort[tissue_name].fillna(1.0) )
     
     # consensus_rna.drop("gbm",inplace=True)
     # consensus_mirna.drop("gbm",inplace=True)

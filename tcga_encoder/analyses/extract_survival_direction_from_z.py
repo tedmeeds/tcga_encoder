@@ -7,20 +7,28 @@ if __name__ == "__main__":
   
   #names = ["no scale","scale","entropy"]
   
-  # short_coefs_dirs = []
-  # short_coefs_dirs.append("results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything2/survival_regression_global_Z_K_5_Cox2")
-  # short_latent_dirs = []
-  # short_latent_dirs.append("results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything2/A_spearmans_latent_tissue")
-  # short_weighted_dirs = []
-  # short_weighted_dirs.append("results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything2/A_weighted_latent_tissue")
-
+  short_coefs_dirs = []
+  short_coefs_dirs.append("results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything2/survival_regression_global_Z_K_5_Cox2")
+  short_latent_dirs = []
+  short_latent_dirs.append("results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything2/A_spearmans_latent_tissue")
+  short_weighted_dirs = []
+  short_weighted_dirs.append("results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5/everything2/A_weighted_latent_tissue")
 
   short_coefs_dirs = []
-  short_coefs_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/survival_regression_global_Z_K_5_Cox2")
+  short_coefs_dirs.append("results/tcga_vae_post_recomb9/large/xval_rec_not_blind_fix_outliers/z_100_h_1000_anti_5000/fold_1_of_50/everything2/survival_regression_global_Z_K_5_Cox2")
   short_latent_dirs = []
-  short_latent_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/A_spearmans_latent_tissue")
+  short_latent_dirs.append("results/tcga_vae_post_recomb9/large/xval_rec_not_blind_fix_outliers/z_100_h_1000_anti_5000/fold_1_of_50/everything2/A_spearmans_latent_tissue")
   short_weighted_dirs = []
-  short_weighted_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/A_weighted_latent_tissue")
+  short_weighted_dirs.append("results/tcga_vae_post_recomb9/large/xval_rec_not_blind_fix_outliers/z_100_h_1000_anti_5000/fold_1_of_50/everything2/A_weighted_latent_tissue")
+
+
+
+  # short_coefs_dirs = []
+  # short_coefs_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/survival_regression_global_Z_K_5_Cox2")
+  # short_latent_dirs = []
+  # short_latent_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/A_spearmans_latent_tissue")
+  # short_weighted_dirs = []
+  # short_weighted_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything2/A_weighted_latent_tissue")
 
   # short_coefs_dirs = []
   # short_coefs_dirs.append("results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_500_h_5000_anti_5000/fold_1_of_50/everything2/survival_regression_global_Z_K_2_Cox2")
@@ -52,6 +60,11 @@ if __name__ == "__main__":
     mirna_rho = pd.read_csv( latent_dir + "/mirna_z_rho.csv", index_col = "gene" )
     meth_rho  = pd.read_csv( latent_dir + "/meth_z_rho.csv", index_col = "gene" )
     
+    rna_c   = pd.read_csv( latent_dir + "/consensus_rna_scores.csv", index_col = "gene" )
+    dna_c   = pd.read_csv( latent_dir + "/consensus_dna_scores.csv", index_col = "gene" )
+    mirna_c = pd.read_csv( latent_dir + "/consensus_mirna_scores.csv", index_col = "gene" )
+    meth_c  = pd.read_csv( latent_dir + "/consensus_meth_scores.csv", index_col = "gene" )
+    
     # rna_rho   = 1-pd.read_csv( latent_dir + "/rna_z_p.csv", index_col = "gene" )
     # dna_rho   = 1-pd.read_csv( latent_dir + "/dna_z_p.csv", index_col = "gene" )
     # mirna_rho = 1-pd.read_csv( latent_dir + "/mirna_z_p.csv", index_col = "gene" )
@@ -73,25 +86,37 @@ if __name__ == "__main__":
     meth_projection  = pd.Series( np.dot( meth_rho, mean_coef ), index = meth_rho.index, name="METH" ).sort_values()
     all_projection  = pd.Series( np.dot( weighted, mean_coef ), index = weighted.index, name="ALL" ).sort_values()
     
+    
+    rna_projection_c   = pd.Series( np.dot( rna_c, mean_coef ), index = rna_c.index, name="RNA" ).sort_values()
+    dna_projection_c   = pd.Series( np.dot( dna_c, mean_coef ), index = dna_c.index, name="DNA" ).sort_values()
+    mirna_projection_c = pd.Series( np.dot( mirna_c, mean_coef ), index = mirna_c.index, name="miRNA" ).sort_values()
+    meth_projection_c  = pd.Series( np.dot( meth_c, mean_coef ), index = meth_c.index, name="METH" ).sort_values()
+    
     rna_projection.to_csv( latent_dir + "/rna_z_rho_projection.csv" )
     dna_projection.to_csv( latent_dir + "/dna_z_rho_projection.csv" )
     mirna_projection.to_csv( latent_dir + "/mirna_z_rho_projection.csv" )
     meth_projection.to_csv( latent_dir + "/meth_z_rho_projection.csv" )
     all_projection.to_csv( weighted_dir + "/all_z_weighted_projection.csv" )
     
+    
+    rna_projection_c.to_csv( latent_dir + "/rna_z_concensus_projection.csv" )
+    dna_projection_c.to_csv( latent_dir + "/dna_z_concensus_projection.csv" )
+    mirna_projection_c.to_csv( latent_dir + "/mirna_z_concensus_projection.csv" )
+    meth_projection_c.to_csv( latent_dir + "/meth_z_concensus_projection.csv" )
+    
     print "RNA-----------"
-    print rna_projection[:20]
-    print rna_projection[-20:]
+    print rna_projection_c[:20]
+    print rna_projection_c[-20:]
     print "DNA-----------"
-    print dna_projection[:20]
-    print dna_projection[-20:]
+    print dna_projection_c[:20]
+    print dna_projection_c[-20:]
     print "miRNA-----------"
-    print mirna_projection[:20]
-    print mirna_projection[-20:]
+    print mirna_projection_c[:20]
+    print mirna_projection_c[-20:]
     print "METH-----------"
-    print meth_projection[:20]
-    print meth_projection[-20:]
-    print "ALL-----------"
-    print all_projection[:20]
-    print all_projection[-20:]
+    print meth_projection_c[:20]
+    print meth_projection_c[-20:]
+    # print "ALL-----------"
+    # print all_projection[:20]
+    # print all_projection[-20:]
   #pdb.set_trace()
