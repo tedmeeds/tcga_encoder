@@ -98,9 +98,11 @@ if __name__ == "__main__":
     for tissue in auc1.index.values:
       if tissue == "PAN":
         continue
-      auc1_ = auc1.loc[tissue]; auc2_ = auc2.loc[tissue]
-      prc1_ = pr1.loc[tissue];  prc2_ = pr2.loc[tissue]
-      
+      try:
+        auc1_ = auc1.loc[tissue]; auc2_ = auc2.loc[tissue]
+        prc1_ = pr1.loc[tissue];  prc2_ = pr2.loc[tissue]
+      except:
+        print "something happened to %s"%tissue
       real_weight = float(mutations.loc[tissue]) / float( pan_muts )
       weight = max(5, 200*real_weight )
       
