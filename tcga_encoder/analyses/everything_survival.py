@@ -3466,9 +3466,9 @@ if __name__ == "__main__":
   #survival_regression_global( data, data.Z, "Z", K = 10, fitter = CoxPHFitter  )
   #survival_regression_global( data, data.Z, "Z", K = 5, fitter = CoxPHFitter  )
   
-  for K in [2]:#,5]:
+  for K in [2,5]:#,5]:
     #K=2
-    L2s_Z = [1.0]
+    L2s_Z = [0.0]
     L2s_RNA = [0.001,0.01,0.1,1.0]
     #survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=20, fitter = CoxPHFitter  )
     survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=50, fitter = CoxPHFitter  )
