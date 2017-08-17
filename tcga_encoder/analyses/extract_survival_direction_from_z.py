@@ -9,10 +9,12 @@ from tcga_encoder.analyses.survival_functions import *
 if __name__ == "__main__":
   
   #names = ["no scale","scale","entropy"]
+  data_location = sys.argv[1]
+  results_location = sys.argv[2]
   
   
-  data_locations = ["data/broad_processed_june_2017/20160128/pan_medium"]
-  results_locations=["results/tcga_vae_post_recomb9/medium/xval_nn_tissue/z_100_h_500_anti_100/fold_1_of_5"]
+  data_locations = [data_location]
+  results_locations=[results_location]
   short_coefs_dirs = []
   short_coefs_dirs.append("%s/everything2/survival_regression_global_Z_K_2_Cox2"%(results_locations[-1]))
   short_latent_dirs = []
@@ -20,8 +22,8 @@ if __name__ == "__main__":
   short_weighted_dirs = []
   short_weighted_dirs.append("%s/everything2/A_weighted_latent_tissue"%(results_locations[-1]))
   
-  data_locations = ["data/broad_processed_june_2017/20160128/pan_large"]
-  results_locations=["results/tcga_vae_post_recomb9/large/xval_rec_not_blind_fix_outliers/22_z_100_h_1000_anti_5000/fold_1_of_50"]
+  #data_locations = ["data/broad_processed_june_2017/20160128/pan_large"]
+  #results_locations=["results/tcga_vae_post_recomb9/large/xval_rec_not_blind_fix_outliers/22_z_100_h_1000_anti_5000/fold_1_of_50"]
   short_coefs_dirs = []
   short_coefs_dirs.append("%s/everything2/survival_regression_global_Z_K_5_Cox2"%(results_locations[-1]))
   short_latent_dirs = []
@@ -30,8 +32,8 @@ if __name__ == "__main__":
   short_weighted_dirs.append("%s/everything2/A_weighted_latent_tissue"%(results_locations[-1]))
 
 
-  data_locations = ["data/broad_processed_june_2017/20160128/pan_large"]
-  results_locations=["results/tcga_vae_post_recomb9/large/xval_rec_not_blind_fix_outliers/22_z_200_h_2000_anti_5000/fold_1_of_50"]
+  #data_locations = ["data/broad_processed_june_2017/20160128/pan_large"]
+  #results_locations=["results/tcga_vae_post_recomb9/large/xval_rec_not_blind_fix_outliers/22_z_200_h_2000_anti_5000/fold_1_of_50"]
   short_coefs_dirs = []
   short_coefs_dirs.append("%s/everything2/survival_regression_global_Z_K_5_Cox2"%(results_locations[-1]))
   short_latent_dirs = []
