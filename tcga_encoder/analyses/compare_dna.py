@@ -103,6 +103,7 @@ if __name__ == "__main__":
         prc1_ = pr1.loc[tissue];  prc2_ = pr2.loc[tissue]
       except:
         print "something happened to %s"%tissue
+        continue
       real_weight = float(mutations.loc[tissue]) / float( pan_muts )
       weight = max(5, 200*real_weight )
       
