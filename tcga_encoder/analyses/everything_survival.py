@@ -2239,7 +2239,7 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
       print "adding noise"
       dataset = pd.DataFrame( np.hstack( (X.values+STD.values*np.random.randn(STD.values.shape[0],STD.values.shape[1]), times[:,np.newaxis], events[:,np.newaxis], np.argmax(T.values,1)[:,np.newaxis] ) ), index = X.index, columns = data_columns )
       
-    folds = StratifiedKFold(n_splits=K, shuffle = True, random_state=r)
+    folds = StratifiedKFold(n_splits=K, shuffle = True, random_state=0)
     for train_ids, test_ids in folds.split( X.values, events ): #[:,np.newaxis].astype(int) ):
 
       train_bcs = bcs[train_ids]
