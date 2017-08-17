@@ -41,7 +41,7 @@ class PanCancerSurvival(object):
     s_barcodes = s_barcodes[ok_followup]
     NEW_SURVIVAL = NEW_SURVIVAL.loc[s_barcodes]
   
-    S = pd.DataFrame( np.vstack((Events,Times)).T, index = s_barcodes, columns=["E","T"])
+    S = pd.DataFrame( np.vstack((Events,Times,Age)).T, index = s_barcodes, columns=["E","T","Age"])
     
     self.Events = Events
     self.Times  = Times

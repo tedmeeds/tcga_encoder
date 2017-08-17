@@ -2163,7 +2163,7 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   if fitter==AalenAdditiveFitter:
     save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Aalen"%(data_name,K) )
   elif fitter == CoxPHFitter:
-    save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Cox2"%(data_name,K) )
+    save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Cox3"%(data_name,K) )
   check_and_mkdir(save_dir) 
   
   survival_fig_dir = os.path.join(save_dir, "survival_curves" )
@@ -2188,7 +2188,7 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   bcs = X.index.values
   times = data.survival.data.loc[ bcs ]["T"].values
   events = data.survival.data.loc[ bcs ]["E"].values
-  
+  age    = data.survival.data.loc[ bcs ]["Age"].values/ 3650.0
   good = pp.find( np.isnan(times) == False )
   #pdb.set_trace()
 
@@ -2199,12 +2199,13 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   T = T.loc[bcs]
   times = data.survival.data.loc[ bcs ]["T"].values
   events = data.survival.data.loc[ bcs ]["E"].values
-  
+  age    = data.survival.data.loc[ bcs ]["Age"].values/ 3650.0
+  #pdb.set_trace()
   data_columns = list(X.columns.values)
   #pdb.set_trace()
-  data_columns.append("T"); data_columns.append("E"); data_columns.append("tissue")
+  data_columns.append("Age"); data_columns.append("T"); data_columns.append("E");  data_columns.append("tissue")
   
-  dataset = pd.DataFrame( np.hstack( (X.values, times[:,np.newaxis], events[:,np.newaxis], np.argmax(T.values,1)[:,np.newaxis] ) ), index = X.index, columns = data_columns )
+  dataset = pd.DataFrame( np.hstack( (X.values, age[:,np.newaxis], times[:,np.newaxis], events[:,np.newaxis], np.argmax(T.values,1)[:,np.newaxis] ) ), index = X.index, columns = data_columns )
   
   data.data_store.open()
   dna = data.data_store["/DNA/channel/0"].loc[bcs].fillna(0)
@@ -2237,7 +2238,7 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
     print "repeat ",r
     if data_name == "Z":
       print "adding noise"
-      dataset = pd.DataFrame( np.hstack( (X.values+STD.values*np.random.randn(STD.values.shape[0],STD.values.shape[1]), times[:,np.newaxis], events[:,np.newaxis], np.argmax(T.values,1)[:,np.newaxis] ) ), index = X.index, columns = data_columns )
+      dataset = pd.DataFrame( np.hstack( (X.values+STD.values*np.random.randn(STD.values.shape[0],STD.values.shape[1]), age[:,np.newaxis], times[:,np.newaxis], events[:,np.newaxis], np.argmax(T.values,1)[:,np.newaxis] ) ), index = X.index, columns = data_columns )
       
     folds = StratifiedKFold(n_splits=K, shuffle = True, random_state=0)
     for train_ids, test_ids in folds.split( X.values, events ): #[:,np.newaxis].astype(int) ):
