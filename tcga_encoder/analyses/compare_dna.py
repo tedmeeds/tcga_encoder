@@ -138,8 +138,8 @@ if __name__ == "__main__":
     
     pp.suptitle(gene)
     
-    f.savefig( gene_dir1 + "/comparison.png", fmt='png', dpi=300)
-    f.savefig( gene_dir2 + "/comparison.png", fmt='png', dpi=300)
+    # f.savefig( gene_dir1 + "/comparison.png", fmt='png', dpi=300)
+    # f.savefig( gene_dir2 + "/comparison.png", fmt='png', dpi=300)
     print perf1, perf2
     
     #pp.show()
