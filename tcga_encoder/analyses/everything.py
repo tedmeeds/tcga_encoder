@@ -3260,10 +3260,13 @@ if __name__ == "__main__":
   threshold=0.05
   min_features = data.Z.values.shape[1]
   deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  threshold=0.0
+  min_features = data.Z.values.shape[1]
+  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
   #
-  min_features = data.RNA_fair.values.shape[1]
-  deeper_meaning_dna_and_data_correct_pan( data, tanh(data.RNA_scale), "RNA_scale", min_features=min_features,max_features=min_features,nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
-  deeper_meaning_dna_and_data_correct_pan( data, data.RNA_fair, "RNA_fair", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  #min_features = data.RNA_fair.values.shape[1]
+  #deeper_meaning_dna_and_data_correct_pan( data, tanh(data.RNA_scale), "RNA_scale", min_features=min_features,max_features=min_features,nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  #deeper_meaning_dna_and_data_correct_pan( data, data.RNA_fair, "RNA_fair", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
   #
   # threshold=0.05
   # min_features = data.Z.values.shape[1]
