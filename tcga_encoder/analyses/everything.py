@@ -3237,15 +3237,15 @@ if __name__ == "__main__":
   data = load_data_and_fill( data_location, results_location )
   
   #dna_auc_using_latent_space( data, force =True )
-  #spearmanr_latent_space_by_inputs(data, force=True)
+  spearmanr_latent_space_by_inputs(data, force=True)
   #spearmanr_hidden_by_inputs(data, force=True)
   #weighted_latent_space_by_inputs(data, force=False)
   # write latex table guts
   #tables_for_weighted_z(data, max_lines=100 )
-  #tables_for_z(data,z_or_h="z", max_lines=100 )
+  tables_for_z(data,z_or_h="z", max_lines=100 )
   # tables_for_z(data,z_or_h="h", max_lines=100 )
   #tables_for_weighted_z(data,order_by="dna", max_lines=100 )
-  #tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
+  tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
   # tables_for_z(data,order_by="dna",z_or_h="h", max_lines=100 )
   
   # ridges = [0.00001, 0.001,1.0]
