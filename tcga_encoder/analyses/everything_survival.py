@@ -2458,7 +2458,7 @@ def survival_regression_global_g0_v_g3( data, DATA, data_name, L2s, K = 5, K_gro
   if fitter==AalenAdditiveFitter:
     save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Aalen"%(data_name,K) )
   elif fitter == CoxPHFitter:
-    save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Cox2"%(data_name,K) )
+    save_dir = os.path.join( data.save_dir, "survival_regression_global_%s_K_%d_Cox3"%(data_name,K) )
   check_and_mkdir(save_dir) 
   
   survival_fig_dir = os.path.join(save_dir, "survival_curves" )
