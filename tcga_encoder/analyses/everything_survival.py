@@ -3477,13 +3477,13 @@ if __name__ == "__main__":
   #   #survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
   #   #survival_regression_global( data, data.RNA_fair, "RNA_fair", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
   
-  for K in [2,5]:
+  for K in [2]:#,5]:
     L2s_Z = [0.001,0.01,0.1,1.0]
     L2s_RNA = [0.0] #01,0.01,0.1,1.0]
     #survival_regression_global( data, data.Z, "Z", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
     #survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
     #survival_regression_global( data, data.RNA_fair, "RNA_fair", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
-    survival_regression_global( data, data.RNA_fair, "RNA_rank", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
+    #survival_regression_global( data, data.RNA_fair, "RNA_rank", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
     survival_regression_global_g0_v_g3( data, data.RNA_fair, "RNA_rank", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
     survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
     survival_regression_global_g0_v_g3( data, data.RNA_scale, "RNA_scale", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
