@@ -634,9 +634,14 @@ def deeper_meaning_dna_and_data_correct_pan( data, DATA, data_name, \
                                              max_features = 100, \
                                              K=10, min_p_value=1e-3, \
                                              threshold = 0.01, \
-                                             Cs = [0.00001, 0.001,0.1,10.0,1000.0] ):
+                                             Cs = [0.00001, 0.001,0.1,10.0,1000.0], add_cohort_biases=False ):
   
-  save_dir   = os.path.join( data.save_dir, "correct_pancancer_dna_and_%s_pan_min_%d_max_%d_%0.2f_p_spear_%g_logreg"%(data_name,min_features, max_features,threshold,min_p_value) )
+  
+  if add_cohort_biases is False:
+    save_dir   = os.path.join( data.save_dir, "correct_pancancer_dna_and_%s_pan_min_%d_max_%d_%0.2f_p_spear_%g_logreg"%(data_name,min_features, max_features,threshold,min_p_value) )
+  else:
+    save_dir   = os.path.join( data.save_dir, "correct_pancancer_dna_and_%s_pan_min_%d_max_%d_%0.2f_p_spear_%g_logreg_with_cohort_biases"%(data_name,min_features, max_features,threshold,min_p_value) )
+    
   check_and_mkdir(save_dir) 
   
   print "min_features = ",min_features
@@ -723,6 +728,9 @@ def deeper_meaning_dna_and_data_correct_pan( data, DATA, data_name, \
     y_est = np.zeros( ( len(y_true),n_C) )
     X = DATA[ ids_with_n ].values
     assert len(y_true) == len(X), "should be same"
+    features_dim = X.shape[1]
+    if add_cohort_biases is True:
+      X = np.hstack( (X,T.values[ids_with_n]))
     c=Counter()
     #best_ridge = 10.001
     Z_weights = np.zeros( (n_C,K,n_z) )
@@ -766,16 +774,18 @@ def deeper_meaning_dna_and_data_correct_pan( data, DATA, data_name, \
         
       print "  using %d zs"%(len(I))
       #pdb.set_trace()
-      c.update(z_names[np.sort(I)])
+      #c.update(z_names[np.sort(I)])
       #print gene, k, z_names[np.sort(ok_dna_z_p[I])]
       
-      z_ids_k = I #ok_dna_z_p[I]
+      #z_ids_k = I #ok_dna_z_p[I]
       #X_all  = Z_values
-      X_ALL_gene = X_ALL[:,z_ids_k]
+      X_ALL_gene = X_ALL#[:,z_ids_k]
+      if add_cohort_biases is True:
+        X_ALL_gene = np.hstack( (X_ALL_gene,T.values))
       #pdb.set_trace()
-      X_train = X[train_split,:][:,z_ids_k]
-      X_test = X[test_split,:][:,z_ids_k]
-      Z_counts[k,z_ids_k] = 1.0
+      X_train = X[train_split,:]#[:,z_ids_k]
+      X_test = X[test_split,:]#[:,z_ids_k]
+      Z_counts[k,:] = 1.0
       M=LogisticBinaryClassifier()
       
       for C_idx, C in zip(range(n_C),Cs):
@@ -785,7 +795,7 @@ def deeper_meaning_dna_and_data_correct_pan( data, DATA, data_name, \
         weights = np.zeros(n_z)
         #pdb.set_trace()
          
-        Z_weights[C_idx,k,z_ids_k] = M.coef_
+        Z_weights[C_idx,k,:] = M.coef_[:,:features_dim]
       k+=1
     if bad_gene is True:
       continue

@@ -3033,8 +3033,11 @@ def describe_latent(data):
   
   #pdb.set_trace()
 
-def deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold = 0.01, ridges = [0.00001, 0.001,0.1,10.0,1000.0] ):
-  save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_p_tissue_%0.2f_p_spear_%g_logreg"%(threshold,min_p_value) )
+def deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold = 0.01, ridges = [0.00001, 0.001,0.1,10.0,1000.0], add_cohort_biases = False ):
+  if add_cohort_biases is False:
+    save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_p_tissue_%0.2f_p_spear_%g_logreg"%(threshold,min_p_value) )
+  else:
+    save_dir   = os.path.join( data.save_dir, "deeper_meaning_dna_and_z_p_tissue_%0.2f_p_spear_%g_logreg_with_cohort_biases"%(threshold,min_p_value) )
   check_and_mkdir(save_dir) 
   
   dna_auc_dir   = os.path.join( data.save_dir, "dna_auc_latent" )
@@ -3054,21 +3057,6 @@ def deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold = 0.01, ridges =
  
   meth_z_rho = pd.read_csv( spearmanr_dir + "/meth_z_rho.csv", index_col="gene" )
   meth_z_p   = pd.read_csv( spearmanr_dir + "/meth_z_p.csv", index_col="gene" )
-  
-  # first compare AUCs and Rho's
-  
-  # f = pp.figure()
-  # ax1 = f.add_subplot(221)
-  # ax2 = f.add_subplot(222)
-  # ax3 = f.add_subplot(223)
-  # ax4 = f.add_subplot(224)
-  # ax1.plot( spear_dna_z_rho.values.flatten(), dna_z_auc.values.flatten(), '.', alpha=0.25); ax1.set_xlabel("Spearman Rho"); ax1.set_ylabel("AUC"); ax1.set_title( "rho v auc")
-  # ax2.loglog( spear_dna_z_p.values.flatten(), dna_z_auc_p.values.flatten(), '.', alpha=0.25); ax2.set_xlabel("Spearman Rho"); ax2.set_ylabel("AUC"); ax2.set_title( "spearman v auc p-values")
-  #
-  # ax3.semilogy( spear_dna_z_rho.values.flatten(), spear_dna_z_p.values.flatten(), '.', alpha=0.25); ax3.set_xlabel("Spearman Rho"); ax3.set_ylabel("Spearman p-value"); ax3.set_title( "rho v p-value")
-  # ax4.semilogy( dna_z_auc.values.flatten(), dna_z_auc_p.values.flatten(), '.', alpha=0.25); ax4.set_xlabel("AUC"); ax4.set_ylabel("AUC p-value"); ax4.set_title( "auc v p-value")
-  #
-  # f.savefig( save_dir + "/spearman_v_auc.png", format="png", dpi=300)
   
   Z           = data.Z
 
@@ -3125,7 +3113,10 @@ def deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold = 0.01, ridges =
     
     y_true = dna_values[ids_with_n]
     X = Z[ids_with_n][best_z_names].values
-    
+    feature_dim = X.shape[1]
+    if add_cohort_biases is True:
+      print "adding cohort biases"
+      X = np.hstack( (X,T.values[ids_with_n,:]))
     #MCV = GenerativeBinaryClassifierKFold( K = 10 )
     MCV = LogisticBinaryClassifierKFold( K = 10 )
     
@@ -3204,26 +3195,13 @@ def deeper_meaning_dna_and_z( data, min_p_value=1e-3, threshold = 0.01, ridges =
       ax.imshow(Z_order.T, cmap='rainbow', interpolation='nearest', aspect=float(len(y_true))/(len(best_z_names)*r))
       #ax.imshow(differ)
       ax.autoscale(False)
-      
-      #h = sns.heatmap( Z_order, row_colors=None, row_cluster=False, col_cluster=False, figsize=(12,12) )
-      #pdb.set_trace()
-      #pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-      #pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-      #pp.setp(h.ax_heatmap.yaxis.get_majorticklabels(), fontsize=12)
-      #pp.setp(h.ax_heatmap.xaxis.get_majorticklabels(), fontsize=12)
-      #h.ax_row_dendrogram.set_visible(False)
-      #h.ax_col_dendrogram.set_visible(False)
-      #h.cax.set_visible(False)
-    #h.ax_heatmap.hlines(len(kmeans_patients_labels)-pp.find(np.diff(np.array(kmeans_patients_labels)[order_labels]))-1, *h.ax_heatmap.get_xlim(), color="black", lw=5)
-    #h.ax_heatmap.vlines(pp.find(np.diff(np.array(kmeans_z_labels)[order_labels_z]))+1, *h.ax_heatmap.get_ylim(), color="black", lw=5)
-
       f.savefig( gene_dir + "/sorted_by_%s.png"%(gene), fmt="png", bbox_inches='tight')
+      
       pp.close('all')
     
     
     
   check_and_mkdir(save_dir) 
-  
   fptr = open( save_dir + "/pan_cancer_dna.yaml","w+" )
   fptr.write( yaml.dump(results))
   fptr.close()
@@ -3237,15 +3215,15 @@ if __name__ == "__main__":
   data = load_data_and_fill( data_location, results_location )
   
   #dna_auc_using_latent_space( data, force =True )
-  spearmanr_latent_space_by_inputs(data, force=True)
+  #spearmanr_latent_space_by_inputs(data, force=True)
   #spearmanr_hidden_by_inputs(data, force=True)
   #weighted_latent_space_by_inputs(data, force=False)
   # write latex table guts
   #tables_for_weighted_z(data, max_lines=100 )
-  tables_for_z(data,z_or_h="z", max_lines=100 )
+  #tables_for_z(data,z_or_h="z", max_lines=100 )
   # tables_for_z(data,z_or_h="h", max_lines=100 )
   #tables_for_weighted_z(data,order_by="dna", max_lines=100 )
-  tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
+  #tables_for_z(data,order_by="dna", z_or_h="z", max_lines=100 )
   # tables_for_z(data,order_by="dna",z_or_h="h", max_lines=100 )
   
   # ridges = [0.00001, 0.001,1.0]
@@ -3257,12 +3235,29 @@ if __name__ == "__main__":
   #
   K=4
   min_p_value=1.0
+  # threshold=0.05
+  # min_features = data.Z.values.shape[1]
+  # deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+
   threshold=0.05
+  add_cohort_biases=True
   min_features = data.Z.values.shape[1]
-  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs,add_cohort_biases=add_cohort_biases )
+
+  threshold=0.01
+  add_cohort_biases=True
+  min_features = data.Z.values.shape[1]
+  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs,add_cohort_biases=add_cohort_biases )
+
   threshold=0.0
+  add_cohort_biases=True
   min_features = data.Z.values.shape[1]
-  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
+  deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs,add_cohort_biases=add_cohort_biases )
+
+  #
+  # threshold=0.0
+  # min_features = data.Z.values.shape[1]
+  # deeper_meaning_dna_and_data_correct_pan( data, data.Z, "Z", min_features=min_features,max_features=min_features, nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
   #
   #min_features = data.RNA_fair.values.shape[1]
   #deeper_meaning_dna_and_data_correct_pan( data, tanh(data.RNA_scale), "RNA_scale", min_features=min_features,max_features=min_features,nbr_dna_genes2process=nbr_dna_genes2process,K=K, min_p_value=min_p_value, threshold=threshold, Cs = Cs )
