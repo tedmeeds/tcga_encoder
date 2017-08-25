@@ -2234,6 +2234,7 @@ def survival_regression_global( data, DATA, data_name, L2s, K = 5, K_groups = 4,
   predicted_death = np.zeros( (len(X),repeats) )
   weighted_death = np.zeros( (len(X),repeats) )
   rk=0
+
   for r in range(repeats):
     print "repeat ",r
     if data_name == "Z":
@@ -3484,6 +3485,6 @@ if __name__ == "__main__":
     #survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
     #survival_regression_global( data, data.RNA_fair, "RNA_fair", L2s_RNA, K = K, repeats=5, fitter = CoxPHFitter  )
     #survival_regression_global( data, data.RNA_fair, "RNA_rank", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
-    survival_regression_global_g0_v_g3( data, data.RNA_fair, "RNA_rank", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
-    survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
-    survival_regression_global_g0_v_g3( data, data.RNA_scale, "RNA_scale", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
+    #survival_regression_global_g0_v_g3( data, data.RNA_fair, "RNA_rank", L2s_Z, K = K, repeats=5, fitter = CoxPHFitter  )
+    survival_regression_global( data, data.RNA_scale, "RNA_scale", L2s_Z, K = K, repeats=1, fitter = CoxPHFitter  )
+    survival_regression_global_g0_v_g3( data, data.RNA_scale, "RNA_scale", L2s_Z, K = K, repeats=1, fitter = CoxPHFitter  )
