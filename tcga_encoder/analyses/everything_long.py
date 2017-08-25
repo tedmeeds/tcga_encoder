@@ -730,6 +730,7 @@ def deeper_meaning_dna_and_data_correct_pan( data, DATA, data_name, \
     assert len(y_true) == len(X), "should be same"
     features_dim = X.shape[1]
     if add_cohort_biases is True:
+      print "adding cohorts"
       X = np.hstack( (X,T.values[ids_with_n]))
     c=Counter()
     #best_ridge = 10.001
