@@ -32,7 +32,7 @@ from scipy import stats
 if __name__ == "__main__":
   
   name1 = "RNA_scale"
-  name2 = "Z 500"
+  name2 = "Z_500"
   #dir_1_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_rna_fair_tissue_0.05_p_spear_1_logreg"
   #dir_2_short = "results/tcga_vae_post_recomb9/xlarge/xval_rec_not_blind_fix_outliers/20_z_100_h_1000_anti_5000/fold_1_of_50/everything/correct_deeper_meaning_dna_and_z_p_tissue_0.05_p_spear_1_logreg"
   dir_1_short = "results/tcga_vae_post_recomb9/large/xval_rec_not_blind_fix_outliers/22_z_200_h_2000_anti_5000/fold_1_of_50/everything2/correct_pancancer_dna_and_RNA_scale_pan_min_2000_max_2000_0.05_p_spear_1_logreg"
@@ -189,8 +189,8 @@ if __name__ == "__main__":
   ax_auc.set_title("AUROC")
   pp.suptitle("Weighted Pan-cancer")
   
-  f.savefig( dir_1 + "/comparison.png", fmt='png', dpi=300)
-  f.savefig( dir_2 + "/comparison.png", fmt='png', dpi=300)
+  f.savefig( dir_1 + "/comparison_%s_v_%s.png"%(name1,name2), fmt='png', dpi=300)
+  f.savefig( dir_2 + "/comparison_%s_v_%s.png"%(name1,name2), fmt='png', dpi=300)
     
   #weighted_aucs.append( pd.Series( [w_auc_1, w_auc_2], index = [name1, name2], name=gene ) )
   #weighted_prcs.append( pd.Series( [w_prc_1, w_prc_2], index = [name1, name2], name=gene ) ) 
