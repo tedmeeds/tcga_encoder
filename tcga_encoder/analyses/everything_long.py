@@ -752,7 +752,7 @@ def deeper_meaning_dna_and_data_correct_pan( data, DATA, data_name, \
       y_test = y_true[test_split]; 
        
       
-      if min_features == X_train.shape[1]:
+      if min_features == features_dim:
         print "using all features"
         I = np.arange(min_features)
       else:
